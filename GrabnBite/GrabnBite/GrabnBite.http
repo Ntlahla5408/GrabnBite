@@ -1,0 +1,6 @@
+@GrabnBite_HostAddress = http://localhost:5277
+
+GET {{GrabnBite_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

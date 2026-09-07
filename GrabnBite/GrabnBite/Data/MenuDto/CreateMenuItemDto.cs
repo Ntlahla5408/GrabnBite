@@ -1,0 +1,17 @@
+﻿namespace GrabnBite.DTOs.Menu
+{
+    public class CreateMenuItemDto
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public decimal Price { get; set; }
+
+        public bool IsAvailable { get; set; } = true;
+
+        public int RestaurantId { get; set; }
+
+        public int MenuCategoryId { get; set; }
+    }
+}

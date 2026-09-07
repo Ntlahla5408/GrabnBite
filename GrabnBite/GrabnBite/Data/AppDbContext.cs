@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using GrabnBite.Models;
+using GrabnBite.Models.Entities;
 
 namespace GrabnBite.Data
 {
@@ -9,5 +11,12 @@ namespace GrabnBite.Data
         {
                 
         }
+
+        public DbSet<Restaurant> Restaurants { get; set; }
+        public DbSet<MenuCategory> Menus { get; set; }
+        public DbSet<User> Users { get; set; }
+
+
+
     }
 }

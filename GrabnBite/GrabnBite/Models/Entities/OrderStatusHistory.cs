@@ -1,14 +1,15 @@
-﻿using System.Net.NetworkInformation;
-
-namespace GrabnBite.Models.Entities
+﻿namespace GrabnBite.Models.Entities
 {
     public class OrderStatusHistory
     {
         public int OrderStatusHistoryId { get; set; }
+
+        public string Status { get; set; } = string.Empty;
+
+        public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+
         public int OrderId { get; set; }
-        public int Status { get; set; }
-        public int ChangedByUserId { get; set; }
-        public int ChangedAt { get; set; }
-        public int Notes { get; set; }
+
+        public Order Order { get; set; } = null!;
     }
 }

@@ -16,14 +16,14 @@ namespace GrabnBite.Data
         public DbSet<Restaurant> Restaurants { get; set; }
         public DbSet<MenuCategory> MenuCategories { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
-
         public DbSet<Cart> Carts { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
-
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+
         public DbSet<Payment> Payments { get; set; }
-        public DbSet<Driver> Drivers { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -296,6 +296,20 @@ namespace GrabnBite.Data
             modelBuilder.Entity<Cart>()
     .HasIndex(c => new { c.UserId, c.RestaurantId })
     .IsUnique();
+
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.UnitPrice)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.Subtotal)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+    .HasOne(h => h.Order)
+    .WithMany(o => o.StatusHistory)
+    .HasForeignKey(h => h.OrderId)
+    .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

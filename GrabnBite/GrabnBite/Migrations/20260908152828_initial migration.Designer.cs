@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260907230020_initial migration")]
+    [Migration("20260908152828_initial migration")]
     partial class initialmigration
     {
         /// <inheritdoc />
@@ -83,7 +83,7 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DriverId")
+                    b.Property<int?>("DriverId")
                         .HasColumnType("int");
 
                     b.Property<double?>("DriverLatitude")
@@ -291,6 +291,10 @@ namespace GrabnBite.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderItemId"));
 
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("MenuItemId")
                         .HasColumnType("int");
 
@@ -460,6 +464,9 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -475,6 +482,9 @@ namespace GrabnBite.Migrations
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("UserId");
 
@@ -500,8 +510,7 @@ namespace GrabnBite.Migrations
                     b.HasOne("GrabnBite.Models.Entities.Driver", "Driver")
                         .WithMany("Deliveries")
                         .HasForeignKey("DriverId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GrabnBite.Models.Entities.Order", "Order")
                         .WithOne("Delivery")

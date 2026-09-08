@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260908161248_initial migration")]
+    [Migration("20260908164039_initial migration")]
     partial class initialmigration
     {
         /// <inheritdoc />
@@ -70,6 +70,66 @@ namespace GrabnBite.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Addresses");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.Cart", b =>
+                {
+                    b.Property<int>("CartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CartId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CartId");
+
+                    b.HasIndex("RestaurantId");
+
+                    b.HasIndex("UserId", "RestaurantId")
+                        .IsUnique();
+
+                    b.ToTable("Carts");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.CartItem", b =>
+                {
+                    b.Property<int>("CartItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CartItemId"));
+
+                    b.Property<int>("CartId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("CartItemId");
+
+                    b.HasIndex("CartId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("CartItems");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Delivery", b =>
@@ -511,6 +571,44 @@ namespace GrabnBite.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.Cart", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.Restaurant", "Restaurant")
+                        .WithMany()
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Restaurant");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.CartItem", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.Cart", "Cart")
+                        .WithMany("CartItems")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
+
+                    b.Navigation("MenuItem");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.Delivery", b =>
                 {
                     b.HasOne("GrabnBite.Models.Entities.Driver", "Driver")
@@ -679,6 +777,11 @@ namespace GrabnBite.Migrations
             modelBuilder.Entity("GrabnBite.Models.Entities.Address", b =>
                 {
                     b.Navigation("Orders");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.Cart", b =>
+                {
+                    b.Navigation("CartItems");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Driver", b =>

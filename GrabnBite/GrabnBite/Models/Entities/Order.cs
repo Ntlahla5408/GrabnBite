@@ -4,7 +4,7 @@
     {
         public int OrderId { get; set; }
         public DateTime OrderDate { get; set; } = DateTime.UtcNow;
-        public string Status { get; set; } = "PENDING";
+        public string Status { get; set; } = "PREPARING";
         public decimal TotalAmount { get; set; }
         // Foreign Keys
         public int UserId { get; set; }

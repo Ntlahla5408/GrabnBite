@@ -8,6 +8,7 @@
         public decimal Subtotal { get; set; }
         // Foreign Keys
         public int OrderId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
         public int MenuItemId { get; set; }
         // Relationships
         public Order Order { get; set; } = null!;

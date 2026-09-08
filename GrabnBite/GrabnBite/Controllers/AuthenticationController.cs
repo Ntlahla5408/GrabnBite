@@ -168,11 +168,11 @@ namespace GrabnBite.Controllers
             return Ok("You are authenticated.");
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = "Admin")]
         [HttpGet("admin-test")]
         public IActionResult AdminTest()
         {
-            return Ok("You are an Administrator.");
+            return Ok("You are an Admin.");
         }
     }
 }

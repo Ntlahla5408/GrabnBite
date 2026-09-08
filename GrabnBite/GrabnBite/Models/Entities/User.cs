@@ -16,7 +16,11 @@
 
         public string Role { get; set; } = "Customer";
 
+        public bool IsActive { get; set; } = true;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
 
         // Relationships
         public ICollection<Address> Addresses { get; set; } = new List<Address>();

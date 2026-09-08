@@ -398,7 +398,13 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("RestaurantId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Restaurants");
                 });
@@ -627,6 +633,17 @@ namespace GrabnBite.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithOne()
+                        .HasForeignKey("GrabnBite.Models.Entities.Restaurant", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Review", b =>

@@ -251,6 +251,15 @@ namespace GrabnBite.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            // =========================
+            // RESTURANT → USER
+            // =========================
+            modelBuilder.Entity<Restaurant>()
+                    .HasOne(r => r.User)
+                    .WithOne()
+                    .HasForeignKey<Restaurant>(r => r.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

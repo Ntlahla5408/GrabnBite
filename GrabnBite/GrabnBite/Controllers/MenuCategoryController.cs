@@ -4,6 +4,7 @@ using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -18,26 +19,48 @@ namespace GrabnBite.Controllers
         {
             _context = context;
         }
+        private int GetCurrentUserId()
+        {
+            return int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+        }
 
         // CREATE
         [HttpPost]
         [Authorize(Roles = "Restaurant,Admin")]
         public async Task<IActionResult> CreateCategory(
-            CreateMenuCategoryDto dto)
+    CreateMenuCategoryDto dto)
         {
-            var restaurantExists = await _context.Restaurants
-                .AnyAsync(r => r.RestaurantId == dto.RestaurantId);
+            var userId = GetCurrentUserId();
+            var isAdmin = User.IsInRole("Admin");
 
-            if (!restaurantExists)
+            Restaurant? restaurant;
+
+            if (isAdmin)
             {
-                return NotFound("Restaurant not found.");
+                return BadRequest(
+                    "Admins should create or manage categories through an assigned restaurant.");
+            }
+
+            restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.UserId == userId);
+
+            if (restaurant == null)
+            {
+                return NotFound("No restaurant is associated with this account.");
+            }
+
+            if (!restaurant.IsApproved)
+            {
+                return BadRequest("Your restaurant has not been approved yet.");
             }
 
             var category = new MenuCategory
             {
                 Name = dto.Name,
                 Description = dto.Description,
-                RestaurantId = dto.RestaurantId
+                RestaurantId = restaurant.RestaurantId
             };
 
             _context.MenuCategories.Add(category);
@@ -108,8 +131,13 @@ namespace GrabnBite.Controllers
             int id,
             UpdateMenuCategoryDto dto)
         {
+            var userId = GetCurrentUserId();
+
             var category = await _context.MenuCategories
-                .FirstOrDefaultAsync(c => c.MenuCategoryId == id);
+                .Include(c => c.Restaurant)
+                .FirstOrDefaultAsync(c =>
+                    c.MenuCategoryId == id &&
+                    c.Restaurant.UserId == userId);
 
             if (category == null)
             {
@@ -137,8 +165,13 @@ namespace GrabnBite.Controllers
         [Authorize(Roles = "Restaurant,Admin")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
+            var userId = GetCurrentUserId();
+
             var category = await _context.MenuCategories
-                .FirstOrDefaultAsync(c => c.MenuCategoryId == id);
+                .Include(c => c.Restaurant)
+                .FirstOrDefaultAsync(c =>
+                    c.MenuCategoryId == id &&
+                    c.Restaurant.UserId == userId);
 
             if (category == null)
             {

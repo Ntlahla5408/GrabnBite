@@ -1,0 +1,9 @@
+﻿namespace GrabnBite.DTOs.Delivery
+{
+    public class UpdateDriverLocationDto
+    {
+        public double Latitude { get; set; }
+
+        public double Longitude { get; set; }
+    }
+}

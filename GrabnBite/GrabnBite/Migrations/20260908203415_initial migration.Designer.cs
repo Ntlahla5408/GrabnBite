@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260908164039_initial migration")]
+    [Migration("20260908203415_initial migration")]
     partial class initialmigration
     {
         /// <inheritdoc />

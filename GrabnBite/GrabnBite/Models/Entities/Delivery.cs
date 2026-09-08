@@ -4,7 +4,7 @@
     {
         public int DeliveryId { get; set; }
 
-        public string Status { get; set; } = "SEARCHING_FOR_DRIVER";
+        public string Status { get; set; } = "UNASSIGNED";
 
         public DateTime? PickedUpAt { get; set; }
 

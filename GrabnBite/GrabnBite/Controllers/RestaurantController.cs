@@ -4,6 +4,7 @@ using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -18,12 +19,30 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
+        private int GetCurrentUserId()
+        {
+            return int.Parse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier)!
+            );
+        }
+
         // CREATE
         [HttpPost]
         [Authorize(Roles = "Restaurant,Admin")]
         public async Task<IActionResult> CreateRestaurant(
-            CreateRestaurantDto dto)
+     CreateRestaurantDto dto)
         {
+            var userId = GetCurrentUserId();
+
+            // Prevent one restaurant account from creating multiple restaurants
+            var existingRestaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.UserId == userId);
+
+            if (existingRestaurant != null)
+            {
+                return BadRequest("This account already has a restaurant.");
+            }
+
             var restaurant = new Restaurant
             {
                 Name = dto.Name,
@@ -33,6 +52,8 @@ namespace GrabnBite.Controllers
                 Address = dto.Address,
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
+
+                UserId = userId,
 
                 IsOpen = false,
                 IsApproved = false,
@@ -128,8 +149,20 @@ namespace GrabnBite.Controllers
             int id,
             UpdateRestaurantDto dto)
         {
-            var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+            var userId = GetCurrentUserId();
+
+            var isAdmin = User.IsInRole("Admin");
+
+            var restaurantQuery = _context.Restaurants
+                .Where(r => r.RestaurantId == id);
+
+            if (!isAdmin)
+            {
+                restaurantQuery = restaurantQuery
+                    .Where(r => r.UserId == userId);
+            }
+
+            var restaurant = await restaurantQuery.FirstOrDefaultAsync();
 
             if (restaurant == null)
             {
@@ -170,8 +203,19 @@ namespace GrabnBite.Controllers
         [Authorize(Roles = "Restaurant,Admin")]
         public async Task<IActionResult> DeleteRestaurant(int id)
         {
-            var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+            var userId = GetCurrentUserId();
+            var isAdmin = User.IsInRole("Admin");
+
+            var restaurantQuery = _context.Restaurants
+                .Where(r => r.RestaurantId == id);
+
+            if (!isAdmin)
+            {
+                restaurantQuery = restaurantQuery
+                    .Where(r => r.UserId == userId);
+            }
+
+            var restaurant = await restaurantQuery.FirstOrDefaultAsync();
 
             if (restaurant == null)
             {

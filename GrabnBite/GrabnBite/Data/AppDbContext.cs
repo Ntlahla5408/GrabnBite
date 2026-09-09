@@ -16,15 +16,21 @@ namespace GrabnBite.Data
         public DbSet<Restaurant> Restaurants { get; set; }
         public DbSet<MenuCategory> MenuCategories { get; set; }
         public DbSet<MenuItem> MenuItems { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+
         public DbSet<Payment> Payments { get; set; }
-        public DbSet<Driver> Drivers { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Driver> Drivers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
+
         {
             base.OnModelCreating(modelBuilder);
 
@@ -251,6 +257,61 @@ namespace GrabnBite.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            // =========================
+            // RESTURANT → USER
+            // =========================
+            modelBuilder.Entity<Restaurant>()
+                    .HasOne(r => r.User)
+                    .WithOne()
+                    .HasForeignKey<Restaurant>(r => r.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Cart>()
+    .HasOne(c => c.User)
+    .WithMany()
+    .HasForeignKey(c => c.UserId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Cart>()
+    .HasOne(c => c.Restaurant)
+    .WithMany()
+    .HasForeignKey(c => c.RestaurantId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CartItem>()
+    .HasOne(ci => ci.Cart)
+    .WithMany(c => c.CartItems)
+    .HasForeignKey(ci => ci.CartId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CartItem>()
+    .HasOne(ci => ci.MenuItem)
+    .WithMany()
+    .HasForeignKey(ci => ci.MenuItemId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CartItem>()
+    .Property(ci => ci.UnitPrice)
+    .HasPrecision(10, 2);
+
+            modelBuilder.Entity<Cart>()
+    .HasIndex(c => new { c.UserId, c.RestaurantId })
+    .IsUnique();
+
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.UnitPrice)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<OrderItem>()
+                .Property(oi => oi.Subtotal)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+    .HasOne(h => h.Order)
+    .WithMany(o => o.StatusHistory)
+    .HasForeignKey(h => h.OrderId)
+    .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -10,8 +10,6 @@
 
         public bool IsAvailable { get; set; } = true;
 
-        public int RestaurantId { get; set; }
-
         public int MenuCategoryId { get; set; }
     }
 }

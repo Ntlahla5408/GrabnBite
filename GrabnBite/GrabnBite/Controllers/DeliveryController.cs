@@ -5,6 +5,9 @@ using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GrabnBite.Hubs;
+using GrabnBite.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace GrabnBite.Controllers
 {
@@ -14,10 +17,17 @@ namespace GrabnBite.Controllers
     public class DeliveryController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly RedisLocationService _locationService;
+        private readonly IHubContext<TrackingHub> _hubContext;
 
-        public DeliveryController(AppDbContext context)
+        public DeliveryController(
+            AppDbContext context,
+            RedisLocationService locationService,
+            IHubContext<TrackingHub> hubContext)
         {
             _context = context;
+            _locationService = locationService;
+            _hubContext = hubContext;
         }
 
         private int GetCurrentUserId()
@@ -244,6 +254,19 @@ namespace GrabnBite.Controllers
 
             await _context.SaveChangesAsync();
 
+            await _hubContext.Clients
+    .Group($"order-{delivery.OrderId}")
+    .SendAsync(
+        "OrderStatusUpdated",
+        new
+        {
+            orderId = delivery.OrderId,
+            deliveryId = delivery.DeliveryId,
+            status = delivery.Order.Status,
+            deliveryStatus = delivery.Status,
+            updatedAt = DateTime.UtcNow
+        });
+
             return Ok(new
             {
                 message = "Order picked up successfully.",
@@ -300,6 +323,18 @@ namespace GrabnBite.Controllers
             delivery.Order.Status = "DELIVERING";
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients
+    .Group($"order-{delivery.OrderId}")
+    .SendAsync(
+        "OrderStatusUpdated",
+        new
+        {
+            orderId = delivery.OrderId,
+            deliveryId = delivery.DeliveryId,
+            status = delivery.Order.Status,
+            deliveryStatus = delivery.Status,
+            updatedAt = DateTime.UtcNow
+        });
 
             return Ok(new
             {
@@ -361,6 +396,18 @@ namespace GrabnBite.Controllers
             driver.IsOnline = true;
 
             await _context.SaveChangesAsync();
+            await _hubContext.Clients
+    .Group($"order-{delivery.OrderId}")
+    .SendAsync(
+        "OrderStatusUpdated",
+        new
+        {
+            orderId = delivery.OrderId,
+            deliveryId = delivery.DeliveryId,
+            status = delivery.Order.Status,
+            deliveryStatus = delivery.Status,
+            updatedAt = DateTime.UtcNow
+        });
 
             return Ok(new
             {
@@ -376,13 +423,14 @@ namespace GrabnBite.Controllers
         [HttpPut("{deliveryId}/location")]
         [Authorize(Roles = "Driver")]
         public async Task<IActionResult> UpdateDriverLocation(
-    int deliveryId,
-    UpdateDriverLocationDto dto)
+     int deliveryId,
+     UpdateDriverLocationDto dto)
         {
             var userId = GetCurrentUserId();
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId);
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId);
 
             if (driver == null)
             {
@@ -399,42 +447,131 @@ namespace GrabnBite.Controllers
                 return NotFound("Delivery not found.");
             }
 
-            // Make sure this driver owns the delivery
             if (delivery.DriverId != driver.DriverId)
             {
                 return Forbid();
             }
 
-            // Location should only be updated during an active delivery
             if (delivery.Status != "DELIVERING")
             {
                 return BadRequest(
                     "Driver location can only be updated during an active delivery.");
             }
 
-            // Basic coordinate validation
-            if (dto.Latitude < -90 || dto.Latitude > 90)
+            if (dto.Latitude < -90 ||
+                dto.Latitude > 90)
             {
-                return BadRequest("Invalid latitude.");
+                return BadRequest(
+                    "Invalid latitude.");
             }
 
-            if (dto.Longitude < -180 || dto.Longitude > 180)
+            if (dto.Longitude < -180 ||
+                dto.Longitude > 180)
             {
-                return BadRequest("Invalid longitude.");
+                return BadRequest(
+                    "Invalid longitude.");
             }
 
-            delivery.DriverLatitude = dto.Latitude;
-            delivery.DriverLongitude = dto.Longitude;
+            // ------------------------------------------------------------
+            // Save latest location to Redis
+            // ------------------------------------------------------------
 
-            await _context.SaveChangesAsync();
+            await _locationService.SaveLocationAsync(
+                deliveryId,
+                dto.Latitude,
+                dto.Longitude);
+
+            // ------------------------------------------------------------
+            // Broadcast location to everyone tracking this order
+            // ------------------------------------------------------------
+
+            await _hubContext.Clients
+                .Group($"order-{delivery.OrderId}")
+                .SendAsync(
+                    "DriverLocationUpdated",
+                    new
+                    {
+                        deliveryId,
+                        orderId = delivery.OrderId,
+                        driverId = driver.DriverId,
+                        latitude = dto.Latitude,
+                        longitude = dto.Longitude,
+                        updatedAt = DateTime.UtcNow
+                    });
 
             return Ok(new
             {
                 message = "Driver location updated successfully.",
-                deliveryId = delivery.DeliveryId,
-                latitude = delivery.DriverLatitude,
-                longitude = delivery.DriverLongitude
+                deliveryId,
+                orderId = delivery.OrderId,
+                latitude = dto.Latitude,
+                longitude = dto.Longitude
             });
+        }
+
+        [HttpGet("{deliveryId}/location")]
+        [Authorize]
+        public async Task<IActionResult> GetDriverLocation(
+    int deliveryId)
+        {
+            var delivery = await _context.Deliveries
+                .Include(d => d.Order)
+                .FirstOrDefaultAsync(d =>
+                    d.DeliveryId == deliveryId);
+
+            if (delivery == null)
+            {
+                return NotFound("Delivery not found.");
+            }
+
+            var userId = GetCurrentUserId();
+
+            if (User.IsInRole("Customer"))
+            {
+                if (delivery.Order.UserId != userId)
+                {
+                    return Forbid();
+                }
+            }
+
+            if (User.IsInRole("Driver"))
+            {
+                var driver = await _context.Drivers
+                    .FirstOrDefaultAsync(d =>
+                        d.UserId == userId);
+
+                if (driver == null ||
+                    delivery.DriverId != driver.DriverId)
+                {
+                    return Forbid();
+                }
+            }
+
+            if (User.IsInRole("Restaurant"))
+            {
+                var restaurant = await _context.Restaurants
+                    .FirstOrDefaultAsync(r =>
+                        r.RestaurantId ==
+                        delivery.Order.RestaurantId &&
+                        r.UserId == userId);
+
+                if (restaurant == null)
+                {
+                    return Forbid();
+                }
+            }
+
+            var location =
+                await _locationService.GetLocationAsync(
+                    deliveryId);
+
+            if (location == null)
+            {
+                return NotFound(
+                    "No current driver location is available.");
+            }
+
+            return Ok(location);
         }
     }
 }

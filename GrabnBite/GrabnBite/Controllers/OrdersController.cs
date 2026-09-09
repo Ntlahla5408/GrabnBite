@@ -1,10 +1,12 @@
-﻿using System.Security.Claims;
-using GrabnBite.Data;
+﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Order;
+using GrabnBite.Hubs;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -14,10 +16,14 @@ namespace GrabnBite.Controllers
     public class OrderController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<TrackingHub> _hubContext;
 
-        public OrderController(AppDbContext context)
+        public OrderController(
+            AppDbContext context,
+            IHubContext<TrackingHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // ============================================================
@@ -370,6 +376,17 @@ namespace GrabnBite.Controllers
             });
 
             await _context.SaveChangesAsync();
+
+            await _hubContext.Clients
+    .Group($"order-{order.OrderId}")
+    .SendAsync(
+        "OrderStatusUpdated",
+        new
+        {
+            orderId = order.OrderId,
+            status = order.Status,
+            updatedAt = DateTime.UtcNow
+        });
 
             return Ok(new
             {

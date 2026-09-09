@@ -27,8 +27,10 @@ namespace GrabnBite.Data
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Driver> Drivers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
+
         {
             base.OnModelCreating(modelBuilder);
 

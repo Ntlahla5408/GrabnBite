@@ -282,6 +282,27 @@ namespace GrabnBite.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OrderStatusHistories",
+                columns: table => new
+                {
+                    OrderStatusHistoryId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ChangedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    OrderId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderStatusHistories", x => x.OrderStatusHistoryId);
+                    table.ForeignKey(
+                        name: "FK_OrderStatusHistories_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "OrderId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Payments",
                 columns: table => new
                 {
@@ -290,6 +311,7 @@ namespace GrabnBite.Migrations
                     Amount = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
                     PaymentStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PaymentReference = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TransactionReference = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PaymentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     OrderId = table.Column<int>(type: "int", nullable: false)
@@ -375,11 +397,11 @@ namespace GrabnBite.Migrations
                 {
                     OrderItemId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    ItemName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
                     Subtotal = table.Column<decimal>(type: "decimal(10,2)", precision: 10, scale: 2, nullable: false),
                     OrderId = table.Column<int>(type: "int", nullable: false),
-                    ItemName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     MenuItemId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -488,6 +510,11 @@ namespace GrabnBite.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderStatusHistories_OrderId",
+                table: "OrderStatusHistories",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Payments_OrderId",
                 table: "Payments",
                 column: "OrderId",
@@ -536,6 +563,9 @@ namespace GrabnBite.Migrations
 
             migrationBuilder.DropTable(
                 name: "OrderItems");
+
+            migrationBuilder.DropTable(
+                name: "OrderStatusHistories");
 
             migrationBuilder.DropTable(
                 name: "Payments");

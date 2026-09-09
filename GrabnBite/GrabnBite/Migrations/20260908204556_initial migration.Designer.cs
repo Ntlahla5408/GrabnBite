@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260908203415_initial migration")]
+    [Migration("20260908204556_initial migration")]
     partial class initialmigration
     {
         /// <inheritdoc />
@@ -381,6 +381,31 @@ namespace GrabnBite.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.OrderStatusHistory", b =>
+                {
+                    b.Property<int>("OrderStatusHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderStatusHistoryId"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("OrderStatusHistoryId");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderStatusHistories");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.Payment", b =>
                 {
                     b.Property<int>("PaymentId")
@@ -400,6 +425,10 @@ namespace GrabnBite.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentReference")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -725,6 +754,17 @@ namespace GrabnBite.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.OrderStatusHistory", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.Order", "Order")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.Payment", b =>
                 {
                     b.HasOne("GrabnBite.Models.Entities.Order", "Order")
@@ -808,6 +848,8 @@ namespace GrabnBite.Migrations
                     b.Navigation("Payment");
 
                     b.Navigation("Review");
+
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>

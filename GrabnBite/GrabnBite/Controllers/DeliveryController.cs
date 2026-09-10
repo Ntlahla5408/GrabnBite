@@ -1,13 +1,11 @@
-﻿using System.Security.Claims;
-using GrabnBite.Data;
+﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Delivery;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using GrabnBite.Hubs;
-using GrabnBite.Services;
-using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -17,17 +15,10 @@ namespace GrabnBite.Controllers
     public class DeliveryController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly RedisLocationService _locationService;
-        private readonly IHubContext<TrackingHub> _hubContext;
 
-        public DeliveryController(
-            AppDbContext context,
-            RedisLocationService locationService,
-            IHubContext<TrackingHub> hubContext)
+        public DeliveryController(AppDbContext context)
         {
             _context = context;
-            _locationService = locationService;
-            _hubContext = hubContext;
         }
 
         private int GetCurrentUserId()
@@ -250,22 +241,7 @@ namespace GrabnBite.Controllers
 
             delivery.Order.Status = "DRIVER_PICKED_UP";
 
-
-
             await _context.SaveChangesAsync();
-
-            await _hubContext.Clients
-    .Group($"order-{delivery.OrderId}")
-    .SendAsync(
-        "OrderStatusUpdated",
-        new
-        {
-            orderId = delivery.OrderId,
-            deliveryId = delivery.DeliveryId,
-            status = delivery.Order.Status,
-            deliveryStatus = delivery.Status,
-            updatedAt = DateTime.UtcNow
-        });
 
             return Ok(new
             {
@@ -323,18 +299,6 @@ namespace GrabnBite.Controllers
             delivery.Order.Status = "DELIVERING";
 
             await _context.SaveChangesAsync();
-            await _hubContext.Clients
-    .Group($"order-{delivery.OrderId}")
-    .SendAsync(
-        "OrderStatusUpdated",
-        new
-        {
-            orderId = delivery.OrderId,
-            deliveryId = delivery.DeliveryId,
-            status = delivery.Order.Status,
-            deliveryStatus = delivery.Status,
-            updatedAt = DateTime.UtcNow
-        });
 
             return Ok(new
             {
@@ -396,18 +360,6 @@ namespace GrabnBite.Controllers
             driver.IsOnline = true;
 
             await _context.SaveChangesAsync();
-            await _hubContext.Clients
-    .Group($"order-{delivery.OrderId}")
-    .SendAsync(
-        "OrderStatusUpdated",
-        new
-        {
-            orderId = delivery.OrderId,
-            deliveryId = delivery.DeliveryId,
-            status = delivery.Order.Status,
-            deliveryStatus = delivery.Status,
-            updatedAt = DateTime.UtcNow
-        });
 
             return Ok(new
             {
@@ -420,11 +372,16 @@ namespace GrabnBite.Controllers
             });
         }
 
+        // ============================================================
+        // UPDATE DRIVER LOCATION
+        // Location is now stored directly in SQL Server
+        // ============================================================
+
         [HttpPut("{deliveryId}/location")]
         [Authorize(Roles = "Driver")]
         public async Task<IActionResult> UpdateDriverLocation(
-     int deliveryId,
-     UpdateDriverLocationDto dto)
+            int deliveryId,
+            UpdateDriverLocationDto dto)
         {
             var userId = GetCurrentUserId();
 
@@ -473,31 +430,13 @@ namespace GrabnBite.Controllers
             }
 
             // ------------------------------------------------------------
-            // Save latest location to Redis
+            // Save latest location directly to the database
             // ------------------------------------------------------------
 
-            await _locationService.SaveLocationAsync(
-                deliveryId,
-                dto.Latitude,
-                dto.Longitude);
+            delivery.DriverLatitude = dto.Latitude;
+            delivery.DriverLongitude = dto.Longitude;
 
-            // ------------------------------------------------------------
-            // Broadcast location to everyone tracking this order
-            // ------------------------------------------------------------
-
-            await _hubContext.Clients
-                .Group($"order-{delivery.OrderId}")
-                .SendAsync(
-                    "DriverLocationUpdated",
-                    new
-                    {
-                        deliveryId,
-                        orderId = delivery.OrderId,
-                        driverId = driver.DriverId,
-                        latitude = dto.Latitude,
-                        longitude = dto.Longitude,
-                        updatedAt = DateTime.UtcNow
-                    });
+            await _context.SaveChangesAsync();
 
             return Ok(new
             {
@@ -509,10 +448,15 @@ namespace GrabnBite.Controllers
             });
         }
 
+        // ============================================================
+        // GET DRIVER LOCATION
+        // Location is retrieved directly from SQL Server
+        // ============================================================
+
         [HttpGet("{deliveryId}/location")]
         [Authorize]
         public async Task<IActionResult> GetDriverLocation(
-    int deliveryId)
+            int deliveryId)
         {
             var delivery = await _context.Deliveries
                 .Include(d => d.Order)
@@ -561,17 +505,25 @@ namespace GrabnBite.Controllers
                 }
             }
 
-            var location =
-                await _locationService.GetLocationAsync(
-                    deliveryId);
+            // ------------------------------------------------------------
+            // Return the latest location stored in the database
+            // ------------------------------------------------------------
 
-            if (location == null)
+            if (delivery.DriverLatitude == null ||
+                delivery.DriverLongitude == null)
             {
                 return NotFound(
                     "No current driver location is available.");
             }
 
-            return Ok(location);
+            return Ok(new
+            {
+                deliveryId = delivery.DeliveryId,
+                orderId = delivery.OrderId,
+                driverId = delivery.DriverId,
+                latitude = delivery.DriverLatitude,
+                longitude = delivery.DriverLongitude
+            });
         }
     }
 }

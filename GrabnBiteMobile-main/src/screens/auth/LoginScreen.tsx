@@ -15,18 +15,24 @@ import { ArrowLeft, Lock, Mail, UserCheck, Store, Bike, ShieldCheck } from 'luci
 import { UserRole } from '../../types';
 
 export const LoginScreen: React.FC = () => {
-  const { setAuthScreen, login, setNotification } = useApp();
+  // const { setAuthScreen, login, setNotification } = useApp();
   const [email, setEmail] = useState('ntlahla@example.com');
   const [password, setPassword] = useState('password123');
   const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
 
-  const handleLogin = () => {
-    if (!email.trim()) {
-      setNotification('Please enter your email');
-      return;
-    }
-    login(email, selectedRole);
-  };
+const handleLogin = async () => {
+  if (!email.trim()) {
+    setNotification('Please enter your email');
+    return;
+  }
+
+  if (!password.trim()) {
+    setNotification('Please enter your password');
+    return;
+  }
+
+  await login(email.trim(), password);
+};
 
   const handleSelectRoleDemo = (role: UserRole, demoEmail: string) => {
     setSelectedRole(role);

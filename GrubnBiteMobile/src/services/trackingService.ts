@@ -1,112 +1,108 @@
-import {
-    HubConnection,
-    HubConnectionBuilder,
-    LogLevel,
-} from "@microsoft/signalr";
+import { apiRequest } from "./api";
 
-let connection: HubConnection | null = null;
+export interface Delivery {
+  id: number;
+  orderId?: number;
+  driverId?: number;
 
-const API_URL = "http://YOUR_COMPUTER_IP:5277";
+  status?: string;
 
-export async function connectToTracking(
-  token: string,
+  latitude?: number | null;
+  longitude?: number | null;
+
+  createdAt?: string;
+  updatedAt?: string;
+
+  driver?: {
+    id: number;
+    vehicleType?: string;
+    vehicleRegistration?: string;
+  };
+}
+
+export interface DeliveryLocation {
+  latitude: number;
+  longitude: number;
+  timestamp?: string;
+}
+
+export interface UpdateDeliveryLocationRequest {
+  latitude: number;
+  longitude: number;
+}
+
+export const createDelivery = async (
   orderId: number,
-  onLocationUpdate: (location: any) => void,
-  onStatusUpdate: (status: any) => void,
-) {
-  connection = new HubConnectionBuilder()
-    .withUrl(`${API_URL}/hubs/tracking`, {
-      accessTokenFactory: () => token,
-    })
-    .withAutomaticReconnect()
-    .configureLogging(LogLevel.Information)
-    .build();
+): Promise<Delivery> => {
+  return await apiRequest<Delivery>(`/api/Delivery/${orderId}`, {
+    method: "POST",
+  });
+};
 
-  connection.on("DriverLocationUpdated", onLocationUpdate);
+export const getMyDelivery = async (): Promise<Delivery> => {
+  return await apiRequest<Delivery>("/api/Delivery/my-delivery");
+};
 
-  connection.on("OrderStatusUpdated", onStatusUpdate);
-
-  await connection.start();
-
-  await connection.invoke("JoinOrderTracking", orderId);
-
-  return connection;
-}
-
-export async function disconnectFromTracking(orderId: number) {
-  if (!connection) {
-    return;
-  }
-
-  try {
-    await connection.invoke("LeaveOrderTracking", orderId);
-  } catch {
-    // Connection may already be closed
-  }
-
-  await connection.stop();
-
-  connection = null;
-}
-
-import * as Location from "expo-location";
-
-export async function startDriverLocationUpdates(
+export const getDeliveryLocation = async (
   deliveryId: number,
-  token: string,
-) {
-  const { status } = await Location.requestForegroundPermissionsAsync();
+): Promise<DeliveryLocation> => {
+  return await apiRequest<DeliveryLocation>(
+    `/api/Delivery/${deliveryId}/location`,
+  );
+};
 
-  if (status !== "granted") {
-    throw new Error("Location permission was not granted.");
-  }
+export const updateDeliveryLocation = async (
+  deliveryId: number,
+  data: UpdateDeliveryLocationRequest,
+): Promise<void> => {
+  await apiRequest<void>(`/api/Delivery/${deliveryId}/location`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+};
 
-  return await Location.watchPositionAsync(
+export const assignDriver = async (
+  deliveryId: number,
+  driverId: number,
+): Promise<Delivery> => {
+  return await apiRequest<Delivery>(
+    `/api/Delivery/${deliveryId}/assign`,
     {
-      accuracy: Location.Accuracy.High,
-      timeInterval: 5000,
-      distanceInterval: 10,
-    },
-
-    async (location) => {
-      const latitude = location.coords.latitude;
-
-      const longitude = location.coords.longitude;
-
-      await fetch(
-        `http://YOUR_COMPUTER_IP:5277/api/Delivery/${deliveryId}/location`,
-        {
-          method: "PUT",
-
-          headers: {
-            "Content-Type": "application/json",
-
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
-            latitude,
-            longitude,
-          }),
-        },
-      );
+      method: "PUT",
+      body: JSON.stringify({ driverId }),
     },
   );
-}
+};
 
-await connectToTracking(
-  token,
-  orderId,
+export const pickupDelivery = async (
+  deliveryId: number,
+): Promise<Delivery> => {
+  return await apiRequest<Delivery>(
+    `/api/Delivery/${deliveryId}/pickup`,
+    {
+      method: "PUT",
+    },
+  );
+};
 
-  (location) => {
-    console.log("Driver moved:", location.latitude, location.longitude);
+export const startDelivery = async (
+  deliveryId: number,
+): Promise<Delivery> => {
+  return await apiRequest<Delivery>(
+    `/api/Delivery/${deliveryId}/start`,
+    {
+      method: "PUT",
+    },
+  );
+};
 
-    // Update map marker here
-  },
-
-  (status) => {
-    console.log("Order status:", status.status);
-
-    // Update UI here
-  },
-);
+export const completeDelivery = async (
+  deliveryId: number,
+): Promise<Delivery> => {
+  return await apiRequest<Delivery>(
+    `/api/Delivery/${deliveryId}/complete`,
+    {
+      method: "PUT",
+    },
+  );
+};

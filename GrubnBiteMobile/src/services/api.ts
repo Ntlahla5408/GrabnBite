@@ -1,4 +1,4 @@
-const API_URL = "https://localhost:7127";
+const API_URL = "https://localhost:5277";
 
 export const apiRequest = async <T>(
   endpoint: string,

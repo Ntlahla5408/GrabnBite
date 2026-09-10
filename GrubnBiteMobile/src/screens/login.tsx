@@ -1,3 +1,4 @@
+import { getRoleHome } from "@/services/sessionService";
 import { login } from "@/services/authservice";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -49,7 +50,7 @@ export default function LoginScreen() {
 
       // For now, return to the existing home screen.
       // We will create the real role-based screens next.
-      router.replace("/");
+     router.replace(getRoleHome(result.role) as any);
     } catch (error) {
       console.error("Login error:", error);
 

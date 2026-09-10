@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { authService } from '../services/authService';
 import {
   User,
   UserRole,
@@ -36,7 +37,7 @@ interface AppContextType {
   isAuthenticated: boolean;
   authScreen: AuthScreenType;
   setAuthScreen: (screen: AuthScreenType) => void;
-  login: (email: string, role?: UserRole) => void;
+login: (email: string, password: string) => Promise<void>;
   register: (firstName: string, lastName: string, email: string, phone: string) => void;
   logout: () => void;
   currentUser: User;
@@ -216,17 +217,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Authentication methods
-  const login = (email: string, role?: UserRole) => {
-    const targetRole = role || 'customer';
-    setCurrentRole(targetRole);
-    const mock = MOCK_USERS[targetRole] || MOCK_USERS.customer;
-    setCurrentUser({
-      ...mock,
-      email: email.trim() || mock.email,
-    });
+  const login = async (
+  email: string,
+  password: string
+) => {
+  try {
+    const response = await authService.login(
+      email,
+      password
+    );
+
+    const backendRole = response.role.toLowerCase();
+
+    let role: UserRole;
+
+    switch (backendRole) {
+      case 'admin':
+        role = 'admin';
+        break;
+
+      case 'restaurant':
+        role = 'restaurant';
+        break;
+
+      case 'driver':
+        role = 'driver';
+        break;
+
+      case 'customer':
+      default:
+        role = 'customer';
+        break;
+    }
+
+    const loggedInUser = {
+      id: response.userId.toString(),
+      name: `${response.firstName} ${response.lastName}`,
+      email: response.email,
+      role,
+    };
+
+    setCurrentUser(loggedInUser);
+    setCurrentRole(role);
     setIsAuthenticated(true);
-    setNotification(`Logged in as ${mock.name} (${targetRole.toUpperCase()})`);
-  };
+
+    setNotification(
+      `Welcome back, ${response.firstName}!`
+    );
+
+  } catch (error) {
+    setNotification(
+      error instanceof Error
+        ? error.message
+        : 'Login failed. Please check your credentials.'
+    );
+  }
+};
 
   const register = (firstName: string, lastName: string, email: string, phone: string) => {
     const newUser: User = {

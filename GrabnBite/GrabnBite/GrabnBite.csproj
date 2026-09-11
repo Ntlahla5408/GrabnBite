@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\Dtos\**" />
+    <Content Remove="Data\Dtos\**" />
+    <EmbeddedResource Remove="Data\Dtos\**" />
+    <None Remove="Data\Dtos\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.4" />
@@ -21,10 +28,6 @@
     </PackageReference>
     <PackageReference Include="StackExchange.Redis" Version="3.1.31" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Data\Dtos\" />
   </ItemGroup>
 
 </Project>

@@ -23,9 +23,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "JWT Demo API",
+        Title = "GrabnBite API",
         Version = "v1",
-        Description = "A simple JWT Authentication API"
+        Description = "GrabnBite Web API"
     });
 
     // Add JWT Authentication to Swagger

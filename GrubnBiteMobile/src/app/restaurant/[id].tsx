@@ -1,7 +1,7 @@
 import { apiRequest } from "@/services/api";
 import { Restaurant, getRestaurant } from "@/services/restaurantService";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,

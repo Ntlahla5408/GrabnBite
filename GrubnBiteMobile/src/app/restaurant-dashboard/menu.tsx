@@ -1,26 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
+import RoleGuard from "@/components/RoleGuard";
 import {
-  createMenuCategory,
-  createMenuItem,
-  deleteMenuCategory,
-  deleteMenuItem,
-  getMenuCategories,
-  getMenuItemsByRestaurant,
-  updateMenuCategory,
-  updateMenuItem,
+    createMenuCategory,
+    createMenuItem,
+    deleteMenuCategory,
+    deleteMenuItem,
+    getMenuCategories,
+    getMenuItemsByRestaurant,
+    updateMenuItem
 } from "@/services/adminService";
 
 export default function RestaurantMenu() {

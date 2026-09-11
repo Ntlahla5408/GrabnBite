@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,7 +9,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
 
 import {
   getRestaurantOrders,

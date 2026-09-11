@@ -1,21 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { router } from "expo-router";
-
-import { Cart, getCart } from "../services/cartService";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Address,
-  getAddresses,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+
+import {
+    Address,
+    getAddresses,
 } from "../services/addressService";
 import { apiRequest } from "../services/api";
+import { Cart, getCart } from "../services/cartService";
 
 interface CheckoutResponse {
   orderId: number;
@@ -98,7 +98,7 @@ export default function CheckoutScreen() {
     }, 0);
   }, [cart]);
 
-  const deliveryFee = 0;
+  const deliveryFee: number = 0;
 
   const total = subtotal + deliveryFee;
 

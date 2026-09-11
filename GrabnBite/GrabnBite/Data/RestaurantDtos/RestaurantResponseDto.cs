@@ -14,9 +14,9 @@
 
         public string Address { get; set; } = string.Empty;
 
-        public double Latitude { get; set; }
+        public decimal Latitude { get; set; }
 
-        public double Longitude { get; set; }
+        public decimal Longitude { get; set; }
 
         public bool IsOpen { get; set; }
 

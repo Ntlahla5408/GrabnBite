@@ -260,12 +260,13 @@ namespace GrabnBite.Data
 
             // =========================
             // RESTURANT → USER
+            // Changed to one-to-many: a User can own many Restaurants
             // =========================
             modelBuilder.Entity<Restaurant>()
-                    .HasOne(r => r.User)
-                    .WithOne()
-                    .HasForeignKey<Restaurant>(r => r.UserId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(r => r.User)
+                .WithMany(u => u.Restaurants)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Cart>()
     .HasOne(c => c.User)

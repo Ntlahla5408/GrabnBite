@@ -32,5 +32,8 @@
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
         public Driver? Driver { get; set; }
+
+        // NEW: allow a user to own multiple restaurants
+        public ICollection<Restaurant> Restaurants { get; set; } = new List<Restaurant>();
     }
 }

@@ -75,7 +75,7 @@ namespace GrabnBite.Data
                 context.SaveChanges();
             }
 
-            // --- Restaurant ---
+            // --- Restaurant (Burger House) ---
             var restaurant = context.Restaurants.FirstOrDefault(r => r.Email == "orders@burger.local");
             if (restaurant == null)
             {
@@ -97,6 +97,7 @@ namespace GrabnBite.Data
                 context.SaveChanges();
             }
 
+            // --- Restaurant (Pizza House) ---
             var restaurant1 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@pizza.local");
             if (restaurant1 == null)
             {
@@ -105,7 +106,7 @@ namespace GrabnBite.Data
                     Name = "Pizza House",
                     Description = "Test pizzas and pies",
                     PhoneNumber = "+27112224444",
-                    Email = "orders@pizza.local",
+                    Email = "orders@pizza.local",   
                     Address = "5 Govan Mbeki St",
                     Latitude = 0m,
                     Longitude = 0m,
@@ -117,6 +118,41 @@ namespace GrabnBite.Data
                 context.Restaurants.Add(restaurant1);
                 context.SaveChanges();
             }
+
+            // --- Create separate owners for additional restaurants (one-to-one relationship) ---
+            var sushiOwner = context.Users.FirstOrDefault(u => u.Email == "owner@sushi.local");
+            if (sushiOwner == null)
+            {
+                sushiOwner = new User
+                {
+                    FirstName = "Sushi",
+                    LastName = "Owner",
+                    Email = "owner@sushi.local",
+                    PhoneNumber = "+27110001111",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("SushiOwner123!"),
+                    Role = "Restaurant",
+                    IsActive = true
+                };
+                context.Users.Add(sushiOwner);
+            }
+
+            var tacoOwner = context.Users.FirstOrDefault(u => u.Email == "owner@taco.local");
+            if (tacoOwner == null)
+            {
+                tacoOwner = new User
+                {
+                    FirstName = "Taco",
+                    LastName = "Owner",
+                    Email = "owner@taco.local",
+                    PhoneNumber = "+27110002222",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("TacoOwner123!"),
+                    Role = "Restaurant",
+                    IsActive = true
+                };
+                context.Users.Add(tacoOwner);
+            }
+
+            context.SaveChanges();
 
             // --- New: Sushi Corner ---
             var restaurant2 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@sushi.local");
@@ -133,7 +169,7 @@ namespace GrabnBite.Data
                     Longitude = 0m,
                     IsOpen = true,
                     IsApproved = true,
-                    UserId = restOwner.UserId
+                    UserId = sushiOwner.UserId
                 };
 
                 context.Restaurants.Add(restaurant2);
@@ -155,7 +191,7 @@ namespace GrabnBite.Data
                     Longitude = 0m,
                     IsOpen = true,
                     IsApproved = true,
-                    UserId = restOwner.UserId
+                    UserId = tacoOwner.UserId
                 };
 
                 context.Restaurants.Add(restaurant3);

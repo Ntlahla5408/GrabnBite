@@ -1,32 +1,34 @@
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
 
-import {
-  getMyOrders,
-  type Order,
-} from "@/services/orderService";
 import RoleGuard from "@/components/RoleGuard";
+import { FoodColors } from "@/constants/theme";
+import {
+    getMyOrders,
+    type Order,
+} from "@/services/orderService";
 
-const COLORS = {
-  navy: "#071B2C",
-  blue: "#2C7A9E",
-  white: "#FFFFFF",
-  background: "#F5F7F9",
-  text: "#17212B",
-  muted: "#6B7280",
-  border: "#E1E7EB",
-  green: "#228B55",
-  red: "#C83C3C",
-  orange: "#D97917",
+const COLORS: Record<string, string> = {
+  navy: FoodColors.ink,
+  blue: FoodColors.tomato,
+  white: FoodColors.onDark,
+  surface: FoodColors.surface,
+  background: FoodColors.oat,
+  text: FoodColors.ink,
+  muted: FoodColors.muted,
+  border: FoodColors.line,
+  green: FoodColors.green,
+  red: FoodColors.tomatoDark,
+  orange: FoodColors.tomato,
 };
 
 export default function OrdersScreen() {
@@ -225,27 +227,27 @@ function OrderCard({
 function StatusBadge({ status }: { status: string }) {
   const normalized = status.toLowerCase();
 
-  let background = "#EAF5F9";
-  let text = COLORS.blue;
+  let background: string = FoodColors.cream;
+  let text: string = COLORS.blue;
 
   if (
     normalized.includes("deliver") ||
     normalized.includes("complete") ||
     normalized.includes("success")
   ) {
-    background = "#E7F6ED";
+    background = FoodColors.mint;
     text = COLORS.green;
   } else if (
     normalized.includes("cancel") ||
     normalized.includes("fail")
   ) {
-    background = "#FCEAEA";
+    background = FoodColors.peach;
     text = COLORS.red;
   } else if (
     normalized.includes("pending") ||
     normalized.includes("prepar")
   ) {
-    background = "#FFF3E5";
+    background = FoodColors.peach;
     text = COLORS.orange;
   }
 
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
   },
 
   orderCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface,
     borderRadius: 17,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -420,7 +422,7 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 20,
     borderRadius: 14,
-    backgroundColor: "#FCEAEA",
+    backgroundColor: FoodColors.peach,
   },
 
   errorTitle: {

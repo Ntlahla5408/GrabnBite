@@ -1,5 +1,6 @@
-import { getRoleHome } from "@/services/sessionService";
+import { FoodColors } from "@/constants/theme";
 import { login } from "@/services/authservice";
+import { getRoleHome, saveSession } from "@/services/sessionService";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -17,40 +18,35 @@ import {
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      console.log("Please enter your email and password.");
+    if (!email.trim() || !password) {
+      Alert.alert("Missing information", "Enter your email and password.");
       return;
     }
 
     try {
+      setLoading(true);
       const result = await login({
-        email,
+        email: email.trim(),
         password,
       });
 
       console.log("Login successful!");
       console.log("User:", result);
 
-      // Store the JWT for the current web session
-      localStorage.setItem("grubnbite_token", result.token);
-
-      // Store the logged-in user's information
-      localStorage.setItem(
-        "grubnbite_user",
-        JSON.stringify({
+      await saveSession(result.token, {
           userId: result.userId,
           firstName: result.firstName,
           lastName: result.lastName,
           email: result.email,
           role: result.role,
-        }),
-      );
+      });
 
       // For now, return to the existing home screen.
       // We will create the real role-based screens next.
-     router.replace(getRoleHome(result.role) as any);
+      router.replace(getRoleHome(result.role) as any);
     } catch (error) {
       console.error("Login error:", error);
 
@@ -60,6 +56,8 @@ export default function LoginScreen() {
           ? error.message
           : "Something went wrong. Please try again.",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -95,7 +93,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
-                placeholderTextColor="#999"
+                placeholderTextColor={FoodColors.muted}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -110,7 +108,7 @@ export default function LoginScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"
-                placeholderTextColor="#999"
+                placeholderTextColor={FoodColors.muted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -126,10 +124,13 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.loginButton}
+              style={[styles.loginButton, loading && styles.disabledButton]}
               onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.loginButtonText}>
+                {loading ? "Signing in..." : "Login"}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.registerContainer}>
@@ -151,7 +152,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.oat,
   },
 
   scrollContainer: {
@@ -160,25 +161,27 @@ const styles = StyleSheet.create({
 
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 26,
+    paddingVertical: 28,
     justifyContent: "center",
   },
 
   header: {
     alignItems: "center",
-    marginBottom: 50,
+    marginBottom: 42,
   },
 
   logo: {
-    fontSize: 38,
-    fontWeight: "800",
-    color: "#208AEF",
+    fontSize: 40,
+    fontWeight: "900",
+    color: FoodColors.tomato,
+    letterSpacing: 0,
   },
 
   subtitle: {
     marginTop: 8,
     fontSize: 15,
-    color: "#777",
+    color: FoodColors.muted,
   },
 
   form: {
@@ -186,15 +189,15 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#222",
+    fontSize: 30,
+    fontWeight: "900",
+    color: FoodColors.ink,
     marginBottom: 8,
   },
 
   description: {
     fontSize: 15,
-    color: "#777",
+    color: FoodColors.muted,
     marginBottom: 30,
   },
 
@@ -205,19 +208,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: FoodColors.ink,
     marginBottom: 8,
   },
 
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#D9D9D9",
-    borderRadius: 10,
+    borderColor: FoodColors.line,
+    borderRadius: 14,
     paddingHorizontal: 15,
     fontSize: 16,
-    color: "#222",
-    backgroundColor: "#FAFAFA",
+    color: FoodColors.ink,
+    backgroundColor: FoodColors.surface,
   },
 
   forgotButton: {
@@ -227,20 +230,24 @@ const styles = StyleSheet.create({
 
   forgotText: {
     fontSize: 14,
-    color: "#208AEF",
+    color: FoodColors.tomato,
     fontWeight: "600",
   },
 
   loginButton: {
     height: 52,
     borderRadius: 10,
-    backgroundColor: "#208AEF",
+    backgroundColor: FoodColors.tomato,
     justifyContent: "center",
     alignItems: "center",
   },
 
+  disabledButton: {
+    opacity: 0.6,
+  },
+
   loginButtonText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -253,13 +260,13 @@ const styles = StyleSheet.create({
 
   registerText: {
     fontSize: 14,
-    color: "#777",
+    color: FoodColors.muted,
   },
 
   registerLink: {
     marginLeft: 5,
     fontSize: 14,
-    color: "#208AEF",
+    color: FoodColors.tomato,
     fontWeight: "700",
   },
 });

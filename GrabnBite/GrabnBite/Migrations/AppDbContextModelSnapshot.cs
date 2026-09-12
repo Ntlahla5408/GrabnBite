@@ -473,6 +473,9 @@ namespace GrabnBite.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Latitude")
                         .HasColumnType("decimal(18,2)");
 

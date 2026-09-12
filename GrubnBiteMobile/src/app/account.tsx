@@ -1,16 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
+import { FoodColors } from "@/constants/theme";
 import { getCurrentUser } from "@/services/sessionService";
 
 export default function AccountScreen() {
@@ -42,7 +42,7 @@ export default function AccountScreen() {
               <Ionicons
                 name="location-outline"
                 size={21}
-                color="#1A4B6B"
+                color={FoodColors.tomato}
               />
             </View>
 
@@ -56,7 +56,7 @@ export default function AccountScreen() {
             <Ionicons
               name="chevron-forward"
               size={20}
-              color="#94A3B8"
+              color={FoodColors.muted}
             />
           </Pressable>
         </View>
@@ -72,29 +72,29 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: FoodColors.oat,
   },
 
   header: {
     alignItems: "center",
     paddingVertical: 35,
     paddingHorizontal: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    borderBottomColor: FoodColors.line,
   },
 
   avatar: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#1A4B6B",
+    backgroundColor: FoodColors.tomato,
     alignItems: "center",
     justifyContent: "center",
   },
 
   avatarText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 30,
     fontWeight: "800",
   },
@@ -103,20 +103,20 @@ const styles = StyleSheet.create({
     marginTop: 14,
     fontSize: 22,
     fontWeight: "800",
-    color: "#071B2C",
+    color: FoodColors.ink,
   },
 
   email: {
     marginTop: 5,
-    color: "#64748B",
+    color: FoodColors.muted,
   },
 
   section: {
     margin: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: FoodColors.line,
   },
 
   row: {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: "#E0F2FE",
+    backgroundColor: FoodColors.peach,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -143,21 +143,21 @@ const styles = StyleSheet.create({
   rowTitle: {
     fontWeight: "800",
     fontSize: 15,
-    color: "#071B2C",
+    color: FoodColors.ink,
   },
 
   rowSubtitle: {
     marginTop: 3,
     fontSize: 12,
-    color: "#64748B",
+    color: FoodColors.muted,
   },
 
   logoutSection: {
     marginHorizontal: 16,
     paddingHorizontal: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: FoodColors.tomatoDark,
   },
 });

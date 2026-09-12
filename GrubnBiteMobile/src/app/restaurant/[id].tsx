@@ -1,9 +1,14 @@
+import { FoodColors } from "@/constants/theme";
 import { apiRequest } from "@/services/api";
+import { addCartItem } from "@/services/cartService";
 import { Restaurant, getRestaurant } from "@/services/restaurantService";
+import { isLoggedIn } from "@/services/sessionService";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,6 +32,7 @@ export default function RestaurantDetailsScreen() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [addingItemId, setAddingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -59,16 +65,52 @@ export default function RestaurantDetailsScreen() {
     }
   };
 
+<<<<<<< HEAD
   const addToCart = (item: MenuItem) => {
     // Replace this with your cart logic (context, redux, etc.)
     console.log("Added to cart:", item);
+=======
+  const handleAddToCart = async (item: MenuItem) => {
+    if (!isLoggedIn()) {
+      Alert.alert(
+        "Log in to order",
+        "Create an account or log in before adding items to your cart.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Log in", onPress: () => router.push("/login") },
+        ],
+      );
+      return;
+    }
+
+    try {
+      setAddingItemId(item.id);
+      await addCartItem({ menuItemId: item.id, quantity: 1 });
+      Alert.alert("Added to cart", `${item.name} is ready for checkout.`);
+    } catch (error) {
+      Alert.alert(
+        "Could not add item",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setAddingItemId(null);
+    }
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
+<<<<<<< HEAD
         <ActivityIndicator size="large" color="#208AEF" />
         <Text style={styles.loadingText}>Loading restaurant...</Text>
+=======
+        <ActivityIndicator size="large" color={FoodColors.tomato} />
+
+        <Text style={styles.loadingText}>
+          Loading restaurant...
+        </Text>
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
       </View>
     );
   }
@@ -109,6 +151,7 @@ export default function RestaurantDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant Hero */}
+<<<<<<< HEAD
         {restaurant && (
           <View style={styles.hero}>
             <Text style={styles.heroEmoji}>🍔</Text>
@@ -122,6 +165,36 @@ export default function RestaurantDetailsScreen() {
                 {restaurant.isOpen ? "OPEN NOW" : "CLOSED"}
               </Text>
             </View>
+=======
+        <View style={styles.hero}>
+          {restaurant.imageUrl ? (
+            <Image
+              source={{ uri: restaurant.imageUrl }}
+              contentFit="cover"
+              transition={250}
+              style={styles.heroImage}
+            />
+          ) : (
+            <View style={styles.heroFallback}>
+              <Text style={styles.heroEmoji}>🍔</Text>
+              <Text style={styles.heroFallbackText}>Fresh food, made daily</Text>
+            </View>
+          )}
+
+          <View
+            style={[
+              styles.statusBadge,
+              restaurant.isOpen
+                ? styles.openBadge
+                : styles.closedBadge,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {restaurant.isOpen
+                ? "OPEN NOW"
+                : "CLOSED"}
+            </Text>
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
           </View>
         )}
 
@@ -184,8 +257,21 @@ export default function RestaurantDetailsScreen() {
             </View>
 
             {item.isAvailable && (
+<<<<<<< HEAD
               <Pressable style={styles.addButton} onPress={() => addToCart(item)}>
                 <Text style={styles.addButtonText}>+</Text>
+=======
+              <Pressable
+                style={styles.addButton}
+                onPress={() => handleAddToCart(item)}
+                disabled={addingItemId === item.id}
+              >
+                {addingItemId === item.id ? (
+                  <ActivityIndicator color={FoodColors.onDark} size="small" />
+                ) : (
+                  <Text style={styles.addButtonText}>+</Text>
+                )}
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
               </Pressable>
             )}
           </View>
@@ -196,5 +282,317 @@ export default function RestaurantDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
   // (same styles as before, unchanged)
 });
+=======
+  container: {
+    flex: 1,
+    backgroundColor: FoodColors.oat,
+  },
+
+  header: {
+    height: 62,
+    backgroundColor: FoodColors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: FoodColors.line,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+  },
+
+  backIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  backIcon: {
+    fontSize: 34,
+    lineHeight: 34,
+    color: FoodColors.ink,
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 17,
+    fontWeight: "700",
+    color: FoodColors.ink,
+  },
+
+  cartButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: FoodColors.peach,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cartIcon: {
+    fontSize: 19,
+  },
+
+  scrollView: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  hero: {
+    height: 190,
+    backgroundColor: FoodColors.cream,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+
+  heroEmoji: {
+    fontSize: 75,
+  },
+
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  heroFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+
+  heroFallbackText: {
+    color: FoodColors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+
+  statusBadge: {
+    position: "absolute",
+    top: 14,
+    left: 16,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  openBadge: {
+    backgroundColor: FoodColors.green,
+  },
+
+  closedBadge: {
+    backgroundColor: FoodColors.tomatoDark,
+  },
+
+  statusText: {
+    color: FoodColors.onDark,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  restaurantInfo: {
+    backgroundColor: FoodColors.surface,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: FoodColors.line,
+  },
+
+  restaurantName: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: FoodColors.ink,
+  },
+
+  description: {
+    fontSize: 14,
+    color: FoodColors.muted,
+    lineHeight: 20,
+    marginTop: 7,
+    marginBottom: 14,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 7,
+  },
+
+  infoIcon: {
+    fontSize: 14,
+    width: 24,
+  },
+
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: FoodColors.muted,
+  },
+
+  menuSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 12,
+  },
+
+  menuTitle: {
+    fontSize: 21,
+    fontWeight: "800",
+    color: FoodColors.ink,
+  },
+
+  menuSubtitle: {
+    fontSize: 13,
+    color: FoodColors.muted,
+    marginTop: 3,
+  },
+
+  menuCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    backgroundColor: FoodColors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: FoodColors.line,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  menuCardUnavailable: {
+    opacity: 0.55,
+  },
+
+  menuItemContent: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  menuItemName: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: FoodColors.ink,
+  },
+
+  unavailableText: {
+    color: FoodColors.muted,
+  },
+
+  menuItemDescription: {
+    fontSize: 13,
+    color: FoodColors.muted,
+    lineHeight: 18,
+    marginTop: 5,
+  },
+
+  price: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: FoodColors.tomato,
+    marginTop: 9,
+  },
+
+  unavailableLabel: {
+    fontSize: 11,
+    color: FoodColors.tomatoDark,
+    fontWeight: "600",
+    marginTop: 5,
+  },
+
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: FoodColors.tomato,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  addButtonText: {
+    color: FoodColors.onDark,
+    fontSize: 26,
+    fontWeight: "500",
+    lineHeight: 28,
+  },
+
+  emptyContainer: {
+    marginHorizontal: 20,
+    backgroundColor: FoodColors.surface,
+    borderRadius: 14,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  emptyEmoji: {
+    fontSize: 40,
+  },
+
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: FoodColors.ink,
+    marginTop: 10,
+  },
+
+  emptySubtitle: {
+    fontSize: 13,
+    color: FoodColors.muted,
+    textAlign: "center",
+    marginTop: 5,
+    lineHeight: 19,
+  },
+
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 30,
+    backgroundColor: "#F7F9FC",
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#69717D",
+  },
+
+  errorIcon: {
+    fontSize: 38,
+    marginBottom: 10,
+  },
+
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222831",
+    textAlign: "center",
+  },
+
+  errorMessage: {
+    fontSize: 13,
+    color: "#69717D",
+    textAlign: "center",
+    marginTop: 7,
+  },
+
+  backButton: {
+    marginTop: 20,
+    backgroundColor: "#208AEF",
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 9,
+  },
+
+  backButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+});
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49

@@ -148,6 +148,14 @@ export const getMenuItems = async (): Promise<MenuItem[]> => {
   return await apiRequest<MenuItem[]>("/api/MenuItem");
 };
 
+export const getMenuItemsByRestaurant = async (
+  restaurantId: number,
+): Promise<MenuItem[]> => {
+  return await apiRequest<MenuItem[]>(
+    `/api/MenuItem/restaurant/${restaurantId}`,
+  );
+};
+
 export const createMenuItem = async (
   data: CreateMenuItemRequest,
 ): Promise<MenuItem> => {

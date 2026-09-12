@@ -1,24 +1,42 @@
-const API_URL = "https://localhost:5277";
+import { Platform } from "react-native";
+
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+const API_URL = (
+  configuredApiUrl ||
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:5277"
+    : "http://localhost:5277")
+).replace(/\/$/, "");
 
 export const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> => {
-  const token = localStorage.getItem("grubnbite_token");
+  const token =
+    typeof localStorage === "undefined"
+      ? null
+      : localStorage.getItem("grubnbite_token");
 
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch {
+    throw new Error(
+      `Could not connect to GrubnBite at ${API_URL}. ` +
+        "Start the API or set EXPO_PUBLIC_API_URL to its reachable address.",
+    );
+  }
 
   if (!response.ok) {
     const errorText = await response.text();

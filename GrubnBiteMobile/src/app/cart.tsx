@@ -1,26 +1,21 @@
 import {
-    Cart,
-    clearCart,
-    getCart,
-    removeCartItem,
-    updateCartItem,
-    Cart,
-    clearCart,
-    getCart,
-    removeCartItem,
-    updateCartItem,
+  Cart,
+  clearCart,
+  getCart,
+  removeCartItem,
+  updateCartItem,
 } from "@/services/cartService";
 import { isLoggedIn } from "@/services/sessionService";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  ColorSchemeName,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text, useColorScheme, View
 } from "react-native";
 
 export default function CartScreen() {
@@ -35,16 +30,7 @@ export default function CartScreen() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      router.replace("/login");
-      return;
-    }
-
-    loadCart();
-  }, []);
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -64,6 +50,11 @@ export default function CartScreen() {
   }, []);
 
   useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace("/login");
+      return;
+    }
+
     void loadCart();
   }, [loadCart]);
 

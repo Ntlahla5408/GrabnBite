@@ -1,4 +1,4 @@
-import { apiRequest } from "../app/restaurant/apiClient";
+import { apiRequest } from "./api";
 
 export interface LoginRequest {
   email: string;
@@ -35,7 +35,7 @@ export async function login(
   credentials: LoginRequest
 ): Promise<LoginResponse> {
   return apiRequest<LoginResponse>(
-    "/Authentication/login",
+    "/api/Authentication/login",
     {
       method: "POST",
       body: JSON.stringify(credentials),
@@ -47,7 +47,7 @@ export async function register(
   data: RegisterRequest
 ): Promise<RegisterResponse> {
   return apiRequest<RegisterResponse>(
-    "/Authentication/register",
+    "/api/Authentication/register",
     {
       method: "POST",
       body: JSON.stringify(data),

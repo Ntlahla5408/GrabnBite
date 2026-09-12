@@ -47,18 +47,28 @@ namespace GrabnBite.Migrations
                     .IsRequired()
                     .HasColumnType("nvarchar(max)");
 
-                b.Property<bool>("IsApproved")
-                    .HasColumnType("bit");
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
 
                 b.Property<bool>("IsOpen")
                     .HasColumnType("bit");
 
-                // ✅ Incoming branch properties kept
-                b.Property<string>("ImageUrl")
-                    .HasColumnType("nvarchar(max)");
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("decimal(18,2)");
 
-                b.Property<decimal>("Latitude")
-                    .HasColumnType("decimal(18,2)");
+=======
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+>>>>>>> 21eac8d737ee938eac3c53a0f7fefe686636143a
+                    b.Property<decimal>("Latitude")
+                        .HasColumnType("decimal(18,2)");
 
                 b.Property<decimal>("Longitude")
                     .HasColumnType("decimal(18,2)");

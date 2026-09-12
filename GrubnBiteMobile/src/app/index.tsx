@@ -1,16 +1,17 @@
+import { getRestaurantImage } from "@/constants/assetImages";
 import { getRestaurants, Restaurant } from "@/services/restaurantService";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from "react-native";
 
 export default function CustomerHomeScreen() {
@@ -106,12 +107,13 @@ export default function CustomerHomeScreen() {
     <View style={[styles.container, { backgroundColor: palette.background }]}> 
       <View style={[styles.topHeader, { backgroundColor: palette.header, borderBottomColor: palette.cardBorder }]}> 
         <View style={styles.deliveryLocationContainer}>
-          <Text style={[styles.deliveringToLabel, { color: palette.textMuted }]}>DELIVERING TO</Text>
-
-          <View style={styles.locationRow}>
-            <Text style={styles.locationTitle} numberOfLines={1}>
-              Select delivery address
-            </Text>
+          <View style={styles.brandRow}>
+            <Image
+              source={require("@/assets/images/logo.jpeg")}
+              style={styles.brandLogo}
+              resizeMode="cover"
+            />
+            <Text style={[styles.brandName, { color: palette.text }]}>Grubn<Text style={{ color: palette.accent }}>Bite</Text></Text>
           </View>
         </View>
 
@@ -129,9 +131,9 @@ export default function CustomerHomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.greetingSection}>
-          <Text style={styles.greetingTitle}>Hungry?</Text>
+          <Text style={[styles.greetingTitle, { color: palette.accent }]}>Hungry?</Text>
 
-          <Text style={styles.greetingSubtitle}>
+          <Text style={[styles.greetingSubtitle, { color: palette.accent }]}> 
             Order delicious food from local restaurants
           </Text>
         </View>
@@ -210,7 +212,7 @@ export default function CustomerHomeScreen() {
                     source={
                       restaurant.imageUrl
                         ? { uri: restaurant.imageUrl }
-                        : require("@/assets/images/burger.jpg")
+                        : getRestaurantImage(restaurant.name)
                     }
                     style={styles.restaurantImage}
                     resizeMode="cover"
@@ -245,6 +247,57 @@ export default function CustomerHomeScreen() {
             ))}
           </View>
         )}
+
+        {!loading && error === "" && restaurants.length > 0 && (
+          <View style={styles.dealsSection}>
+            <View style={styles.dealsHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>Deals & Discounts</Text>
+                <Text style={[styles.sectionSubtitle, { color: palette.textMuted }]}>Save more on your next order</Text>
+              </View>
+              <Text style={[styles.dealsAccent, { color: palette.accent }]}>TODAY</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dealsList}
+            >
+              {restaurants.slice(0, 5).map((restaurant, index) => (
+                <Pressable
+                  key={`${restaurant.id}-deal`}
+                  style={({ pressed }) => [
+                    styles.dealCard,
+                    { backgroundColor: palette.card, borderColor: palette.cardBorder },
+                    pressed && styles.restaurantCardPressed,
+                  ]}
+                  onPress={() => handleRestaurantPress(restaurant)}
+                >
+                  <Image
+                    source={
+                      restaurant.imageUrl
+                        ? { uri: restaurant.imageUrl }
+                        : getRestaurantImage(restaurant.name)
+                    }
+                    style={styles.dealImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.dealBadge}>
+                    <Text style={styles.dealBadgeText}>{index % 2 === 0 ? "20% OFF" : "15% OFF"}</Text>
+                  </View>
+                  <View style={styles.dealContent}>
+                    <Text style={[styles.dealRestaurantName, { color: palette.text }]} numberOfLines={1}>
+                      {restaurant.name}
+                    </Text>
+                    <Text style={[styles.dealDescription, { color: palette.textSoft }]} numberOfLines={1}>
+                      Limited-time offer
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -267,6 +320,24 @@ const styles = StyleSheet.create({
   deliveryLocationContainer: {
     flex: 1,
     marginRight: 16,
+  },
+
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 7,
+  },
+
+  brandLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+
+  brandName: {
+    fontSize: 18,
+    fontWeight: "800",
   },
 
   deliveringToLabel: {
@@ -456,6 +527,71 @@ const styles = StyleSheet.create({
   addressText: {
     flex: 1,
     fontSize: 11,
+  },
+
+  dealsSection: {
+    marginTop: 10,
+  },
+
+  dealsHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
+  dealsAccent: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginTop: 4,
+  },
+
+  dealsList: {
+    paddingRight: 20,
+  },
+
+  dealCard: {
+    width: 190,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    marginRight: 12,
+  },
+
+  dealImage: {
+    width: "100%",
+    height: 108,
+  },
+
+  dealBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "#F47A20",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+
+  dealBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  dealContent: {
+    padding: 11,
+  },
+
+  dealRestaurantName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  dealDescription: {
+    fontSize: 12,
+    marginTop: 4,
   },
 
   viewText: {

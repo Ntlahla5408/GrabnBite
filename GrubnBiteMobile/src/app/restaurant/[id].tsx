@@ -1,3 +1,4 @@
+import { getMenuItemImage, getRestaurantImage } from "@/constants/assetImages";
 import { FoodColors } from "@/constants/theme";
 import { apiRequest } from "@/services/api";
 import { addCartItem } from "@/services/cartService";
@@ -7,13 +8,13 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface MenuItem {
@@ -33,6 +34,8 @@ export default function RestaurantDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [addingItemId, setAddingItemId] = useState<number | null>(null);
+  const [cartTotal, setCartTotal] = useState(0);
+  const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -71,7 +74,7 @@ export default function RestaurantDetailsScreen() {
         "Log in to order",
         "Create an account or log in before adding items to your cart.",
         [
-          { text: "Cancel", style: "cancel" },
+          { text: "mCancel", style: "cancel" },
           { text: "Log in", onPress: () => router.push("/login") },
         ],
       );
@@ -81,6 +84,8 @@ export default function RestaurantDetailsScreen() {
     try {
       setAddingItemId(item.id);
       await addCartItem({ menuItemId: item.id, quantity: 1 });
+      setCartTotal((total) => total + Number(item.price));
+      setCartItemCount((count) => count + 1);
       Alert.alert("Added to cart", `${item.name} is ready for checkout.`);
     } catch (error) {
       Alert.alert(
@@ -136,7 +141,10 @@ export default function RestaurantDetailsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          cartItemCount > 0 && styles.scrollContentWithCart,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant Hero */}
@@ -149,9 +157,12 @@ export default function RestaurantDetailsScreen() {
               style={styles.heroImage}
             />
           ) : (
-            <View style={styles.heroFallback}>
-              <Text style={styles.heroFallbackText}>Fresh food, made daily</Text>
-            </View>
+            <Image
+              source={getRestaurantImage(restaurant.name)}
+              contentFit="cover"
+              transition={250}
+              style={styles.heroImage}
+            />
           )}
 
           <View
@@ -212,6 +223,12 @@ export default function RestaurantDetailsScreen() {
             key={item.id}
             style={[styles.menuCard, !item.isAvailable && styles.menuCardUnavailable]}
           >
+            <Image
+              source={getMenuItemImage(item.name, restaurant.name)}
+              contentFit="cover"
+              style={styles.menuItemImage}
+            />
+
             <View style={styles.menuItemContent}>
               <Text
                 style={[styles.menuItemName, !item.isAvailable && styles.unavailableText]}
@@ -243,6 +260,21 @@ export default function RestaurantDetailsScreen() {
           </View>
         ))}
       </ScrollView>
+
+      {cartItemCount > 0 && (
+        <Pressable
+          style={styles.viewCartButton}
+          onPress={() => router.push("/cart")}
+        >
+          <View>
+            <Text style={styles.viewCartLabel}>View cart</Text>
+            <Text style={styles.viewCartCount}>
+              {cartItemCount} {cartItemCount === 1 ? "item" : "items"}
+            </Text>
+          </View>
+          <Text style={styles.viewCartTotal}>R{cartTotal.toFixed(2)}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -304,6 +336,10 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     paddingBottom: 40,
+  },
+
+  scrollContentWithCart: {
+    paddingBottom: 112,
   },
 
   hero: {
@@ -431,6 +467,14 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
 
+  menuItemImage: {
+    width: 82,
+    height: 82,
+    borderRadius: 10,
+    marginRight: 12,
+    backgroundColor: FoodColors.oat,
+  },
+
   menuItemContent: {
     flex: 1,
     paddingRight: 12,
@@ -481,6 +525,45 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "500",
     lineHeight: 28,
+  },
+
+  viewCartButton: {
+    position: "absolute",
+    left: 20,
+    right: 20,
+    bottom: 18,
+    minHeight: 62,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: FoodColors.tomato,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  viewCartLabel: {
+    color: FoodColors.onDark,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  viewCartCount: {
+    color: FoodColors.onDark,
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.9,
+  },
+
+  viewCartTotal: {
+    color: FoodColors.onDark,
+    fontSize: 17,
+    fontWeight: "800",
   },
 
   emptyContainer: {

@@ -1,4 +1,5 @@
 import { apiRequest } from "./api";
+import { getToken } from "./sessionService";
 
 export interface CartItem {
   id: number;
@@ -28,7 +29,9 @@ const CART_ENDPOINT = "/api/Cart";
 const CART_ITEMS_ENDPOINT = "/api/Cart/items";
 
 export const getCart = async (): Promise<Cart> => {
-  const response = await apiRequest<unknown>(CART_ENDPOINT);
+  const response = await apiRequest<unknown>(CART_ENDPOINT, {
+    token: getToken(),
+  });
   const payload = response && typeof response === "object" ? response as Record<string, unknown> : {};
   const rawItems = Array.isArray(response)
     ? response
@@ -61,6 +64,7 @@ export const addCartItem = async (
   await apiRequest<void>(CART_ITEMS_ENDPOINT, {
     method: "POST",
     body: JSON.stringify(data),
+    token: getToken(),
   });
 };
 
@@ -71,6 +75,7 @@ export const updateCartItem = async (
   await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
+    token: getToken(),
   });
 };
 
@@ -79,11 +84,13 @@ export const removeCartItem = async (
 ): Promise<void> => {
   await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
     method: "DELETE",
+    token: getToken(),
   });
 };
 
 export const clearCart = async (): Promise<void> => {
   await apiRequest<void>(CART_ENDPOINT, {
     method: "DELETE",
+    token: getToken(),
   });
 };

@@ -1,22 +1,22 @@
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
-import { router } from "expo-router";
 
 import {
-  createRestaurant,
-  deleteRestaurant,
-  getRestaurants,
-  updateRestaurant,
-  type Restaurant,
+    createRestaurant,
+    deleteRestaurant,
+    getRestaurants,
+    updateRestaurant,
+    type Restaurant,
 } from "@/services/adminService";
 
 const COLORS = {
@@ -286,7 +286,7 @@ export default function AdminRestaurants() {
               </View>
             </View>
 
-            <Text style={styles.detail}>📍 {restaurant.address}</Text>
+            <Text style={styles.detail}>{restaurant.address}</Text>
 
             {restaurant.phoneNumber ? (
               <Text style={styles.detail}>📞 {restaurant.phoneNumber}</Text>

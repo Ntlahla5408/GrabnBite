@@ -1,17 +1,17 @@
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 
-import { getOrder, type Order } from "@/services/orderService";
-import { getDeliveryLocation } from "@/services/driverService";
 import RoleGuard from "@/components/RoleGuard";
+import { getDeliveryLocation } from "@/services/driverService";
+import { getOrder, type Order } from "@/services/orderService";
 
 const COLORS = {
   navy: "#071B2C",
@@ -196,8 +196,6 @@ export default function TrackingScreen() {
 
       <View style={styles.mapContainer}>
         <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapIcon}>📍</Text>
-
           <Text style={styles.mapTitle}>
             Delivery Location
           </Text>

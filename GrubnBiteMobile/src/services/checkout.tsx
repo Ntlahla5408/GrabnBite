@@ -1,18 +1,18 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
-    Address,
-    getAddresses,
+  Address,
+  getAddresses,
 } from "../services/addressService";
 import { apiRequest } from "../services/api";
 import { Cart, getCart } from "../services/cartService";
@@ -381,9 +381,6 @@ export default function CheckoutScreen() {
                   style={styles.orderItem}
                 >
                   <View style={styles.foodIcon}>
-                    <Text style={styles.foodEmoji}>
-                      🍔
-                    </Text>
                   </View>
 
                   <View style={styles.orderItemDetails}>

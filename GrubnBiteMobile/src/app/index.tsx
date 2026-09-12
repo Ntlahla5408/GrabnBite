@@ -2,15 +2,15 @@ import { getRestaurants, Restaurant } from "@/services/restaurantService";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
 } from "react-native";
 
 export default function CustomerHomeScreen() {
@@ -109,9 +109,7 @@ export default function CustomerHomeScreen() {
           <Text style={[styles.deliveringToLabel, { color: palette.textMuted }]}>DELIVERING TO</Text>
 
           <View style={styles.locationRow}>
-            <Text style={styles.locationIcon}>📍</Text>
-
-            <Text style={[styles.locationTitle, { color: palette.text }]} numberOfLines={1}>
+            <Text style={styles.locationTitle} numberOfLines={1}>
               Select delivery address
             </Text>
           </View>
@@ -131,8 +129,11 @@ export default function CustomerHomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.greetingSection}>
-          <Text style={[styles.greetingTitle, { color: palette.text }]}>Hungry? 🍔</Text>
-          <Text style={[styles.greetingSubtitle, { color: palette.textSoft }]}>Order delicious food from local restaurants</Text>
+          <Text style={styles.greetingTitle}>Hungry?</Text>
+
+          <Text style={styles.greetingSubtitle}>
+            Order delicious food from local restaurants
+          </Text>
         </View>
 
         <View style={[styles.searchContainer, { backgroundColor: palette.input, borderColor: palette.inputBorder }]}> 

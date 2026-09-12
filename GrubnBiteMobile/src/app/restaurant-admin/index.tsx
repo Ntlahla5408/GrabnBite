@@ -1,22 +1,22 @@
-import React, { useCallback, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import {
-  getRestaurantMenu,
-  getRestaurantOrders,
-  getRestaurants,
-  AdminRestaurant,
-  MenuItem,
-  RestaurantOrder,
+    AdminRestaurant,
+    getRestaurantMenu,
+    getRestaurantOrders,
+    getRestaurants,
+    MenuItem,
+    RestaurantOrder,
 } from "@/services/restaurantAdminService";
 
 const formatStatus = (status?: string) => {
@@ -221,7 +221,7 @@ export default function RestaurantDashboard() {
         </View>
 
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>🍔</Text>
+          <Text style={styles.statIcon}>🍽️</Text>
           <Text style={styles.statNumber}>
             {menuItems.length}
           </Text>

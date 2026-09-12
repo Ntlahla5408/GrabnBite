@@ -4,6 +4,7 @@ using GrabnBite.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260911221859_restuarant location")]
+    partial class restuarantlocation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -467,30 +470,15 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
                     b.Property<decimal>("Latitude")
                         .HasColumnType("decimal(18,2)");
 
-=======
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(max)");
-
->>>>>>> 21eac8d737ee938eac3c53a0f7fefe686636143a
-                    b.Property<decimal>("Latitude")
-                        .HasColumnType("decimal(18,2)");
-
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
                     b.Property<decimal>("Longitude")
                         .HasColumnType("decimal(18,2)");
 

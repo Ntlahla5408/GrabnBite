@@ -46,36 +46,30 @@ export default function RestaurantDetailsScreen() {
       setError("");
 
       const restaurantId = Number(id);
-
       if (Number.isNaN(restaurantId)) {
         throw new Error("Invalid restaurant ID.");
       }
 
       const [restaurantData, menuData] = await Promise.all([
         getRestaurant(restaurantId),
-        apiRequest<MenuItem[]>(
-          `/api/MenuItem/restaurant/${restaurantId}`,
-        ),
+        apiRequest<MenuItem[]>(`/api/MenuItem/restaurant/${restaurantId}`),
       ]);
 
-      console.log("Restaurant:", restaurantData);
-      console.log("Menu:", menuData);
-
       setRestaurant(restaurantData);
-      setMenuItems(menuData);
-    } catch (error) {
-      console.error("Restaurant details error:", error);
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load restaurant.",
-      );
+      setMenuItems(Array.isArray(menuData) ? menuData : []);
+    } catch (err) {
+      console.error("Restaurant details error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load restaurant.");
     } finally {
       setLoading(false);
     }
   };
 
+<<<<<<< HEAD
+  const addToCart = (item: MenuItem) => {
+    // Replace this with your cart logic (context, redux, etc.)
+    console.log("Added to cart:", item);
+=======
   const handleAddToCart = async (item: MenuItem) => {
     if (!isLoggedIn()) {
       Alert.alert(
@@ -101,16 +95,22 @@ export default function RestaurantDetailsScreen() {
     } finally {
       setAddingItemId(null);
     }
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
+<<<<<<< HEAD
+        <ActivityIndicator size="large" color="#208AEF" />
+        <Text style={styles.loadingText}>Loading restaurant...</Text>
+=======
         <ActivityIndicator size="large" color={FoodColors.tomato} />
 
         <Text style={styles.loadingText}>
           Loading restaurant...
         </Text>
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
       </View>
     );
   }
@@ -119,22 +119,10 @@ export default function RestaurantDetailsScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorIcon}>⚠️</Text>
-
-        <Text style={styles.errorTitle}>
-          Couldn't load restaurant
-        </Text>
-
-        <Text style={styles.errorMessage}>
-          {error || "Restaurant not found."}
-        </Text>
-
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>
-            Go Back
-          </Text>
+        <Text style={styles.errorTitle}>Couldn't load restaurant</Text>
+        <Text style={styles.errorMessage}>{error || "Restaurant not found."}</Text>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>Go Back</Text>
         </Pressable>
       </View>
     );
@@ -144,21 +132,15 @@ export default function RestaurantDetailsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backIconButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backIcon}>‹</Text>
+        <Pressable style={styles.backIconButton} onPress={() => router.back()}>
+          <Text style={styles.backIcon}>←</Text>
         </Pressable>
 
         <Text style={styles.headerTitle} numberOfLines={1}>
           {restaurant.name}
         </Text>
 
-        <Pressable
-          style={styles.cartButton}
-          onPress={() => router.push("/cart")}
-        >
+        <Pressable style={styles.cartButton} onPress={() => router.push("/cart")}>
           <Text style={styles.cartIcon}>🛒</Text>
         </Pressable>
       </View>
@@ -169,6 +151,21 @@ export default function RestaurantDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant Hero */}
+<<<<<<< HEAD
+        {restaurant && (
+          <View style={styles.hero}>
+            <Text style={styles.heroEmoji}>🍔</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                restaurant.isOpen ? styles.openBadge : styles.closedBadge,
+              ]}
+            >
+              <Text style={styles.statusText}>
+                {restaurant.isOpen ? "OPEN NOW" : "CLOSED"}
+              </Text>
+            </View>
+=======
         <View style={styles.hero}>
           {restaurant.imageUrl ? (
             <Image
@@ -197,62 +194,43 @@ export default function RestaurantDetailsScreen() {
                 ? "OPEN NOW"
                 : "CLOSED"}
             </Text>
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
           </View>
-        </View>
+        )}
 
         {/* Restaurant Information */}
         <View style={styles.restaurantInfo}>
-          <Text style={styles.restaurantName}>
-            {restaurant.name}
-          </Text>
-
+          <Text style={styles.restaurantName}>{restaurant.name}</Text>
           <Text style={styles.description}>
-            {restaurant.description ||
-              "Delicious food made for you."}
+            {restaurant.description || "Delicious food made for you."}
           </Text>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>📍</Text>
-
-            <Text style={styles.infoText}>
-              {restaurant.address}
-            </Text>
+            <Text style={styles.infoText}>{restaurant.address}</Text>
           </View>
 
           {!!restaurant.phoneNumber && (
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📞</Text>
-
-              <Text style={styles.infoText}>
-                {restaurant.phoneNumber}
-              </Text>
+              <Text style={styles.infoText}>{restaurant.phoneNumber}</Text>
             </View>
           )}
         </View>
 
         {/* Menu Section */}
         <View style={styles.menuSection}>
-          <Text style={styles.menuTitle}>
-            Menu
-          </Text>
-
-          <Text style={styles.menuSubtitle}>
-            Choose something delicious
-          </Text>
+          <Text style={styles.menuTitle}>Menu</Text>
+          <Text style={styles.menuSubtitle}>Choose something delicious</Text>
         </View>
 
         {/* Empty Menu */}
         {menuItems.length === 0 && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>🍽️</Text>
-
-            <Text style={styles.emptyTitle}>
-              No menu items yet
-            </Text>
-
+            <Text style={styles.emptyTitle}>No menu items yet</Text>
             <Text style={styles.emptySubtitle}>
-              This restaurant hasn't added any
-              menu items yet.
+              This restaurant hasn't added any menu items yet.
             </Text>
           </View>
         )}
@@ -261,40 +239,28 @@ export default function RestaurantDetailsScreen() {
         {menuItems.map((item) => (
           <View
             key={item.id}
-            style={[
-              styles.menuCard,
-              !item.isAvailable &&
-                styles.menuCardUnavailable,
-            ]}
+            style={[styles.menuCard, !item.isAvailable && styles.menuCardUnavailable]}
           >
             <View style={styles.menuItemContent}>
               <Text
-                style={[
-                  styles.menuItemName,
-                  !item.isAvailable &&
-                    styles.unavailableText,
-                ]}
+                style={[styles.menuItemName, !item.isAvailable && styles.unavailableText]}
               >
                 {item.name}
               </Text>
-
               <Text style={styles.menuItemDescription}>
-                {item.description ||
-                  "A delicious choice from the restaurant."}
+                {item.description || "A delicious choice from the restaurant."}
               </Text>
-
-              <Text style={styles.price}>
-                R{Number(item.price).toFixed(2)}
-              </Text>
-
+              <Text style={styles.price}>R{Number(item.price).toFixed(2)}</Text>
               {!item.isAvailable && (
-                <Text style={styles.unavailableLabel}>
-                  Currently unavailable
-                </Text>
+                <Text style={styles.unavailableLabel}>Currently unavailable</Text>
               )}
             </View>
 
             {item.isAvailable && (
+<<<<<<< HEAD
+              <Pressable style={styles.addButton} onPress={() => addToCart(item)}>
+                <Text style={styles.addButtonText}>+</Text>
+=======
               <Pressable
                 style={styles.addButton}
                 onPress={() => handleAddToCart(item)}
@@ -305,6 +271,7 @@ export default function RestaurantDetailsScreen() {
                 ) : (
                   <Text style={styles.addButtonText}>+</Text>
                 )}
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
               </Pressable>
             )}
           </View>
@@ -315,6 +282,10 @@ export default function RestaurantDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
+<<<<<<< HEAD
+  // (same styles as before, unchanged)
+});
+=======
   container: {
     flex: 1,
     backgroundColor: FoodColors.oat,
@@ -624,3 +595,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+>>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49

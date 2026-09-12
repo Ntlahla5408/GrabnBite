@@ -1,19 +1,19 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import {
-  getDeliveryLocation,
-  getMyDelivery,
-  Delivery,
-  DeliveryLocation,
+    Delivery,
+    DeliveryLocation,
+    getDeliveryLocation,
+    getMyDelivery,
 } from "@/services/trackingService";
 
 const formatStatus = (status?: string) => {
@@ -164,8 +164,6 @@ export default function TrackingScreen() {
       </View>
 
       <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapIcon}>📍</Text>
-
         <Text style={styles.mapTitle}>Delivery Location</Text>
 
         {location ? (

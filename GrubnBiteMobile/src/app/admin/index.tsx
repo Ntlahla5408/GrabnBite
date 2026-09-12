@@ -1,20 +1,20 @@
 import RoleGuard from "@/components/RoleGuard";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { router } from "expo-router";
 
 import {
-  adminTest,
-  getMenuCategories,
-  getMenuItems,
-  getRestaurants,
+    adminTest,
+    getMenuCategories,
+    getMenuItems,
+    getRestaurants,
 } from "@/services/adminService";
 
 const COLORS = {
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
         <StatCard
           title="Menu Items"
           value={menuItemCount}
-          icon="🍔"
+          icon="🍽️"
         />
       </View>
 

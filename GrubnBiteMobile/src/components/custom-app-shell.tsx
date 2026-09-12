@@ -8,12 +8,6 @@ import { FoodColors } from "@/constants/theme";
 const navigationItems = [
   { label: "Home", path: "/", icon: "home-outline", activeIcon: "home" },
   {
-    label: "Explore",
-    path: "/explore",
-    icon: "compass-outline",
-    activeIcon: "compass",
-  },
-  {
     label: "Orders",
     path: "/orders",
     icon: "receipt-outline",

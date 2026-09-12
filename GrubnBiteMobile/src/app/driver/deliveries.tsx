@@ -1,24 +1,24 @@
 import RoleGuard from "@/components/RoleGuard";
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import {
-  completeDelivery,
-  getDeliveryLocation,
-  getMyDelivery,
-  pickupDelivery,
-  startDelivery,
-  updateDeliveryLocation,
-  Delivery,
+    completeDelivery,
+    Delivery,
+    getDeliveryLocation,
+    getMyDelivery,
+    pickupDelivery,
+    startDelivery,
+    updateDeliveryLocation,
 } from "@/services/driverService";
 
 const formatStatus = (status?: string) => {
@@ -376,10 +376,6 @@ export default function DriverDeliveriesScreen() {
       </Text>
 
       <View style={styles.locationCard}>
-        <Text style={styles.locationIcon}>
-          📍
-        </Text>
-
         {latitude !== null &&
         longitude !== null ? (
           <>

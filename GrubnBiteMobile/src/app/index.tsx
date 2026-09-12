@@ -71,8 +71,6 @@ export default function CustomerHomeScreen() {
           <Text style={styles.deliveringToLabel}>DELIVERING TO</Text>
 
           <View style={styles.locationRow}>
-            <Text style={styles.locationIcon}>📍</Text>
-
             <Text style={styles.locationTitle} numberOfLines={1}>
               Select delivery address
             </Text>
@@ -94,9 +92,7 @@ export default function CustomerHomeScreen() {
       >
         {/* Greeting */}
         <View style={styles.greetingSection}>
-          <Text style={styles.greetingTitle}>
-            Hungry? 🍔
-          </Text>
+          <Text style={styles.greetingTitle}>Hungry?</Text>
 
           <Text style={styles.greetingSubtitle}>
             Order delicious food from local restaurants
@@ -263,10 +259,6 @@ export default function CustomerHomeScreen() {
 
                     <View style={styles.cardFooter}>
                       <View style={styles.addressRow}>
-                        <Text style={styles.addressIcon}>
-                          📍
-                        </Text>
-
                         <Text
                           style={styles.addressText}
                           numberOfLines={1}

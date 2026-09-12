@@ -7,13 +7,13 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 interface MenuItem {
@@ -150,7 +150,6 @@ export default function RestaurantDetailsScreen() {
             />
           ) : (
             <View style={styles.heroFallback}>
-              <Text style={styles.heroEmoji}>🍔</Text>
               <Text style={styles.heroFallbackText}>Fresh food, made daily</Text>
             </View>
           )}
@@ -179,7 +178,6 @@ export default function RestaurantDetailsScreen() {
           </Text>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📍</Text>
             <Text style={styles.infoText}>{restaurant.address}</Text>
           </View>
 

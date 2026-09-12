@@ -1,4 +1,12 @@
+import type { ImageSourcePropType } from "react-native";
 import { apiRequest } from "./api";
+
+const restaurantImages = {
+  burgerKing: require("@/assets/images/BurgerKing.jpeg"),
+  debonairs: require("@/assets/images/Debonaires.jpg"),
+  kfc: require("@/assets/images/kfc.jpg"),
+  mcdonalds: require("@/assets/images/mcdonalds.jpg"),
+} satisfies Record<string, ImageSourcePropType>;
 
 export interface Restaurant {
   id: number;
@@ -12,6 +20,7 @@ export interface Restaurant {
   isOpen: boolean;
   categories: string[];
   imageUrl?: string;
+  imageSource?: ImageSourcePropType;
 }
 
 interface RestaurantResponse {
@@ -34,8 +43,42 @@ interface RestaurantResponse {
   image?: string;
 }
 
+function getLocalImageSource(restaurant: RestaurantResponse): ImageSourcePropType | undefined {
+  const searchableText = [
+    restaurant.name,
+    restaurant.description,
+    restaurant.cuisineType,
+    restaurant.category,
+    restaurant.type,
+    restaurant.cuisine,
+    ...(restaurant.categories ?? []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const compactSearchableText = searchableText.replace(/[^a-z0-9]/g, "");
+
+  if (searchableText.includes("burger king") || compactSearchableText.includes("burgerking")) {
+    return restaurantImages.burgerKing;
+  }
+
+  if (searchableText.includes("debonair")) {
+    return restaurantImages.debonairs;
+  }
+
+  if (searchableText.includes("kfc") || searchableText.includes("kentucky fried chicken")) {
+    return restaurantImages.kfc;
+  }
+
+  if (searchableText.includes("mcdonald")) {
+    return restaurantImages.mcdonalds;
+  }
+
+  return undefined;
+}
+
 const categoryKeywords: Record<string, string[]> = {
-  fastfood: ["fast food", "takeaway", "takeout"],
+  fastfood: ["fast food", "fastfood", "takeaway", "takeout"],
   pizza: ["pizza"],
   wings: ["wing", "wings"],
   burgers: ["burger", "burgers"],
@@ -48,6 +91,9 @@ const categoryKeywords: Record<string, string[]> = {
   chinese: ["chinese"],
   desserts: ["dessert", "cake", "bakery", "sweet"],
   indian: ["indian", "curry"],
+  italian: ["italian", "pasta"],
+  american: ["american"],
+  salad: ["salad", "salads"],
   sandwiches: ["sandwich", "sub", "deli"],
   seafood: ["seafood", "fish", "prawn", "shrimp"],
 };
@@ -129,6 +175,7 @@ const normalizeRestaurant = (
   isOpen: restaurant.isOpen ?? false,
   categories: inferCategories(restaurant),
   imageUrl: restaurant.imageUrl ?? restaurant.image,
+  imageSource: getLocalImageSource(restaurant),
 });
 
 export const getRestaurants = async (): Promise<Restaurant[]> => {

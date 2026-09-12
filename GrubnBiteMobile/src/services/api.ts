@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
-import { getToken } from "./sessionService";
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+
 const API_URL = (
   configuredApiUrl ||
   (Platform.OS === "android"
@@ -11,13 +11,28 @@ const API_URL = (
 
 export const getApiUrl = (): string => API_URL;
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+interface ApiRequestOptions extends RequestInit {
+  token?: string | null;
+}
+
 export const apiRequest = async <T>(
   endpoint: string,
-  options: RequestInit = {},
+  options: ApiRequestOptions = {},
 ): Promise<T> => {
-  const token = getToken();
+  const { token, ...requestOptions } = options;
 
-  const headers = new Headers(options.headers);
+  const headers = new Headers(requestOptions.headers);
+
   headers.set("Content-Type", "application/json");
 
   if (token) {
@@ -28,7 +43,7 @@ export const apiRequest = async <T>(
 
   try {
     response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
+      ...requestOptions,
       headers,
     });
   } catch {
@@ -41,12 +56,12 @@ export const apiRequest = async <T>(
   if (!response.ok) {
     const errorText = await response.text();
 
-    throw new Error(
+    throw new ApiError(
       errorText || `Request failed with status ${response.status}`,
+      response.status,
     );
   }
 
-  // Some endpoints may return no content.
   if (response.status === 204) {
     return undefined as T;
   }

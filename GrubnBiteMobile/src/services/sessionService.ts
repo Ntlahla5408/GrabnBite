@@ -9,6 +9,9 @@ export interface CurrentUser {
   role: string;
 }
 
+const TOKEN_KEY = "grubnbite_token";
+const USER_KEY = "grubnbite_user";
+
 let memoryToken: string | null = null;
 let memoryUser: CurrentUser | null = null;
 
@@ -16,117 +19,134 @@ export async function saveSession(
   token: string,
   user: CurrentUser,
 ): Promise<void> {
+  console.log("SESSION: Saving session");
+
   memoryToken = token;
   memoryUser = user;
 
   if (Platform.OS === "web") {
-    localStorage.setItem("grubnbite_token", token);
-    localStorage.setItem("grubnbite_user", JSON.stringify(user));
+    window.localStorage.setItem(TOKEN_KEY, token);
+    window.localStorage.setItem(USER_KEY, JSON.stringify(user));
     return;
   }
 
-  await SecureStore.setItemAsync("grubnbite_token", token);
-  await SecureStore.setItemAsync("grubnbite_user", JSON.stringify(user));
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
 }
 
 export async function restoreSession(): Promise<void> {
-  if (Platform.OS === "web") {
-    memoryToken = localStorage.getItem("grubnbite_token");
-    memoryUser = getCurrentUser();
-    return;
-  }
+  console.log("SESSION: Restoring session");
 
-  memoryToken = await SecureStore.getItemAsync("grubnbite_token");
-  const storedUser = await SecureStore.getItemAsync("grubnbite_user");
+  try {
+    if (Platform.OS === "web") {
+      memoryToken = window.localStorage.getItem(TOKEN_KEY);
 
-  if (storedUser) {
-    try {
-      memoryUser = JSON.parse(storedUser) as CurrentUser;
-    } catch {
-      memoryUser = null;
+      const storedUser =
+        window.localStorage.getItem(USER_KEY);
+
+      if (storedUser) {
+        memoryUser = JSON.parse(storedUser) as CurrentUser;
+      }
+
+      console.log(
+        "SESSION: Restored:",
+        !!memoryToken,
+        memoryUser,
+      );
+
+      return;
     }
+
+    memoryToken = await SecureStore.getItemAsync(TOKEN_KEY);
+
+    const storedUser =
+      await SecureStore.getItemAsync(USER_KEY);
+
+    if (storedUser) {
+      memoryUser = JSON.parse(storedUser) as CurrentUser;
+    }
+
+    console.log(
+      "SESSION: Restored:",
+      !!memoryToken,
+      memoryUser,
+    );
+  } catch (error) {
+    console.error("SESSION: Restore failed:", error);
+
+    memoryToken = null;
+    memoryUser = null;
   }
 }
 
-export const getCurrentUser = (): CurrentUser | null => {
-  if (memoryUser) {
-    return memoryUser;
-  }
+export function getToken(): string | null {
+  return memoryToken;
+}
 
-  if (typeof localStorage === "undefined") {
-    return null;
-  }
+export function getCurrentUser(): CurrentUser | null {
+  return memoryUser;
+}
 
-  const storedUser = localStorage.getItem("grubnbite_user");
+export function isLoggedIn(): boolean {
+  return !!memoryToken;
+}
 
-  if (!storedUser) {
-    return null;
-  }
+export async function logout(): Promise<void> {
+  console.log("SESSION: Logging out");
 
-  try {
-    return JSON.parse(storedUser) as CurrentUser;
-  } catch {
-    return null;
-  }
-};
-
-export const getToken = (): string | null => {
-  if (memoryToken) {
-    return memoryToken;
-  }
-
-  if (typeof localStorage === "undefined") {
-    return null;
-  }
-
-  return localStorage.getItem("grubnbite_token");
-};
-
-export const isLoggedIn = (): boolean => {
-  return !!getToken();
-};
-
-export const logout = async (): Promise<void> => {
-  // Clear in-memory session immediately
+  // Clear memory first.
   memoryToken = null;
   memoryUser = null;
 
-  // Clear web storage
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("grubnbite_token");
-    localStorage.removeItem("grubnbite_user");
+  try {
+    if (Platform.OS === "web") {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(USER_KEY);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(USER_KEY);
+    }
+
+    console.log("SESSION: Session completely cleared");
+  } catch (error) {
+    console.error("SESSION: Failed to clear storage:", error);
+
+    // Memory is already cleared, so the user is still logged out
+    // for the current app session.
+    throw error;
   }
+}
 
-  // Clear SecureStore on Android/iOS
-  if (Platform.OS !== "web") {
-    await SecureStore.deleteItemAsync("grubnbite_token");
-    await SecureStore.deleteItemAsync("grubnbite_user");
-  }
-};
+export function getUserRole(): string | null {
+  return memoryUser?.role ?? null;
+}
 
-export const getUserRole = (): string | null => {
-  return getCurrentUser()?.role ?? null;
-};
-
-export const normalizeRole = (role?: string | null): string => {
+export function normalizeRole(
+  role?: string | null,
+): string {
   return (role ?? "").trim().toLowerCase();
-};
+}
 
-export const isCustomer = (role?: string | null): boolean => {
+export function isCustomer(
+  role?: string | null,
+): boolean {
   const normalized = normalizeRole(role);
 
   return (
     normalized === "customer" ||
-    normalized === "user" ||
-    normalized === "eventorganiser"
+    normalized === "user"
   );
-};
+}
 
-export const isDriver = (role?: string | null): boolean => {
+export function isDriver(
+  role?: string | null,
+): boolean {
   return normalizeRole(role) === "driver";
-};
+}
 
-export const isRestaurant = (role?: string | null): boolean => {
+export function isRestaurant(
+  role?: string | null,
+): boolean {
   const normalized = normalizeRole(role);
 
   return (
@@ -134,13 +154,17 @@ export const isRestaurant = (role?: string | null): boolean => {
     normalized === "restaurantstaff" ||
     normalized === "staff"
   );
-};
+}
 
-export const isAdmin = (role?: string | null): boolean => {
+export function isAdmin(
+  role?: string | null,
+): boolean {
   return normalizeRole(role) === "admin";
-};
+}
 
-export const getRoleHome = (role?: string | null): string => {
+export function getRoleHome(
+  role?: string | null,
+): string {
   if (isAdmin(role)) {
     return "/admin";
   }
@@ -154,4 +178,4 @@ export const getRoleHome = (role?: string | null): string => {
   }
 
   return "/";
-};
+}

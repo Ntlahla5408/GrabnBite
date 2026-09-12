@@ -1,43 +1,41 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Alert, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
 
 import { logout } from "@/services/sessionService";
 
 export default function LogoutButton() {
-  const handleLogout = () => {
-    Alert.alert(
-      "Log out",
-      "Are you sure you want to log out?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Log out",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await logout();
-              router.replace("/login");
-            } catch (error) {
-              console.error("Logout error:", error);
+  const handleLogout = async () => {
+    console.log("LOGOUT 1: Button pressed");
 
-              Alert.alert(
-                "Logout failed",
-                "We could not log you out. Please try again.",
-              );
-            }
-          },
-        },
-      ],
-    );
+    try {
+      console.log("LOGOUT 2: Clearing session");
+
+      await logout();
+
+      console.log("LOGOUT 3: Session cleared");
+    } catch (error) {
+      console.error("LOGOUT 2 ERROR:", error);
+    }
+
+    console.log("LOGOUT 4: Going to login");
+
+    router.replace("/login");
+
+    console.log("LOGOUT 5: router.replace called");
   };
 
   return (
-    <Pressable style={styles.button} onPress={handleLogout}>
-      <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+    <Pressable
+      style={styles.button}
+      onPress={handleLogout}
+    >
+      <Ionicons
+        name="log-out-outline"
+        size={20}
+        color="#DC2626"
+      />
+
       <Text style={styles.text}>Log out</Text>
     </Pressable>
   );

@@ -15,19 +15,6 @@ export interface Cart {
   items: CartItem[];
 }
 
-interface CartResponseItem {
-  cartItemId: number;
-  menuItemId: number;
-  menuItemName: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-interface CartResponse {
-  cartId?: number;
-  items?: CartResponseItem[];
-}
-
 export interface AddCartItemRequest {
   menuItemId: number;
   quantity: number;
@@ -41,19 +28,30 @@ const CART_ENDPOINT = "/api/Cart";
 const CART_ITEMS_ENDPOINT = "/api/Cart/items";
 
 export const getCart = async (): Promise<Cart> => {
-  const response = await apiRequest<CartResponse>(CART_ENDPOINT);
+  const response = await apiRequest<unknown>(CART_ENDPOINT);
+  const payload = response && typeof response === "object" ? response as Record<string, unknown> : {};
+  const rawItems = Array.isArray(response)
+    ? response
+    : payload.items ?? payload.cartItems ?? (payload.data as Record<string, unknown> | undefined)?.items;
+
+  const items = Array.isArray(rawItems) ? rawItems : [];
 
   return {
-    id: response.cartId ?? 0,
-    items: (response.items ?? []).map((item) => ({
-      id: item.cartItemId,
-      menuItemId: item.menuItemId,
-      quantity: item.quantity,
+    id: Number(payload.cartId ?? payload.id ?? 0),
+    items: items.map((rawItem) => {
+      const item = rawItem as Record<string, unknown>;
+      const menuItem = item.menuItem as Record<string, unknown> | undefined;
+
+      return {
+      id: Number(item.cartItemId ?? item.id ?? 0),
+      menuItemId: Number(item.menuItemId ?? menuItem?.id ?? 0),
+      quantity: Number(item.quantity ?? 0),
       menuItem: {
-        name: item.menuItemName,
-        price: item.unitPrice,
+        name: String(item.menuItemName ?? item.name ?? menuItem?.name ?? "Menu item"),
+        price: Number(item.unitPrice ?? item.price ?? menuItem?.price ?? 0),
       },
-    })),
+      };
+    }),
   };
 };
 

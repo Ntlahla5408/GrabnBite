@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
 import { Alert, Pressable, StyleSheet, Text } from "react-native";
 
 import { logout } from "@/services/sessionService";
@@ -18,9 +17,18 @@ export default function LogoutButton() {
         {
           text: "Log out",
           style: "destructive",
-          onPress: () => {
-            logout();
-            router.replace("/login" as any);
+          onPress: async () => {
+            try {
+              await logout();
+              router.replace("/login");
+            } catch (error) {
+              console.error("Logout error:", error);
+
+              Alert.alert(
+                "Logout failed",
+                "We could not log you out. Please try again.",
+              );
+            }
           },
         },
       ],

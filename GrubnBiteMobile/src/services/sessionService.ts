@@ -86,18 +86,21 @@ export const isLoggedIn = (): boolean => {
   return !!getToken();
 };
 
-export const logout = (): void => {
+export const logout = async (): Promise<void> => {
+  // Clear in-memory session immediately
   memoryToken = null;
   memoryUser = null;
 
+  // Clear web storage
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem("grubnbite_token");
     localStorage.removeItem("grubnbite_user");
   }
 
+  // Clear SecureStore on Android/iOS
   if (Platform.OS !== "web") {
-    void SecureStore.deleteItemAsync("grubnbite_token");
-    void SecureStore.deleteItemAsync("grubnbite_user");
+    await SecureStore.deleteItemAsync("grubnbite_token");
+    await SecureStore.deleteItemAsync("grubnbite_user");
   }
 };
 

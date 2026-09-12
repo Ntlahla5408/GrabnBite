@@ -1,9 +1,14 @@
+import { FoodColors } from "@/constants/theme";
 import { apiRequest } from "@/services/api";
+import { addCartItem } from "@/services/cartService";
 import { Restaurant, getRestaurant } from "@/services/restaurantService";
+import { isLoggedIn } from "@/services/sessionService";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,6 +32,7 @@ export default function RestaurantDetailsScreen() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [addingItemId, setAddingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -70,10 +76,37 @@ export default function RestaurantDetailsScreen() {
     }
   };
 
+  const handleAddToCart = async (item: MenuItem) => {
+    if (!isLoggedIn()) {
+      Alert.alert(
+        "Log in to order",
+        "Create an account or log in before adding items to your cart.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Log in", onPress: () => router.push("/login") },
+        ],
+      );
+      return;
+    }
+
+    try {
+      setAddingItemId(item.id);
+      await addCartItem({ menuItemId: item.id, quantity: 1 });
+      Alert.alert("Added to cart", `${item.name} is ready for checkout.`);
+    } catch (error) {
+      Alert.alert(
+        "Could not add item",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setAddingItemId(null);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#208AEF" />
+        <ActivityIndicator size="large" color={FoodColors.tomato} />
 
         <Text style={styles.loadingText}>
           Loading restaurant...
@@ -137,7 +170,19 @@ export default function RestaurantDetailsScreen() {
       >
         {/* Restaurant Hero */}
         <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>🍔</Text>
+          {restaurant.imageUrl ? (
+            <Image
+              source={{ uri: restaurant.imageUrl }}
+              contentFit="cover"
+              transition={250}
+              style={styles.heroImage}
+            />
+          ) : (
+            <View style={styles.heroFallback}>
+              <Text style={styles.heroEmoji}>🍔</Text>
+              <Text style={styles.heroFallbackText}>Fresh food, made daily</Text>
+            </View>
+          )}
 
           <View
             style={[
@@ -252,16 +297,14 @@ export default function RestaurantDetailsScreen() {
             {item.isAvailable && (
               <Pressable
                 style={styles.addButton}
-                onPress={() =>
-                  console.log(
-                    "Add to cart:",
-                    item,
-                  )
-                }
+                onPress={() => handleAddToCart(item)}
+                disabled={addingItemId === item.id}
               >
-                <Text style={styles.addButtonText}>
-                  +
-                </Text>
+                {addingItemId === item.id ? (
+                  <ActivityIndicator color={FoodColors.onDark} size="small" />
+                ) : (
+                  <Text style={styles.addButtonText}>+</Text>
+                )}
               </Pressable>
             )}
           </View>
@@ -274,14 +317,14 @@ export default function RestaurantDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F9FC",
+    backgroundColor: FoodColors.oat,
   },
 
   header: {
     height: 62,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8ECF1",
+    borderBottomColor: FoodColors.line,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -298,7 +341,7 @@ const styles = StyleSheet.create({
   backIcon: {
     fontSize: 34,
     lineHeight: 34,
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   headerTitle: {
@@ -306,14 +349,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   cartButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#EAF4FF",
+    backgroundColor: FoodColors.peach,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -332,7 +375,7 @@ const styles = StyleSheet.create({
 
   hero: {
     height: 190,
-    backgroundColor: "#DCEBFA",
+    backgroundColor: FoodColors.cream,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -340,6 +383,24 @@ const styles = StyleSheet.create({
 
   heroEmoji: {
     fontSize: 75,
+  },
+
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  heroFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+
+  heroFallbackText: {
+    color: FoodColors.muted,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
   },
 
   statusBadge: {
@@ -352,35 +413,35 @@ const styles = StyleSheet.create({
   },
 
   openBadge: {
-    backgroundColor: "#2E9B59",
+    backgroundColor: FoodColors.green,
   },
 
   closedBadge: {
-    backgroundColor: "#D64545",
+    backgroundColor: FoodColors.tomatoDark,
   },
 
   statusText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 10,
     fontWeight: "800",
   },
 
   restaurantInfo: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8ECF1",
+    borderBottomColor: FoodColors.line,
   },
 
   restaurantName: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   description: {
     fontSize: 14,
-    color: "#69717D",
+    color: FoodColors.muted,
     lineHeight: 20,
     marginTop: 7,
     marginBottom: 14,
@@ -400,7 +461,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: "#69717D",
+    color: FoodColors.muted,
   },
 
   menuSection: {
@@ -412,12 +473,12 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 21,
     fontWeight: "800",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   menuSubtitle: {
     fontSize: 13,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     marginTop: 3,
   },
 
@@ -425,10 +486,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 12,
     padding: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E1E6EC",
+    borderColor: FoodColors.line,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -445,16 +506,16 @@ const styles = StyleSheet.create({
   menuItemName: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   unavailableText: {
-    color: "#777777",
+    color: FoodColors.muted,
   },
 
   menuItemDescription: {
     fontSize: 13,
-    color: "#69717D",
+    color: FoodColors.muted,
     lineHeight: 18,
     marginTop: 5,
   },
@@ -462,13 +523,13 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#208AEF",
+    color: FoodColors.tomato,
     marginTop: 9,
   },
 
   unavailableLabel: {
     fontSize: 11,
-    color: "#D64545",
+    color: FoodColors.tomatoDark,
     fontWeight: "600",
     marginTop: 5,
   },
@@ -477,13 +538,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#208AEF",
+    backgroundColor: FoodColors.tomato,
     alignItems: "center",
     justifyContent: "center",
   },
 
   addButtonText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 26,
     fontWeight: "500",
     lineHeight: 28,
@@ -491,7 +552,7 @@ const styles = StyleSheet.create({
 
   emptyContainer: {
     marginHorizontal: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderRadius: 14,
     padding: 30,
     alignItems: "center",
@@ -504,13 +565,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
     marginTop: 10,
   },
 
   emptySubtitle: {
     fontSize: 13,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     textAlign: "center",
     marginTop: 5,
     lineHeight: 19,

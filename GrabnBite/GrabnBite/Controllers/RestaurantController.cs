@@ -50,6 +50,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = dto.PhoneNumber,
                 Email = dto.Email,
                 Address = dto.Address,
+                ImageUrl = dto.ImageUrl,
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
 
@@ -72,6 +73,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,
+                ImageUrl = restaurant.ImageUrl,
                 Latitude = restaurant.Latitude,
                 Longitude = restaurant.Longitude,
                 IsOpen = restaurant.IsOpen,
@@ -101,6 +103,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = r.PhoneNumber,
                 Email = r.Email,
                 Address = r.Address,
+                ImageUrl = r.ImageUrl,
                 Latitude = r.Latitude,
                 Longitude = r.Longitude,
                 IsOpen = r.IsOpen,
@@ -132,6 +135,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,
+                ImageUrl = restaurant.ImageUrl,
                 Latitude = restaurant.Latitude,
                 Longitude = restaurant.Longitude,
                 IsOpen = restaurant.IsOpen,
@@ -174,6 +178,7 @@ namespace GrabnBite.Controllers
             restaurant.PhoneNumber = dto.PhoneNumber;
             restaurant.Email = dto.Email;
             restaurant.Address = dto.Address;
+            restaurant.ImageUrl = dto.ImageUrl;
             restaurant.Latitude = dto.Latitude;
             restaurant.Longitude = dto.Longitude;
             restaurant.IsOpen = dto.IsOpen;
@@ -188,6 +193,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,
+                ImageUrl = restaurant.ImageUrl,
                 Latitude = restaurant.Latitude,
                 Longitude = restaurant.Longitude,
                 IsOpen = restaurant.IsOpen,

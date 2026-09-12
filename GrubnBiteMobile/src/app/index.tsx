@@ -1,4 +1,6 @@
+import { FoodColors } from "@/constants/theme";
 import { getRestaurants, Restaurant } from "@/services/restaurantService";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -11,9 +13,29 @@ import {
   View,
 } from "react-native";
 
+const foodCategories = [
+  { key: "all", label: "All", emoji: "✨" },
+  { key: "fastfood", label: "Fast food", emoji: "🍟" },
+  { key: "pizza", label: "Pizza", emoji: "🍕" },
+  { key: "wings", label: "Wings", emoji: "🍗" },
+  { key: "burgers", label: "Burgers", emoji: "🍔" },
+  { key: "chicken", label: "Chicken", emoji: "🍗" },
+  { key: "breakfast", label: "Breakfast", emoji: "🥞" },
+  { key: "ice-cream", label: "Ice cream", emoji: "🍦" },
+  { key: "sushi", label: "Sushi", emoji: "🍣" },
+  { key: "coffee", label: "Coffee", emoji: "☕" },
+  { key: "smoothies", label: "Smoothies", emoji: "🥤" },
+  { key: "chinese", label: "Chinese", emoji: "🥡" },
+  { key: "desserts", label: "Desserts", emoji: "🍰" },
+  { key: "indian", label: "Indian", emoji: "🍛" },
+  { key: "sandwiches", label: "Sandwiches", emoji: "🥪" },
+  { key: "seafood", label: "Seafood", emoji: "🦐" },
+] as const;
+
 export default function CustomerHomeScreen() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -46,6 +68,13 @@ export default function CustomerHomeScreen() {
 
   const filteredRestaurants = restaurants.filter((restaurant) => {
     const query = searchQuery.toLowerCase().trim();
+    const matchesCategory =
+      selectedCategory === "all" ||
+      restaurant.categories.includes(selectedCategory);
+
+    if (!matchesCategory) {
+      return false;
+    }
 
     if (!query) {
       return true;
@@ -109,7 +138,7 @@ export default function CustomerHomeScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search restaurants, burgers, pizzas..."
-            placeholderTextColor="#8A8F98"
+            placeholderTextColor={FoodColors.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -125,6 +154,36 @@ export default function CustomerHomeScreen() {
             </Pressable>
           )}
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryList}
+        >
+          {foodCategories.map((category) => {
+            const active = selectedCategory === category.key;
+
+            return (
+              <Pressable
+                key={category.key}
+                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(category.key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                <Text
+                  style={[
+                    styles.categoryLabel,
+                    active && styles.categoryLabelActive,
+                  ]}
+                >
+                  {category.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         {/* Section Header */}
         <View style={styles.sectionHeader}>
@@ -146,7 +205,7 @@ export default function CustomerHomeScreen() {
         {/* Loading */}
         {loading && (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#208AEF" />
+            <ActivityIndicator size="large" color={FoodColors.tomato} />
 
             <Text style={styles.loadingText}>
               Finding restaurants...
@@ -190,7 +249,7 @@ export default function CustomerHomeScreen() {
               </Text>
 
               <Text style={styles.emptySubtitle}>
-                Try searching for another restaurant.
+                Try another search or food category.
               </Text>
             </View>
           )}
@@ -213,9 +272,21 @@ export default function CustomerHomeScreen() {
                 >
                   {/* Restaurant Image Placeholder */}
                   <View style={styles.imageWrapper}>
-                    <Text style={styles.foodEmoji}>
-                      🍔
-                    </Text>
+                    {restaurant.imageUrl ? (
+                      <Image
+                        source={{ uri: restaurant.imageUrl }}
+                        contentFit="cover"
+                        transition={250}
+                        style={styles.restaurantImage}
+                      />
+                    ) : (
+                      <View style={styles.imageFallback}>
+                        <Text style={styles.foodEmoji}>🍔</Text>
+                        <Text style={styles.imageFallbackText}>
+                          Freshly made for you
+                        </Text>
+                      </View>
+                    )}
 
                     <View style={styles.imageOverlayBadge}>
                       <View
@@ -285,7 +356,7 @@ export default function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F9FC",
+    backgroundColor: FoodColors.oat,
   },
 
   topHeader: {
@@ -294,9 +365,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8ECF1",
+    borderBottomColor: FoodColors.line,
   },
 
   deliveryLocationContainer: {
@@ -307,7 +378,7 @@ const styles = StyleSheet.create({
   deliveringToLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#8A8F98",
+    color: FoodColors.muted,
     letterSpacing: 0.8,
   },
 
@@ -326,14 +397,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "600",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   cartHeaderButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#EAF4FF",
+    backgroundColor: FoodColors.peach,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -358,43 +429,79 @@ const styles = StyleSheet.create({
   greetingTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   greetingSubtitle: {
     fontSize: 14,
-    color: "#69717D",
+    color: FoodColors.muted,
     marginTop: 5,
   },
 
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: FoodColors.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
     borderWidth: 1,
-    borderColor: "#DDE3EA",
+    borderColor: FoodColors.line,
     marginBottom: 24,
+  },
+
+  categoryList: {
+    gap: 9,
+    paddingBottom: 22,
+  },
+
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 13,
+    borderRadius: 20,
+    backgroundColor: FoodColors.surface,
+    borderWidth: 1,
+    borderColor: FoodColors.line,
+  },
+
+  categoryChipActive: {
+    backgroundColor: FoodColors.tomato,
+    borderColor: FoodColors.tomato,
+  },
+
+  categoryEmoji: {
+    fontSize: 15,
+  },
+
+  categoryLabel: {
+    color: FoodColors.muted,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  categoryLabelActive: {
+    color: FoodColors.onDark,
   },
 
   searchIcon: {
     fontSize: 25,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     marginRight: 8,
   },
 
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#222831",
+    color: FoodColors.ink,
     outlineStyle: "none" as any,
   },
 
   clearButton: {
     fontSize: 24,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     lineHeight: 24,
   },
 
@@ -405,22 +512,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 19,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   sectionSubtitle: {
     fontSize: 12,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     marginTop: 3,
   },
 
   restaurantCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    backgroundColor: FoodColors.surface,
+    borderRadius: 18,
     overflow: "hidden",
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#E1E6EC",
+    borderColor: FoodColors.line,
   },
 
   restaurantCardPressed: {
@@ -431,14 +538,32 @@ const styles = StyleSheet.create({
   imageWrapper: {
     height: 155,
     width: "100%",
-    backgroundColor: "#DCEBFA",
+    backgroundColor: FoodColors.cream,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
 
+  restaurantImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  imageFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+
   foodEmoji: {
     fontSize: 65,
+  },
+
+  imageFallbackText: {
+    color: FoodColors.muted,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 4,
   },
 
   imageOverlayBadge: {
@@ -454,15 +579,15 @@ const styles = StyleSheet.create({
   },
 
   openBadge: {
-    backgroundColor: "#2E9B59",
+    backgroundColor: FoodColors.green,
   },
 
   closedBadge: {
-    backgroundColor: "#D64545",
+    backgroundColor: FoodColors.tomatoDark,
   },
 
   statusBadgeText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -482,19 +607,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
   },
 
   restaurantDescription: {
     fontSize: 13,
-    color: "#69717D",
+    color: FoodColors.muted,
     lineHeight: 18,
     marginBottom: 13,
   },
 
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: "#EDF0F3",
+    borderTopColor: FoodColors.line,
     paddingTop: 11,
     flexDirection: "row",
     alignItems: "center",
@@ -516,13 +641,13 @@ const styles = StyleSheet.create({
   addressText: {
     flex: 1,
     fontSize: 11,
-    color: "#8A8F98",
+    color: FoodColors.muted,
   },
 
   viewText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#208AEF",
+    color: FoodColors.tomato,
   },
 
   centerContainer: {
@@ -535,7 +660,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#69717D",
+    color: FoodColors.muted,
   },
 
   errorIcon: {
@@ -551,27 +676,27 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#222831",
+    color: FoodColors.ink,
     textAlign: "center",
   },
 
   emptySubtitle: {
     fontSize: 13,
-    color: "#8A8F98",
+    color: FoodColors.muted,
     marginTop: 5,
     textAlign: "center",
   },
 
   retryButton: {
     marginTop: 18,
-    backgroundColor: "#208AEF",
+    backgroundColor: FoodColors.tomato,
     paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 9,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
 
   retryButtonText: {
-    color: "#FFFFFF",
+    color: FoodColors.onDark,
     fontSize: 14,
     fontWeight: "700",
   },

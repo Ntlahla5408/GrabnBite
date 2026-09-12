@@ -71,7 +71,7 @@ namespace GrabnBite.Data
                 Name = "Burger House",
                 Description = "Test burgers and fries",
                 PhoneNumber = "+27112223333",
-                Email = "orders@burgerhouse.local",
+                Email = "orders@burger.local",
                 Address = "5 Food St",
                 Latitude = 0m,
                 Longitude = 0m,

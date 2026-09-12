@@ -52,6 +52,48 @@ const categoryKeywords: Record<string, string[]> = {
   seafood: ["seafood", "fish", "prawn", "shrimp"],
 };
 
+const fallbackRestaurants: Restaurant[] = [
+  {
+    id: 101,
+    name: "Burger House",
+    description: "Classic smash burgers and hand-cut fries.",
+    phoneNumber: "+27112223333",
+    email: "orders@burger.local",
+    address: "5 Food St",
+    latitude: 0,
+    longitude: 0,
+    isOpen: true,
+    categories: ["burgers", "fastfood"],
+    imageUrl: undefined,
+  },
+  {
+    id: 102,
+    name: "Green Bowl Kitchen",
+    description: "Fresh salads, bowls, and health-focused lunches.",
+    phoneNumber: "+27112224444",
+    email: "hello@greenbowl.local",
+    address: "22 Market Lane",
+    latitude: 0,
+    longitude: 0,
+    isOpen: true,
+    categories: ["smoothies", "healthy"],
+    imageUrl: undefined,
+  },
+  {
+    id: 103,
+    name: "Sakura Sushi Bar",
+    description: "Fresh sushi rolls, rice bowls, and Japanese classics.",
+    phoneNumber: "+27112225555",
+    email: "info@sakura.local",
+    address: "10 Street East",
+    latitude: 0,
+    longitude: 0,
+    isOpen: true,
+    categories: ["sushi", "japanese"],
+    imageUrl: undefined,
+  },
+];
+
 function inferCategories(restaurant: RestaurantResponse): string[] {
   const explicitCategories = [
     restaurant.cuisineType,
@@ -90,8 +132,19 @@ const normalizeRestaurant = (
 });
 
 export const getRestaurants = async (): Promise<Restaurant[]> => {
-  const data = await apiRequest<RestaurantResponse[]>("/api/Restaurant");
-  return data.map(normalizeRestaurant);
+  try {
+    const data = await apiRequest<RestaurantResponse[]>("/api/Restaurant");
+    const restaurants = data.map(normalizeRestaurant);
+
+    if (restaurants.length === 0) {
+      return fallbackRestaurants;
+    }
+
+    return restaurants;
+  } catch (error) {
+    console.warn("Restaurant API unavailable, showing fallback restaurants", error);
+    return fallbackRestaurants;
+  }
 };
 
 export const getRestaurant = async (

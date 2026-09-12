@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { getToken } from "./sessionService";
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const API_URL = (
@@ -8,14 +9,13 @@ const API_URL = (
     : "http://localhost:5277")
 ).replace(/\/$/, "");
 
+export const getApiUrl = (): string => API_URL;
+
 export const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> => {
-  const token =
-    typeof localStorage === "undefined"
-      ? null
-      : localStorage.getItem("grubnbite_token");
+  const token = getToken();
 
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");

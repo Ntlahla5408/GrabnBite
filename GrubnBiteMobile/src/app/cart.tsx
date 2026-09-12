@@ -1,9 +1,9 @@
 import {
+  Cart,
   clearCart,
   getCart,
   removeCartItem,
   updateCartItem,
-  Cart,
 } from "@/services/cartService";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -60,20 +60,10 @@ export default function CartScreen() {
     try {
       setUpdating(true);
 
-      const updatedItem = await updateCartItem(itemId, {
+      await updateCartItem(itemId, {
         quantity,
       });
-
-      setCart((currentCart) => {
-        if (!currentCart) return currentCart;
-
-        return {
-          ...currentCart,
-          items: currentCart.items.map((item) =>
-            item.id === itemId ? updatedItem : item,
-          ),
-        };
-      });
+      await loadCart();
     } catch (error) {
       console.error("Quantity update error:", error);
 

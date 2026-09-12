@@ -10,6 +10,26 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
+## Connect the backend
+
+The frontend sends requests through `src/services/api.ts`. Add the backend's
+base URL to a local `.env.local` file:
+
+```bash
+EXPO_PUBLIC_API_URL=https://localhost:7127
+```
+
+Use the address that is reachable from the device running Expo. For an Android
+emulator, use the backend's emulator-reachable address and port; for a physical
+phone, use the computer's LAN IP, for example
+`http://192.168.1.20:5277`. Restart Expo after changing
+the variable.
+
+Endpoint paths belong in the service files under `src/services/`, such as
+`restaurantService.ts`, `orderService.ts`, and `adminService.ts`. Screens call
+those service functions rather than calling `fetch` directly. Authentication
+tokens are stored by `sessionService.ts` and automatically added to requests.
+
 2. Start the app
 
    ```bash

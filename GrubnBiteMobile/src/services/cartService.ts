@@ -2,25 +2,30 @@ import { apiRequest } from "./api";
 
 export interface CartItem {
   id: number;
-  cartId: number;
   menuItemId: number;
   quantity: number;
-
-  // These names may depend on the exact backend response.
-  // We will verify them during integration testing.
   menuItem?: {
-    id: number;
     name: string;
-    description: string;
     price: number;
-    isAvailable: boolean;
   };
 }
 
 export interface Cart {
   id: number;
-  userId: number;
   items: CartItem[];
+}
+
+interface CartResponseItem {
+  cartItemId: number;
+  menuItemId: number;
+  menuItemName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+interface CartResponse {
+  cartId?: number;
+  items?: CartResponseItem[];
 }
 
 export interface AddCartItemRequest {
@@ -33,13 +38,26 @@ export interface UpdateCartItemRequest {
 }
 
 export const getCart = async (): Promise<Cart> => {
-  return await apiRequest<Cart>("/api/Cart");
+  const response = await apiRequest<CartResponse>("/api/Cart");
+
+  return {
+    id: response.cartId ?? 0,
+    items: (response.items ?? []).map((item) => ({
+      id: item.cartItemId,
+      menuItemId: item.menuItemId,
+      quantity: item.quantity,
+      menuItem: {
+        name: item.menuItemName,
+        price: item.unitPrice,
+      },
+    })),
+  };
 };
 
 export const addCartItem = async (
   data: AddCartItemRequest,
-): Promise<CartItem> => {
-  return await apiRequest<CartItem>("/api/Cart/items", {
+): Promise<void> => {
+  await apiRequest<void>("/api/Cart/items", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -48,8 +66,8 @@ export const addCartItem = async (
 export const updateCartItem = async (
   id: number,
   data: UpdateCartItemRequest,
-): Promise<CartItem> => {
-  return await apiRequest<CartItem>(`/api/Cart/items/${id}`, {
+): Promise<void> => {
+  await apiRequest<void>(`/api/Cart/items/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });

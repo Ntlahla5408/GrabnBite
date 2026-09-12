@@ -1,15 +1,14 @@
-```tsx
-import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
 
 import { apiRequest } from "../services/api";
 
@@ -940,4 +939,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-```

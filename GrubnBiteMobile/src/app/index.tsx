@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -213,9 +214,15 @@ export default function CustomerHomeScreen() {
                 >
                   {/* Restaurant Image Placeholder */}
                   <View style={styles.imageWrapper}>
-                    <Text style={styles.foodEmoji}>
-                      🍔
-                    </Text>
+                    <Image
+                      source={
+                        restaurant.imageUrl
+                          ? { uri: restaurant.imageUrl }
+                          : require("@/assets/images/burger.jpg")
+                      }
+                      style={styles.restaurantImage}
+                      resizeMode="cover"
+                    />
 
                     <View style={styles.imageOverlayBadge}>
                       <View
@@ -437,8 +444,9 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  foodEmoji: {
-    fontSize: 65,
+  restaurantImage: {
+    width: "100%",
+    height: "100%",
   },
 
   imageOverlayBadge: {

@@ -5,8 +5,8 @@ const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 const API_URL = (
   configuredApiUrl ||
   (Platform.OS === "android"
-    ? "http://10.0.2.2:5277"
-    : "http://localhost:5277")
+    ? "https://10.0.2.2:7127"
+    : "https://localhost:7127")
 ).replace(/\/$/, "");
 
 export const getApiUrl = (): string => API_URL;

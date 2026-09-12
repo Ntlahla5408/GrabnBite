@@ -1,3 +1,4 @@
+
 import {
   Cart,
   clearCart,
@@ -5,7 +6,8 @@ import {
   removeCartItem,
   updateCartItem,
 } from "@/services/cartService";
-import { isLoggedIn } from "@/services/sessionService";
+import { getToken, isLoggedIn } from "@/services/sessionService";
+// import { isLoggedIn } from "@/services/sessionService";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -31,23 +33,28 @@ export default function CartScreen() {
   const [error, setError] = useState("");
 
   const loadCart = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
+  try {
+    setLoading(true);
+    setError("");
 
-      const data = await getCart();
-      setCart(data);
-    } catch (caughtError) {
-      console.error("Cart error:", caughtError);
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Failed to load cart.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    console.log("CART LOGIN:", isLoggedIn());
+    console.log("CART TOKEN EXISTS:", !!getToken());
+    console.log("CART TOKEN:", getToken());
+
+    const data = await getCart();
+    setCart(data);
+  } catch (caughtError) {
+    console.error("Cart error:", caughtError);
+
+    setError(
+      caughtError instanceof Error
+        ? caughtError.message
+        : "Failed to load cart.",
+    );
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     if (!isLoggedIn()) {

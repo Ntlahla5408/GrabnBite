@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Slot, router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FoodColors } from "@/constants/theme";
@@ -56,16 +56,44 @@ export default function CustomAppShell() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const hideNavigation = isNavigationHidden(pathname);
+  const scheme = useColorScheme();
+  const dark = scheme === "dark";
+  const palette = dark
+    ? {
+        shell: "#11151b",
+        wrap: "#11151b",
+        nav: "#171b22",
+        border: "#303540",
+        label: "#d9dce3",
+        muted: "#aeb4bf",
+        active: FoodColors.tomato,
+        activeBubble: "#40261e",
+      }
+    : {
+        shell: FoodColors.oat,
+        wrap: FoodColors.oat,
+        nav: FoodColors.surface,
+        border: FoodColors.line,
+        label: FoodColors.ink,
+        muted: FoodColors.muted,
+        active: FoodColors.tomato,
+        activeBubble: FoodColors.peach,
+      };
 
   return (
-    <View style={styles.shell}>
+    <View style={[styles.shell, { backgroundColor: palette.shell }]}>
       <View style={styles.content}>
         <Slot />
       </View>
 
       {!hideNavigation && (
-        <View style={[styles.navWrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
-          <View style={styles.navBar}>
+        <View
+          style={[
+            styles.navWrap,
+            { backgroundColor: palette.wrap, paddingBottom: Math.max(insets.bottom, 10) },
+          ]}
+        >
+          <View style={[styles.navBar, { backgroundColor: palette.nav, borderColor: palette.border }]}> 
             {navigationItems.map((item) => {
               const active = isActivePath(pathname, item.path);
               const iconName = active ? item.activeIcon : item.icon;
@@ -82,14 +110,14 @@ export default function CustomAppShell() {
                     pressed && styles.navItemPressed,
                   ]}
                 >
-                  <View style={[styles.iconBubble, active && styles.activeBubble]}>
+                  <View style={[styles.iconBubble, active && styles.activeBubble, active && { backgroundColor: palette.activeBubble }]}> 
                     <Ionicons
                       name={iconName as keyof typeof Ionicons.glyphMap}
                       size={21}
-                      color={active ? FoodColors.tomato : FoodColors.muted}
+                      color={active ? palette.active : palette.muted}
                     />
                   </View>
-                  <Text style={[styles.navLabel, active && styles.activeLabel]}>
+                  <Text style={[styles.navLabel, active && styles.activeLabel, { color: active ? palette.active : palette.muted }]}>
                     {item.label}
                   </Text>
                 </Pressable>
@@ -105,7 +133,6 @@ export default function CustomAppShell() {
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    backgroundColor: FoodColors.oat,
   },
   content: {
     flex: 1,
@@ -113,7 +140,6 @@ const styles = StyleSheet.create({
   navWrap: {
     paddingHorizontal: 14,
     paddingTop: 8,
-    backgroundColor: FoodColors.oat,
   },
   navBar: {
     flexDirection: "row",
@@ -122,9 +148,7 @@ const styles = StyleSheet.create({
     minHeight: 68,
     borderRadius: 22,
     paddingHorizontal: 5,
-    backgroundColor: FoodColors.surface,
     borderWidth: 1,
-    borderColor: FoodColors.line,
     shadowColor: FoodColors.ink,
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.08,
@@ -152,11 +176,10 @@ const styles = StyleSheet.create({
     backgroundColor: FoodColors.peach,
   },
   navLabel: {
-    color: FoodColors.muted,
     fontSize: 10,
     fontWeight: "700",
   },
   activeLabel: {
-    color: FoodColors.tomato,
+    fontWeight: "800",
   },
 });

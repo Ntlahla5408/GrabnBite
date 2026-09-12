@@ -65,11 +65,6 @@ export default function RestaurantDetailsScreen() {
     }
   };
 
-<<<<<<< HEAD
-  const addToCart = (item: MenuItem) => {
-    // Replace this with your cart logic (context, redux, etc.)
-    console.log("Added to cart:", item);
-=======
   const handleAddToCart = async (item: MenuItem) => {
     if (!isLoggedIn()) {
       Alert.alert(
@@ -95,22 +90,16 @@ export default function RestaurantDetailsScreen() {
     } finally {
       setAddingItemId(null);
     }
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
   };
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-<<<<<<< HEAD
-        <ActivityIndicator size="large" color="#208AEF" />
-        <Text style={styles.loadingText}>Loading restaurant...</Text>
-=======
         <ActivityIndicator size="large" color={FoodColors.tomato} />
 
         <Text style={styles.loadingText}>
           Loading restaurant...
         </Text>
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
       </View>
     );
   }
@@ -151,21 +140,6 @@ export default function RestaurantDetailsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant Hero */}
-<<<<<<< HEAD
-        {restaurant && (
-          <View style={styles.hero}>
-            <Text style={styles.heroEmoji}>🍔</Text>
-            <View
-              style={[
-                styles.statusBadge,
-                restaurant.isOpen ? styles.openBadge : styles.closedBadge,
-              ]}
-            >
-              <Text style={styles.statusText}>
-                {restaurant.isOpen ? "OPEN NOW" : "CLOSED"}
-              </Text>
-            </View>
-=======
         <View style={styles.hero}>
           {restaurant.imageUrl ? (
             <Image
@@ -194,9 +168,8 @@ export default function RestaurantDetailsScreen() {
                 ? "OPEN NOW"
                 : "CLOSED"}
             </Text>
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
           </View>
-        )}
+        </View>
 
         {/* Restaurant Information */}
         <View style={styles.restaurantInfo}>
@@ -257,10 +230,6 @@ export default function RestaurantDetailsScreen() {
             </View>
 
             {item.isAvailable && (
-<<<<<<< HEAD
-              <Pressable style={styles.addButton} onPress={() => addToCart(item)}>
-                <Text style={styles.addButtonText}>+</Text>
-=======
               <Pressable
                 style={styles.addButton}
                 onPress={() => handleAddToCart(item)}
@@ -271,7 +240,6 @@ export default function RestaurantDetailsScreen() {
                 ) : (
                   <Text style={styles.addButtonText}>+</Text>
                 )}
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49
               </Pressable>
             )}
           </View>
@@ -282,10 +250,6 @@ export default function RestaurantDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  // (same styles as before, unchanged)
-});
-=======
   container: {
     flex: 1,
     backgroundColor: FoodColors.oat,
@@ -595,4 +559,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
->>>>>>> dc9dafa5589dfa83018c38dbbf915c2221f1bc49

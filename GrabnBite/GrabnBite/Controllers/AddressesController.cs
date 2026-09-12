@@ -10,7 +10,7 @@ namespace GrabnBite.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    
     public class AddressesController : ControllerBase
     {
         private readonly AppDbContext dbContext;

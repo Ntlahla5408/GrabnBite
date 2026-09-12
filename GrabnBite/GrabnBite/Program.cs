@@ -102,5 +102,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+try
+{
+    app.Seed();
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Database seeding failed.");
+    throw;
+}
 
 app.Run();

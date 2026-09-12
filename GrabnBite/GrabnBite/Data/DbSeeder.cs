@@ -76,16 +76,16 @@ namespace GrabnBite.Data
             }
 
             // --- Restaurant (Burger House) ---
-            var restaurant = context.Restaurants.FirstOrDefault(r => r.Email == "orders@burger.local");
+            var restaurant = context.Restaurants.FirstOrDefault(r => r.Email == "burgerking.co.za");
             if (restaurant == null)
             {
                 restaurant = new Restaurant
                 {
-                    Name = "Burger House",
-                    Description = "Test burgers and fries",
+                    Name = "Burger King Walmer",
+                    Description = "Fast-food restaurant company",
                     PhoneNumber = "+27112223333",
-                    Email = "orders@burger.local",
-                    Address = "5 Food St",
+                    Email = "burgerking.co.za",
+                    Address = "108 Heugh Rd, Walmer, Gqeberha, 6070",
                     Latitude = 0m,
                     Longitude = 0m,
                     IsOpen = true,
@@ -98,16 +98,16 @@ namespace GrabnBite.Data
             }
 
             // --- Restaurant (Pizza House) ---
-            var restaurant1 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@pizza.local");
+            var restaurant1 = context.Restaurants.FirstOrDefault(r => r.Email == "debonairspizza.co.za");
             if (restaurant1 == null)
             {
                 restaurant1 = new Restaurant
                 {
-                    Name = "Pizza House",
+                    Name = "Debonairs Pizza Summerstrand Village",
                     Description = "Test pizzas and pies",
-                    PhoneNumber = "+27112224444",
-                    Email = "orders@pizza.local",   
-                    Address = "5 Govan Mbeki St",
+                    PhoneNumber = "0415831490",
+                    Email = "debonairspizza.co.za",   
+                    Address = "Shop 8, 8th Ave, Summerstrand, Gqeberha, 6001",
                     Latitude = 0m,
                     Longitude = 0m,
                     IsOpen = true,
@@ -154,17 +154,17 @@ namespace GrabnBite.Data
 
             context.SaveChanges();
 
-            // --- New: Sushi Corner ---
-            var restaurant2 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@sushi.local");
+            // --- New: KFC Summerstrand Village ---
+            var restaurant2 = context.Restaurants.FirstOrDefault(r => r.Email == "kfcsummerstrandvillage@kfc.co.za");
             if (restaurant2 == null)
             {
                 restaurant2 = new Restaurant
                 {
-                    Name = "Sushi Corner",
-                    Description = "Fresh sushi, nigiri and rolls",
-                    PhoneNumber = "+27112225555",
-                    Email = "orders@sushi.local",
-                    Address = "12 Ocean Ave",
+                    Name = "KFC Summerstrand Village",
+                    Description = "Fast food restaurant",
+                    PhoneNumber = "0418800344",
+                    Email = "kfcsummerstrandvillage@kfc.co.za",
+                    Address = "8th Ave &, Marine Dr, Summerstrand, Gqeberha, 6001",
                     Latitude = 0m,
                     Longitude = 0m,
                     IsOpen = true,
@@ -176,17 +176,17 @@ namespace GrabnBite.Data
                 context.SaveChanges();
             }
 
-            // --- New: Taco Town ---
-            var restaurant3 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@taco.local");
+            // --- New: McDonald’s Walmer ---
+            var restaurant3 = context.Restaurants.FirstOrDefault(r => r.Email == "mcdonaldswalmer@co.za");
             if (restaurant3 == null)
             {
                 restaurant3 = new Restaurant
                 {
-                    Name = "Taco Town",
-                    Description = "Street-style tacos and sides",
+                    Name = "McDonald’s Walmer",
+                    Description = "Classic, long-running fast-food chain known for its burgers & fries",
                     PhoneNumber = "+27112226666",
-                    Email = "orders@taco.local",
-                    Address = "9 Spice Road",
+                    Email = "mcdonaldswalmer@co.za",
+                    Address = "59 Heugh Rd, Walmer, Gqeberha, 6065",
                     Latitude = 0m,
                     Longitude = 0m,
                     IsOpen = true,

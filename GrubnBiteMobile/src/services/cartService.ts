@@ -37,8 +37,11 @@ export interface UpdateCartItemRequest {
   quantity: number;
 }
 
+const CART_ENDPOINT = "/api/Cart";
+const CART_ITEMS_ENDPOINT = "/api/Cart/items";
+
 export const getCart = async (): Promise<Cart> => {
-  const response = await apiRequest<CartResponse>("/api/Cart");
+  const response = await apiRequest<CartResponse>(CART_ENDPOINT);
 
   return {
     id: response.cartId ?? 0,
@@ -57,7 +60,7 @@ export const getCart = async (): Promise<Cart> => {
 export const addCartItem = async (
   data: AddCartItemRequest,
 ): Promise<void> => {
-  await apiRequest<void>("/api/Cart/items", {
+  await apiRequest<void>(CART_ITEMS_ENDPOINT, {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -67,7 +70,7 @@ export const updateCartItem = async (
   id: number,
   data: UpdateCartItemRequest,
 ): Promise<void> => {
-  await apiRequest<void>(`/api/Cart/items/${id}`, {
+  await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
@@ -76,13 +79,13 @@ export const updateCartItem = async (
 export const removeCartItem = async (
   id: number,
 ): Promise<void> => {
-  await apiRequest<void>(`/api/Cart/items/${id}`, {
+  await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
     method: "DELETE",
   });
 };
 
 export const clearCart = async (): Promise<void> => {
-  await apiRequest<void>("/api/Cart", {
+  await apiRequest<void>(CART_ENDPOINT, {
     method: "DELETE",
   });
 };

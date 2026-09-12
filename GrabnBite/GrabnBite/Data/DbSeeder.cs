@@ -97,7 +97,72 @@ namespace GrabnBite.Data
                 context.SaveChanges();
             }
 
-            // --- Menu Category ---
+            var restaurant1 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@pizza.local");
+            if (restaurant1 == null)
+            {
+                restaurant1 = new Restaurant
+                {
+                    Name = "Pizza House",
+                    Description = "Test pizzas and pies",
+                    PhoneNumber = "+27112224444",
+                    Email = "orders@pizza.local",
+                    Address = "5 Govan Mbeki St",
+                    Latitude = 0m,
+                    Longitude = 0m,
+                    IsOpen = true,
+                    IsApproved = true,
+                    UserId = restOwner.UserId
+                };
+
+                context.Restaurants.Add(restaurant1);
+                context.SaveChanges();
+            }
+
+            // --- New: Sushi Corner ---
+            var restaurant2 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@sushi.local");
+            if (restaurant2 == null)
+            {
+                restaurant2 = new Restaurant
+                {
+                    Name = "Sushi Corner",
+                    Description = "Fresh sushi, nigiri and rolls",
+                    PhoneNumber = "+27112225555",
+                    Email = "orders@sushi.local",
+                    Address = "12 Ocean Ave",
+                    Latitude = 0m,
+                    Longitude = 0m,
+                    IsOpen = true,
+                    IsApproved = true,
+                    UserId = restOwner.UserId
+                };
+
+                context.Restaurants.Add(restaurant2);
+                context.SaveChanges();
+            }
+
+            // --- New: Taco Town ---
+            var restaurant3 = context.Restaurants.FirstOrDefault(r => r.Email == "orders@taco.local");
+            if (restaurant3 == null)
+            {
+                restaurant3 = new Restaurant
+                {
+                    Name = "Taco Town",
+                    Description = "Street-style tacos and sides",
+                    PhoneNumber = "+27112226666",
+                    Email = "orders@taco.local",
+                    Address = "9 Spice Road",
+                    Latitude = 0m,
+                    Longitude = 0m,
+                    IsOpen = true,
+                    IsApproved = true,
+                    UserId = restOwner.UserId
+                };
+
+                context.Restaurants.Add(restaurant3);
+                context.SaveChanges();
+            }
+
+            // --- Menu Category for Burger House ---
             var burgersCategory = context.MenuCategories.FirstOrDefault(mc =>
                 mc.RestaurantId == restaurant.RestaurantId && mc.Name == "Burgers");
             if (burgersCategory == null)
@@ -113,7 +178,39 @@ namespace GrabnBite.Data
                 context.SaveChanges();
             }
 
-            // --- Menu Items ---
+            // --- Menu Category for Sushi Corner ---
+            var sushiCategory = context.MenuCategories.FirstOrDefault(mc =>
+                mc.RestaurantId == restaurant2.RestaurantId && mc.Name == "Sushi");
+            if (sushiCategory == null)
+            {
+                sushiCategory = new MenuCategory
+                {
+                    Name = "Sushi",
+                    Description = "Nigiri, maki and specialty rolls",
+                    RestaurantId = restaurant2.RestaurantId
+                };
+
+                context.MenuCategories.Add(sushiCategory);
+                context.SaveChanges();
+            }
+
+            // --- Menu Category for Taco Town ---
+            var tacosCategory = context.MenuCategories.FirstOrDefault(mc =>
+                mc.RestaurantId == restaurant3.RestaurantId && mc.Name == "Tacos");
+            if (tacosCategory == null)
+            {
+                tacosCategory = new MenuCategory
+                {
+                    Name = "Tacos",
+                    Description = "Assorted tacos and combos",
+                    RestaurantId = restaurant3.RestaurantId
+                };
+
+                context.MenuCategories.Add(tacosCategory);
+                context.SaveChanges();
+            }
+
+            // --- Menu Items for Burger House ---
             if (!context.MenuItems.Any(mi =>
                 mi.RestaurantId == restaurant.RestaurantId && mi.Name == "Classic Beef Burger"))
             {
@@ -144,6 +241,72 @@ namespace GrabnBite.Data
                 };
 
                 context.MenuItems.Add(item2);
+            }
+
+            // --- Menu Items for Sushi Corner ---
+            if (!context.MenuItems.Any(mi =>
+                mi.RestaurantId == restaurant2.RestaurantId && mi.Name == "Salmon Nigiri"))
+            {
+                var s1 = new MenuItem
+                {
+                    Name = "Salmon Nigiri",
+                    Description = "Fresh salmon over pressed sushi rice (2 pcs)",
+                    Price = 29.99m,
+                    IsAvailable = true,
+                    RestaurantId = restaurant2.RestaurantId,
+                    MenuCategoryId = sushiCategory.MenuCategoryId
+                };
+
+                context.MenuItems.Add(s1);
+            }
+
+            if (!context.MenuItems.Any(mi =>
+                mi.RestaurantId == restaurant2.RestaurantId && mi.Name == "California Roll"))
+            {
+                var s2 = new MenuItem
+                {
+                    Name = "California Roll",
+                    Description = "Crab, avocado, cucumber roll (8 pcs)",
+                    Price = 39.50m,
+                    IsAvailable = true,
+                    RestaurantId = restaurant2.RestaurantId,
+                    MenuCategoryId = sushiCategory.MenuCategoryId
+                };
+
+                context.MenuItems.Add(s2);
+            }
+
+            // --- Menu Items for Taco Town ---
+            if (!context.MenuItems.Any(mi =>
+                mi.RestaurantId == restaurant3.RestaurantId && mi.Name == "Chicken Taco"))
+            {
+                var t1 = new MenuItem
+                {
+                    Name = "Chicken Taco",
+                    Description = "Grilled chicken, pico de gallo, lime",
+                    Price = 24.99m,
+                    IsAvailable = true,
+                    RestaurantId = restaurant3.RestaurantId,
+                    MenuCategoryId = tacosCategory.MenuCategoryId
+                };
+
+                context.MenuItems.Add(t1);
+            }
+
+            if (!context.MenuItems.Any(mi =>
+                mi.RestaurantId == restaurant3.RestaurantId && mi.Name == "Beef Taco"))
+            {
+                var t2 = new MenuItem
+                {
+                    Name = "Beef Taco",
+                    Description = "Spiced beef, onions, cilantro",
+                    Price = 26.50m,
+                    IsAvailable = true,
+                    RestaurantId = restaurant3.RestaurantId,
+                    MenuCategoryId = tacosCategory.MenuCategoryId
+                };
+
+                context.MenuItems.Add(t2);
             }
 
             context.SaveChanges();

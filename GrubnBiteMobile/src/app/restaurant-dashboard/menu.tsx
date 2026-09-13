@@ -20,8 +20,10 @@ import {
     deleteMenuItem,
     getMenuCategories,
     getMenuItemsByRestaurant,
-    updateMenuItem
+    updateMenuItem,
 } from "@/services/adminService";
+import { getRestaurantsForUser } from "@/services/restaurantService";
+import { getCurrentUser } from "@/services/sessionService";
 
 export default function RestaurantMenu() {
   const params = useLocalSearchParams<{ restaurantId?: string }>();
@@ -39,9 +41,11 @@ export default function RestaurantMenu() {
   const [itemName, setItemName] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [itemPrice, setItemPrice] = useState("");
+  const [itemAvailable, setItemAvailable] = useState(true);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
+  const [editingItem, setEditingItem] = useState<any | null>(null);
 
   const [savingCategory, setSavingCategory] = useState(false);
   const [savingItem, setSavingItem] = useState(false);
@@ -58,6 +62,17 @@ export default function RestaurantMenu() {
 
     try {
       setLoading(true);
+
+      const userId = getCurrentUser()?.userId;
+      const ownedRestaurants = userId
+        ? await getRestaurantsForUser(userId)
+        : [];
+
+      if (
+        !ownedRestaurants.some((restaurant) => restaurant.id === restaurantId)
+      ) {
+        throw new Error("You can only manage your own restaurant.");
+      }
 
       const [categoryData, itemData] = await Promise.all([
         getMenuCategories(),
@@ -125,17 +140,28 @@ export default function RestaurantMenu() {
     try {
       setSavingItem(true);
 
-      await createMenuItem({
-        name: itemName.trim(),
-        description: itemDescription.trim(),
-        price,
-        isAvailable: true,
-        menuCategoryId: selectedCategoryId,
-      });
+      if (editingItem) {
+        await updateMenuItem(editingItem.id, {
+          name: itemName.trim(),
+          description: itemDescription.trim(),
+          price,
+          isAvailable: itemAvailable,
+        });
+      } else {
+        await createMenuItem({
+          name: itemName.trim(),
+          description: itemDescription.trim(),
+          price,
+          isAvailable: itemAvailable,
+          menuCategoryId: selectedCategoryId,
+        });
+      }
 
       setItemName("");
       setItemDescription("");
       setItemPrice("");
+      setItemAvailable(true);
+      setEditingItem(null);
 
       await loadMenu();
     } catch (err) {
@@ -146,6 +172,24 @@ export default function RestaurantMenu() {
     } finally {
       setSavingItem(false);
     }
+  };
+
+  const openEditItem = (item: any) => {
+    setEditingItem(item);
+    setItemName(item.name ?? "");
+    setItemDescription(item.description ?? "");
+    setItemPrice(String(item.price ?? ""));
+    setItemAvailable(Boolean(item.isAvailable));
+    setSelectedCategoryId(item.menuCategoryId ?? null);
+  };
+
+  const cancelEditItem = () => {
+    setEditingItem(null);
+    setItemName("");
+    setItemDescription("");
+    setItemPrice("");
+    setItemAvailable(true);
+    setSelectedCategoryId(null);
   };
 
   const toggleItemAvailability = async (item: any) => {
@@ -226,231 +270,231 @@ export default function RestaurantMenu() {
   }
 
   return (
-    <RoleGuard
-  allowedRoles={["restaurant", "restaurantstaff", "staff"]}
->
- <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={23} color="#071B2C" />
-        </Pressable>
+    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={23} color="#071B2C" />
+          </Pressable>
 
-        <View>
-          <Text style={styles.title}>Manage Menu</Text>
-          <Text style={styles.subtitle}>
-            Categories and menu items
-          </Text>
+          <View>
+            <Text style={styles.title}>Manage Menu</Text>
+            <Text style={styles.subtitle}>Categories and menu items</Text>
+          </View>
         </View>
-      </View>
 
-      {/* Categories */}
+        {/* Categories */}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Menu Categories</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Menu Categories</Text>
 
-        {categories.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No categories have been created yet.
-          </Text>
-        ) : (
-          categories.map((category) => (
-            <View key={category.id} style={styles.categoryCard}>
-              <View style={styles.categoryInfo}>
-                <Text style={styles.categoryName}>{category.name}</Text>
-
-                {category.description ? (
-                  <Text style={styles.categoryDescription}>
-                    {category.description}
-                  </Text>
-                ) : null}
-              </View>
-
-              <Pressable
-                onPress={() => handleDeleteCategory(category)}
-                style={styles.iconButton}
-              >
-                <Ionicons name="trash-outline" size={19} color="#DC2626" />
-              </Pressable>
-            </View>
-          ))
-        )}
-
-        <Text style={styles.formTitle}>Add Category</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Category name"
-          value={categoryName}
-          onChangeText={setCategoryName}
-        />
-
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          placeholder="Description"
-          value={categoryDescription}
-          onChangeText={setCategoryDescription}
-          multiline
-        />
-
-        <Pressable
-          style={styles.primaryButton}
-          onPress={handleCreateCategory}
-          disabled={savingCategory}
-        >
-          {savingCategory ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              Add Category
+          {categories.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No categories have been created yet.
             </Text>
-          )}
-        </Pressable>
-      </View>
+          ) : (
+            categories.map((category) => (
+              <View key={category.id} style={styles.categoryCard}>
+                <View style={styles.categoryInfo}>
+                  <Text style={styles.categoryName}>{category.name}</Text>
 
-      {/* Menu Items */}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Menu Items</Text>
-
-        {menuItems.length === 0 ? (
-          <Text style={styles.emptyText}>
-            No menu items have been created yet.
-          </Text>
-        ) : (
-          menuItems.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-
-                {item.description ? (
-                  <Text style={styles.itemDescription}>
-                    {item.description}
-                  </Text>
-                ) : null}
-
-                <Text style={styles.itemPrice}>
-                  R{Number(item.price ?? 0).toFixed(2)}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.availability,
-                    {
-                      color: item.isAvailable
-                        ? "#16A34A"
-                        : "#DC2626",
-                    },
-                  ]}
-                >
-                  {item.isAvailable ? "Available" : "Unavailable"}
-                </Text>
-              </View>
-
-              <View style={styles.itemActions}>
-                <Pressable
-                  style={styles.smallButton}
-                  onPress={() => toggleItemAvailability(item)}
-                >
-                  <Ionicons
-                    name={
-                      item.isAvailable
-                        ? "eye-off-outline"
-                        : "eye-outline"
-                    }
-                    size={19}
-                    color="#1A4B6B"
-                  />
-                </Pressable>
+                  {category.description ? (
+                    <Text style={styles.categoryDescription}>
+                      {category.description}
+                    </Text>
+                  ) : null}
+                </View>
 
                 <Pressable
-                  style={styles.smallButton}
-                  onPress={() => handleDeleteItem(item)}
+                  onPress={() => handleDeleteCategory(category)}
+                  style={styles.iconButton}
                 >
-                  <Ionicons
-                    name="trash-outline"
-                    size={19}
-                    color="#DC2626"
-                  />
+                  <Ionicons name="trash-outline" size={19} color="#DC2626" />
                 </Pressable>
               </View>
-            </View>
-          ))
-        )}
+            ))
+          )}
 
-        <Text style={styles.formTitle}>Add Menu Item</Text>
+          <Text style={styles.formTitle}>Add Category</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Item name"
-          value={itemName}
-          onChangeText={setItemName}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Category name"
+            value={categoryName}
+            onChangeText={setCategoryName}
+          />
 
-        <TextInput
-          style={[styles.input, styles.multiline]}
-          placeholder="Description"
-          value={itemDescription}
-          onChangeText={setItemDescription}
-          multiline
-        />
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="Description"
+            value={categoryDescription}
+            onChangeText={setCategoryDescription}
+            multiline
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Price"
-          value={itemPrice}
-          onChangeText={setItemPrice}
-          keyboardType="decimal-pad"
-        />
+          <Pressable
+            style={styles.primaryButton}
+            onPress={handleCreateCategory}
+            disabled={savingCategory}
+          >
+            {savingCategory ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Add Category</Text>
+            )}
+          </Pressable>
+        </View>
 
-        <Text style={styles.label}>Category</Text>
+        {/* Menu Items */}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categorySelector}
-        >
-          {categories.map((category) => {
-            const selected = selectedCategoryId === category.id;
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Menu Items</Text>
 
-            return (
-              <Pressable
-                key={category.id}
-                onPress={() => setSelectedCategoryId(category.id)}
-                style={[
-                  styles.categoryChoice,
-                  selected && styles.selectedCategoryChoice,
-                ]}
-              >
-                <Text
+          {menuItems.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No menu items have been created yet.
+            </Text>
+          ) : (
+            menuItems.map((item) => (
+              <View key={item.id} style={styles.itemCard}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+
+                  {item.description ? (
+                    <Text style={styles.itemDescription}>
+                      {item.description}
+                    </Text>
+                  ) : null}
+
+                  <Text style={styles.itemPrice}>
+                    R{Number(item.price ?? 0).toFixed(2)}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.availability,
+                      {
+                        color: item.isAvailable ? "#16A34A" : "#DC2626",
+                      },
+                    ]}
+                  >
+                    {item.isAvailable ? "Available" : "Unavailable"}
+                  </Text>
+                </View>
+
+                <View style={styles.itemActions}>
+                  <Pressable
+                    style={styles.smallButton}
+                    onPress={() => openEditItem(item)}
+                  >
+                    <Ionicons name="create-outline" size={19} color="#1A4B6B" />
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.smallButton}
+                    onPress={() => toggleItemAvailability(item)}
+                  >
+                    <Ionicons
+                      name={
+                        item.isAvailable ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={19}
+                      color="#1A4B6B"
+                    />
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.smallButton}
+                    onPress={() => handleDeleteItem(item)}
+                  >
+                    <Ionicons name="trash-outline" size={19} color="#DC2626" />
+                  </Pressable>
+                </View>
+              </View>
+            ))
+          )}
+
+          <Text style={styles.formTitle}>
+            {editingItem ? "Edit Menu Item" : "Add Menu Item"}
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Item name"
+            value={itemName}
+            onChangeText={setItemName}
+          />
+
+          <TextInput
+            style={[styles.input, styles.multiline]}
+            placeholder="Description"
+            value={itemDescription}
+            onChangeText={setItemDescription}
+            multiline
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Price"
+            value={itemPrice}
+            onChangeText={setItemPrice}
+            keyboardType="decimal-pad"
+          />
+
+          <Text style={styles.label}>Category</Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categorySelector}
+          >
+            {categories.map((category) => {
+              const selected = selectedCategoryId === category.id;
+
+              return (
+                <Pressable
+                  key={category.id}
+                  onPress={() => setSelectedCategoryId(category.id)}
                   style={[
-                    styles.categoryChoiceText,
-                    selected && styles.selectedCategoryChoiceText,
+                    styles.categoryChoice,
+                    selected && styles.selectedCategoryChoice,
                   ]}
                 >
-                  {category.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={[
+                      styles.categoryChoiceText,
+                      selected && styles.selectedCategoryChoiceText,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={handleCreateItem}
-          disabled={savingItem}
-        >
-          {savingItem ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.primaryButtonText}>
-              Add Menu Item
-            </Text>
+          {editingItem && (
+            <Pressable style={styles.cancelButton} onPress={cancelEditItem}>
+              <Text style={styles.cancelButtonText}>Cancel editing</Text>
+            </Pressable>
           )}
-        </Pressable>
-      </View>
-    </ScrollView>
-</RoleGuard>
-   
+
+          <Pressable
+            style={styles.primaryButton}
+            onPress={handleCreateItem}
+            disabled={savingItem}
+          >
+            {savingItem ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {editingItem ? "Save Changes" : "Add Menu Item"}
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      </ScrollView>
+    </RoleGuard>
   );
 }
 
@@ -671,6 +715,21 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: "#FFFFFF",
     fontWeight: "800",
+  },
+
+  cancelButton: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+
+  cancelButtonText: {
+    color: "#475569",
+    fontWeight: "700",
   },
 
   emptyText: {

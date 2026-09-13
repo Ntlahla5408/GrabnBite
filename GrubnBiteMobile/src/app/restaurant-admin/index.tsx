@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+import LogoutButton from "@/components/LogoutButton";
 import {
     AdminRestaurant,
     getRestaurantMenu,
@@ -32,8 +33,7 @@ const formatStatus = (status?: string) => {
 export default function RestaurantDashboard() {
   const router = useRouter();
 
-  const [restaurant, setRestaurant] =
-    useState<AdminRestaurant | null>(null);
+  const [restaurant, setRestaurant] = useState<AdminRestaurant | null>(null);
 
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -49,9 +49,7 @@ export default function RestaurantDashboard() {
       const restaurants = await getRestaurants();
 
       if (!restaurants || restaurants.length === 0) {
-        setError(
-          "No restaurant is associated with this account.",
-        );
+        setError("No restaurant is associated with this account.");
         return;
       }
 
@@ -67,11 +65,10 @@ export default function RestaurantDashboard() {
 
       setRestaurant(currentRestaurant);
 
-      const [restaurantOrders, restaurantMenu] =
-        await Promise.all([
-          getRestaurantOrders(currentRestaurant.id),
-          getRestaurantMenu(currentRestaurant.id),
-        ]);
+      const [restaurantOrders, restaurantMenu] = await Promise.all([
+        getRestaurantOrders(currentRestaurant.id),
+        getRestaurantMenu(currentRestaurant.id),
+      ]);
 
       setOrders(restaurantOrders);
       setMenuItems(restaurantMenu);
@@ -103,10 +100,11 @@ export default function RestaurantDashboard() {
   if (loading) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>
-          Loading restaurant dashboard...
-        </Text>
+        <Text style={styles.loadingText}>Loading restaurant dashboard...</Text>
       </View>
     );
   }
@@ -114,9 +112,10 @@ export default function RestaurantDashboard() {
   if (error || !restaurant) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorTitle}>
-          Restaurant Dashboard
-        </Text>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
+        <Text style={styles.errorTitle}>Restaurant Dashboard</Text>
 
         <Text style={styles.errorText}>
           {error || "Restaurant information unavailable."}
@@ -132,10 +131,7 @@ export default function RestaurantDashboard() {
   const pendingOrders = orders.filter((order) => {
     const status = order.status?.toLowerCase() ?? "";
 
-    return (
-      status.includes("pending") ||
-      status.includes("new")
-    );
+    return status.includes("pending") || status.includes("new");
   });
 
   const activeOrders = orders.filter((order) => {
@@ -149,29 +145,26 @@ export default function RestaurantDashboard() {
     );
   });
 
-  const unavailableItems = menuItems.filter(
-    (item) => !item.isAvailable,
-  );
+  const unavailableItems = menuItems.filter((item) => !item.isAvailable);
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refresh}
-        />
+        <RefreshControl refreshing={refreshing} onRefresh={refresh} />
       }
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>
-          RESTAURANT MANAGEMENT
-        </Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.eyebrow}>RESTAURANT MANAGEMENT</Text>
 
-        <Text style={styles.title}>
-          {restaurant.name}
-        </Text>
+            <Text style={styles.title}>{restaurant.name}</Text>
+          </View>
+
+          <LogoutButton />
+        </View>
 
         <Text style={styles.subtitle}>
           Manage your restaurant, orders and menu.
@@ -180,9 +173,7 @@ export default function RestaurantDashboard() {
 
       <View style={styles.openCard}>
         <View>
-          <Text style={styles.openLabel}>
-            Restaurant status
-          </Text>
+          <Text style={styles.openLabel}>Restaurant status</Text>
 
           <Text style={styles.openStatus}>
             {restaurant.isOpen ? "Open" : "Closed"}
@@ -192,9 +183,7 @@ export default function RestaurantDashboard() {
         <View
           style={[
             styles.statusDot,
-            restaurant.isOpen
-              ? styles.openDot
-              : styles.closedDot,
+            restaurant.isOpen ? styles.openDot : styles.closedDot,
           ]}
         />
       </View>
@@ -202,62 +191,40 @@ export default function RestaurantDashboard() {
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>🛎️</Text>
-          <Text style={styles.statNumber}>
-            {orders.length}
-          </Text>
-          <Text style={styles.statLabel}>
-            Total Orders
-          </Text>
+          <Text style={styles.statNumber}>{orders.length}</Text>
+          <Text style={styles.statLabel}>Total Orders</Text>
         </View>
 
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>⏳</Text>
-          <Text style={styles.statNumber}>
-            {pendingOrders.length}
-          </Text>
-          <Text style={styles.statLabel}>
-            Pending
-          </Text>
+          <Text style={styles.statNumber}>{pendingOrders.length}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
         </View>
 
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>🍽️</Text>
-          <Text style={styles.statNumber}>
-            {menuItems.length}
-          </Text>
-          <Text style={styles.statLabel}>
-            Menu Items
-          </Text>
+          <Text style={styles.statNumber}>{menuItems.length}</Text>
+          <Text style={styles.statLabel}>Menu Items</Text>
         </View>
 
         <View style={styles.statCard}>
           <Text style={styles.statIcon}>⚠️</Text>
-          <Text style={styles.statNumber}>
-            {unavailableItems.length}
-          </Text>
-          <Text style={styles.statLabel}>
-            Unavailable
-          </Text>
+          <Text style={styles.statNumber}>{unavailableItems.length}</Text>
+          <Text style={styles.statLabel}>Unavailable</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>
-        Quick Actions
-      </Text>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
 
       <View style={styles.actions}>
         <Pressable
           style={styles.actionCard}
-          onPress={() =>
-            router.push("/restaurant-admin/orders")
-          }
+          onPress={() => router.push("/restaurant-admin/orders")}
         >
           <Text style={styles.actionIcon}>📋</Text>
 
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>
-              Manage Orders
-            </Text>
+            <Text style={styles.actionTitle}>Manage Orders</Text>
 
             <Text style={styles.actionDescription}>
               View and update incoming orders.
@@ -269,16 +236,12 @@ export default function RestaurantDashboard() {
 
         <Pressable
           style={styles.actionCard}
-          onPress={() =>
-            router.push("/restaurant-admin/menu")
-          }
+          onPress={() => router.push("/restaurant-admin/menu")}
         >
           <Text style={styles.actionIcon}>🍽️</Text>
 
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>
-              Manage Menu
-            </Text>
+            <Text style={styles.actionTitle}>Manage Menu</Text>
 
             <Text style={styles.actionDescription}>
               Add, edit and manage menu items.
@@ -290,16 +253,12 @@ export default function RestaurantDashboard() {
 
         <Pressable
           style={styles.actionCard}
-          onPress={() =>
-            router.push("/restaurant-admin/categories")
-          }
+          onPress={() => router.push("/restaurant-admin/categories")}
         >
           <Text style={styles.actionIcon}>🏷️</Text>
 
           <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>
-              Categories
-            </Text>
+            <Text style={styles.actionTitle}>Categories</Text>
 
             <Text style={styles.actionDescription}>
               Organise your restaurant menu.
@@ -310,17 +269,13 @@ export default function RestaurantDashboard() {
         </Pressable>
       </View>
 
-      <Text style={styles.sectionTitle}>
-        Recent Orders
-      </Text>
+      <Text style={styles.sectionTitle}>Recent Orders</Text>
 
       {activeOrders.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyIcon}>📦</Text>
 
-          <Text style={styles.emptyTitle}>
-            No active orders
-          </Text>
+          <Text style={styles.emptyTitle}>No active orders</Text>
 
           <Text style={styles.emptyText}>
             New customer orders will appear here.
@@ -331,14 +286,10 @@ export default function RestaurantDashboard() {
           <Pressable
             key={order.id}
             style={styles.orderCard}
-            onPress={() =>
-              router.push("/restaurant-admin/orders")
-            }
+            onPress={() => router.push("/restaurant-admin/orders")}
           >
             <View>
-              <Text style={styles.orderTitle}>
-                Order #{order.id}
-              </Text>
+              <Text style={styles.orderTitle}>Order #{order.id}</Text>
 
               <Text style={styles.orderStatus}>
                 {formatStatus(order.status)}
@@ -366,6 +317,12 @@ const styles = StyleSheet.create({
 
   header: {
     marginBottom: 18,
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
   },
 
   eyebrow: {
@@ -563,6 +520,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 25,
+  },
+
+  exitRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    marginBottom: 24,
   },
 
   loadingText: {

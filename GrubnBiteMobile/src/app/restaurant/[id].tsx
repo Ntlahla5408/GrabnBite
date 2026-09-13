@@ -7,13 +7,13 @@ import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 interface MenuItem {
@@ -37,12 +37,13 @@ interface MenuItemResponse {
 
 export default function RestaurantDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { addItem } = useCart();
+  const { addItem, carts, removeItem, setItemQuantity } = useCart();
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -92,13 +93,45 @@ export default function RestaurantDetailsScreen() {
 
   const handleAddItem = async (item: MenuItem) => {
     try {
+      setUpdatingItemId(item.id);
       await addItem(item.id);
-      Alert.alert("Added to cart", `${item.name} is ready for checkout.`);
     } catch (err) {
       Alert.alert(
         "Could not add item",
         err instanceof Error ? err.message : "Please try again.",
       );
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  const getCartItem = (menuItemId: number) =>
+    carts
+      .flatMap((cart) => cart.items)
+      .find((cartItem) => cartItem.menuItemId === menuItemId);
+
+  const changeItemQuantity = async (item: MenuItem, increase: boolean) => {
+    const cartItem = getCartItem(item.id);
+
+    try {
+      setUpdatingItemId(item.id);
+
+      if (!cartItem) {
+        await addItem(item.id);
+      } else if (increase) {
+        await setItemQuantity(cartItem.cartItemId, cartItem.quantity + 1);
+      } else if (cartItem.quantity <= 1) {
+        await removeItem(cartItem.cartItemId);
+      } else {
+        await setItemQuantity(cartItem.cartItemId, cartItem.quantity - 1);
+      }
+    } catch (err) {
+      Alert.alert(
+        "Could not update cart",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
+      setUpdatingItemId(null);
     }
   };
 
@@ -212,49 +245,92 @@ export default function RestaurantDetailsScreen() {
         )}
 
         {/* Menu Items */}
-        {menuItems.map((item) => (
-          <View
-            key={item.id}
-            style={[
-              styles.menuCard,
-              !item.isAvailable && styles.menuCardUnavailable,
-            ]}
-          >
-            <Image
-              source={getMenuItemImage(item.name, restaurant.name)}
-              contentFit="cover"
-              style={styles.menuItemImage}
-            />
+        <View style={styles.menuGrid}>
+          {menuItems.map((item) => (
+            <View
+              key={item.id}
+              style={[
+                styles.menuCard,
+                !item.isAvailable && styles.menuCardUnavailable,
+              ]}
+            >
+              <View style={styles.menuImageContainer}>
+                <Image
+                  source={getMenuItemImage(item.name, restaurant.name)}
+                  contentFit="cover"
+                  style={styles.menuItemImage}
+                />
 
-            <View style={styles.menuItemContent}>
-              <Text
-                style={[
-                  styles.menuItemName,
-                  !item.isAvailable && styles.unavailableText,
-                ]}
-              >
-                {item.name}
-              </Text>
-              <Text style={styles.menuItemDescription}>
-                {item.description || "A delicious choice from the restaurant."}
-              </Text>
-              <Text style={styles.price}>R{Number(item.price).toFixed(2)}</Text>
-              {!item.isAvailable && (
-                <Text style={styles.unavailableLabel}>
-                  Currently unavailable
-                </Text>
-              )}
-              {item.isAvailable && (
-                <Pressable
-                  style={styles.addButton}
-                  onPress={() => handleAddItem(item)}
+                {item.isAvailable &&
+                  (() => {
+                    const cartItem = getCartItem(item.id);
+                    const quantity = cartItem?.quantity ?? 0;
+                    const isUpdating = updatingItemId === item.id;
+
+                    return quantity === 0 ? (
+                      <Pressable
+                        accessibilityLabel={`Add ${item.name} to cart`}
+                        style={styles.addButton}
+                        onPress={() => handleAddItem(item)}
+                        disabled={isUpdating}
+                      >
+                        <Text style={styles.addButtonText}>+</Text>
+                      </Pressable>
+                    ) : (
+                      <View
+                        style={[
+                          styles.quantityControl,
+                          isUpdating && styles.quantityControlDisabled,
+                        ]}
+                      >
+                        <Pressable
+                          accessibilityLabel={`Decrease ${item.name} quantity`}
+                          style={styles.quantityButton}
+                          onPress={() => changeItemQuantity(item, false)}
+                          disabled={isUpdating}
+                        >
+                          <Text style={styles.quantityButtonText}>−</Text>
+                        </Pressable>
+                        <Text style={styles.quantityText}>{quantity}</Text>
+                        <Pressable
+                          accessibilityLabel={`Increase ${item.name} quantity`}
+                          style={styles.quantityButton}
+                          onPress={() => changeItemQuantity(item, true)}
+                          disabled={isUpdating}
+                        >
+                          <Text style={styles.quantityButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })()}
+              </View>
+
+              <View style={styles.menuItemContent}>
+                <Text
+                  style={[
+                    styles.menuItemName,
+                    !item.isAvailable && styles.unavailableText,
+                  ]}
+                  numberOfLines={2}
                 >
-                  <Text style={styles.addButtonText}>Add to cart</Text>
-                </Pressable>
-              )}
+                  {item.name}
+                </Text>
+                <Text style={styles.menuItemDescription} numberOfLines={2}>
+                  {item.description ||
+                    "A delicious choice from the restaurant."}
+                </Text>
+                <Text style={styles.price}>
+                  R{Number(item.price).toFixed(2)}
+                </Text>
+                {!item.isAvailable && (
+                  <Text style={styles.unavailableLabel}>
+                    Currently unavailable
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
       </ScrollView>
     </View>
   );
@@ -415,33 +491,41 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+
   menuCard: {
-    marginHorizontal: 20,
+    width: "48%",
     marginBottom: 12,
-    padding: 16,
     backgroundColor: FoodColors.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: FoodColors.line,
-    flexDirection: "row",
-    alignItems: "center",
+    overflow: "hidden",
   },
 
   menuCardUnavailable: {
     opacity: 0.55,
   },
 
-  menuItemImage: {
-    width: 82,
-    height: 82,
-    borderRadius: 10,
-    marginRight: 12,
+  menuImageContainer: {
+    width: "100%",
+    aspectRatio: 1.15,
+    position: "relative",
     backgroundColor: FoodColors.oat,
   },
 
+  menuItemImage: {
+    width: "100%",
+    height: "100%",
+  },
+
   menuItemContent: {
-    flex: 1,
-    paddingRight: 12,
+    padding: 12,
   },
 
   menuItemName: {
@@ -465,7 +549,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: FoodColors.tomato,
-    marginTop: 9,
+    marginTop: 8,
   },
 
   unavailableLabel: {
@@ -476,18 +560,60 @@ const styles = StyleSheet.create({
   },
 
   addButton: {
-    alignSelf: "flex-start",
-    marginTop: 9,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 7,
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: FoodColors.tomato,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   addButtonText: {
     color: FoodColors.onDark,
-    fontSize: 12,
+    fontSize: 27,
+    fontWeight: "500",
+    lineHeight: 29,
+  },
+
+  quantityControl: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    height: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 19,
+    backgroundColor: FoodColors.tomato,
+    overflow: "hidden",
+  },
+
+  quantityControlDisabled: {
+    opacity: 0.6,
+  },
+
+  quantityButton: {
+    width: 34,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  quantityButtonText: {
+    color: FoodColors.onDark,
+    fontSize: 22,
+    fontWeight: "500",
+    lineHeight: 24,
+  },
+
+  quantityText: {
+    minWidth: 18,
+    color: FoodColors.onDark,
+    fontSize: 15,
     fontWeight: "800",
+    textAlign: "center",
   },
 
   emptyContainer: {

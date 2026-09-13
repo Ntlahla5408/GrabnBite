@@ -1,24 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 import {
-  getRestaurantOrders,
-  updateRestaurantOrderStatus,
+    getRestaurantOrders,
+    updateRestaurantOrderStatus,
 } from "@/services/restaurantDashboardService";
 
-import { Order } from "@/services/orderService";
 import RoleGuard from "@/components/RoleGuard";
+import { Order } from "@/services/orderService";
+import { getRestaurantsForUser } from "@/services/restaurantService";
+import { getCurrentUser } from "@/services/sessionService";
 
 const STATUSES = [
   "Pending",
@@ -50,6 +52,17 @@ export default function RestaurantOrders() {
     try {
       setError("");
 
+      const userId = getCurrentUser()?.userId;
+      const ownedRestaurants = userId
+        ? await getRestaurantsForUser(userId)
+        : [];
+
+      if (
+        !ownedRestaurants.some((restaurant) => restaurant.id === restaurantId)
+      ) {
+        throw new Error("You can only manage your own restaurant.");
+      }
+
       const data = await getRestaurantOrders(restaurantId);
       setOrders(data);
     } catch (err) {
@@ -77,16 +90,11 @@ export default function RestaurantOrders() {
     try {
       setUpdatingOrderId(orderId);
 
-      const updatedOrder = await updateRestaurantOrderStatus(
-        orderId,
-        status,
-      );
+      const updatedOrder = await updateRestaurantOrderStatus(orderId, status);
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>
-          order.id === orderId
-            ? { ...order, ...updatedOrder, status }
-            : order,
+          order.id === orderId ? { ...order, ...updatedOrder, status } : order,
         ),
       );
     } catch (err) {
@@ -136,161 +144,150 @@ export default function RestaurantOrders() {
   }
 
   return (
-    <RoleGuard
-  allowedRoles={["restaurant", "restaurantstaff", "staff"]}
->
-<View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={23} color="#071B2C" />
-        </Pressable>
-
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Restaurant Orders</Text>
-          <Text style={styles.subtitle}>
-            {orders.length} order{orders.length === 1 ? "" : "s"}
-          </Text>
-        </View>
-      </View>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <Ionicons name="alert-circle-outline" size={22} color="#DC2626" />
-          <Text style={styles.errorText}>{error}</Text>
-
-          <Pressable onPress={loadOrders}>
-            <Text style={styles.retryText}>Retry</Text>
+    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={23} color="#071B2C" />
           </Pressable>
+
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Restaurant Orders</Text>
+            <Text style={styles.subtitle}>
+              {orders.length} order{orders.length === 1 ? "" : "s"}
+            </Text>
+          </View>
         </View>
-      ) : null}
 
-      {orders.length === 0 && !error ? (
-        <View style={styles.empty}>
-          <Ionicons name="receipt-outline" size={60} color="#94A3B8" />
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptyText}>
-            New customer orders will appear here.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
-          }
-          contentContainerStyle={styles.list}
-        >
-          {orders.map((order) => {
-            const items = getOrderItems(order);
-            const total = getOrderTotal(order);
+        {error ? (
+          <View style={styles.errorBox}>
+            <Ionicons name="alert-circle-outline" size={22} color="#DC2626" />
+            <Text style={styles.errorText}>{error}</Text>
 
-            return (
-              <View key={order.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View>
-                    <Text style={styles.orderNumber}>
-                      Order #{order.id}
-                    </Text>
+            <Pressable onPress={loadOrders}>
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-                    <Text style={styles.orderDate}>
-                      {order.createdAt
-                        ? new Date(order.createdAt).toLocaleString()
-                        : "Date unavailable"}
-                    </Text>
-                  </View>
+        {orders.length === 0 && !error ? (
+          <View style={styles.empty}>
+            <Ionicons name="receipt-outline" size={60} color="#94A3B8" />
+            <Text style={styles.emptyTitle}>No orders yet</Text>
+            <Text style={styles.emptyText}>
+              New customer orders will appear here.
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+            }
+            contentContainerStyle={styles.list}
+          >
+            {orders.map((order) => {
+              const items = getOrderItems(order);
+              const total = getOrderTotal(order);
 
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>
-                      {order.status || "Unknown"}
-                    </Text>
-                  </View>
-                </View>
+              return (
+                <View key={order.id} style={styles.orderCard}>
+                  <View style={styles.orderHeader}>
+                    <View>
+                      <Text style={styles.orderNumber}>Order #{order.id}</Text>
 
-                <View style={styles.divider} />
-
-                {items.length > 0 ? (
-                  items.map((item, index) => (
-                    <View key={item.id ?? index} style={styles.itemRow}>
-                      <Text style={styles.quantity}>
-                        {item.quantity}×
-                      </Text>
-
-                      <Text style={styles.itemName}>
-                        {item.menuItem?.name ||
-                          `Menu item #${item.menuItemId ?? ""}`}
-                      </Text>
-
-                      <Text style={styles.itemPrice}>
-                        R
-                        {(
-                          (item.totalPrice ??
-                            item.price ??
-                            item.unitPrice ??
-                            item.menuItem?.price ??
-                            0) * item.quantity
-                        ).toFixed(2)}
+                      <Text style={styles.orderDate}>
+                        {order.createdAt
+                          ? new Date(order.createdAt).toLocaleString()
+                          : "Date unavailable"}
                       </Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={styles.noItems}>
-                    Order item details unavailable.
-                  </Text>
-                )}
 
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Order Total</Text>
-                  <Text style={styles.totalValue}>
-                    R{total.toFixed(2)}
-                  </Text>
-                </View>
+                    <View style={styles.statusBadge}>
+                      <Text style={styles.statusBadgeText}>
+                        {order.status || "Unknown"}
+                      </Text>
+                    </View>
+                  </View>
 
-                <Text style={styles.statusHeading}>
-                  Update Order Status
-                </Text>
+                  <View style={styles.divider} />
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.statusList}
-                >
-                  {STATUSES.map((status) => {
-                    const selected =
-                      (order.status || "").toLowerCase() ===
-                      status.toLowerCase();
+                  {items.length > 0 ? (
+                    items.map((item, index) => (
+                      <View key={item.id ?? index} style={styles.itemRow}>
+                        <Text style={styles.quantity}>{item.quantity}×</Text>
 
-                    const updating = updatingOrderId === order.id;
+                        <Text style={styles.itemName}>
+                          {item.menuItem?.name ||
+                            `Menu item #${item.menuItemId ?? ""}`}
+                        </Text>
 
-                    return (
-                      <Pressable
-                        key={status}
-                        disabled={updating || selected}
-                        onPress={() => changeStatus(order.id, status)}
-                        style={[
-                          styles.statusButton,
-                          selected && styles.selectedStatusButton,
-                          updating && styles.disabledButton,
-                        ]}
-                      >
-                        <Text
+                        <Text style={styles.itemPrice}>
+                          R
+                          {(
+                            (item.totalPrice ??
+                              item.price ??
+                              item.unitPrice ??
+                              item.menuItem?.price ??
+                              0) * item.quantity
+                          ).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noItems}>
+                      Order item details unavailable.
+                    </Text>
+                  )}
+
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Order Total</Text>
+                    <Text style={styles.totalValue}>R{total.toFixed(2)}</Text>
+                  </View>
+
+                  <Text style={styles.statusHeading}>Update Order Status</Text>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.statusList}
+                  >
+                    {STATUSES.map((status) => {
+                      const selected =
+                        (order.status || "").toLowerCase() ===
+                        status.toLowerCase();
+
+                      const updating = updatingOrderId === order.id;
+
+                      return (
+                        <Pressable
+                          key={status}
+                          disabled={updating || selected}
+                          onPress={() => changeStatus(order.id, status)}
                           style={[
-                            styles.statusButtonText,
-                            selected && styles.selectedStatusText,
+                            styles.statusButton,
+                            selected && styles.selectedStatusButton,
+                            updating && styles.disabledButton,
                           ]}
                         >
-                          {status}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-    </View>
-</RoleGuard>
-    
+                          <Text
+                            style={[
+                              styles.statusButtonText,
+                              selected && styles.selectedStatusText,
+                            ]}
+                          >
+                            {status}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    </RoleGuard>
   );
 }
 

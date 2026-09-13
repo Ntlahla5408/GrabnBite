@@ -10,8 +10,13 @@ import {
     View,
 } from "react-native";
 
+import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
-import { getRestaurants, Restaurant } from "@/services/restaurantService";
+import {
+    getRestaurantsForUser,
+    Restaurant,
+} from "@/services/restaurantService";
+import { getCurrentUser } from "@/services/sessionService";
 
 export default function RestaurantDashboard() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -27,13 +32,16 @@ export default function RestaurantDashboard() {
       setLoading(true);
       setError("");
 
-      const data = await getRestaurants();
+      const userId = getCurrentUser()?.userId;
+      if (!userId) {
+        throw new Error("Your session could not be identified.");
+      }
+
+      const data = await getRestaurantsForUser(userId);
       setRestaurants(data);
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "Could not load restaurants.",
+        err instanceof Error ? err.message : "Could not load restaurants.",
       );
     } finally {
       setLoading(false);
@@ -57,6 +65,9 @@ export default function RestaurantDashboard() {
   if (loading) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <ActivityIndicator size="large" />
         <Text style={styles.loadingText}>Loading restaurant dashboard...</Text>
       </View>
@@ -66,6 +77,9 @@ export default function RestaurantDashboard() {
   if (error) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <Ionicons name="alert-circle-outline" size={48} color="#DC2626" />
         <Text style={styles.errorTitle}>Something went wrong</Text>
         <Text style={styles.errorText}>{error}</Text>
@@ -80,6 +94,9 @@ export default function RestaurantDashboard() {
   if (restaurants.length === 0) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <Ionicons name="restaurant-outline" size={56} color="#64748B" />
 
         <Text style={styles.emptyTitle}>No restaurant found</Text>
@@ -92,81 +109,81 @@ export default function RestaurantDashboard() {
   }
 
   return (
-    <RoleGuard
-  allowedRoles={["restaurant", "restaurantstaff", "staff"]}
->
- <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Restaurant Dashboard</Text>
-        <Text style={styles.subtitle}>
-          Manage orders and your restaurant menu.
-        </Text>
-      </View>
+    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Restaurant Dashboard</Text>
+            <LogoutButton />
+          </View>
+          <Text style={styles.subtitle}>
+            Manage orders and your restaurant menu.
+          </Text>
+        </View>
 
-      {restaurants.map((restaurant) => (
-        <View key={restaurant.id} style={styles.restaurantCard}>
-          <View style={styles.restaurantHeader}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="restaurant" size={26} color="#FFFFFF" />
-            </View>
+        {restaurants.map((restaurant) => (
+          <View key={restaurant.id} style={styles.restaurantCard}>
+            <View style={styles.restaurantHeader}>
+              <View style={styles.iconContainer}>
+                <Ionicons name="restaurant" size={26} color="#FFFFFF" />
+              </View>
 
-            <View style={styles.restaurantInfo}>
-              <Text style={styles.restaurantName}>{restaurant.name}</Text>
+              <View style={styles.restaurantInfo}>
+                <Text style={styles.restaurantName}>{restaurant.name}</Text>
 
-              <View style={styles.statusRow}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor: restaurant.isOpen
-                        ? "#16A34A"
-                        : "#DC2626",
-                    },
-                  ]}
-                />
+                <View style={styles.statusRow}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor: restaurant.isOpen
+                          ? "#16A34A"
+                          : "#DC2626",
+                      },
+                    ]}
+                  />
 
-                <Text
-                  style={[
-                    styles.statusText,
-                    {
-                      color: restaurant.isOpen ? "#16A34A" : "#DC2626",
-                    },
-                  ]}
-                >
-                  {restaurant.isOpen ? "Open" : "Closed"}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color: restaurant.isOpen ? "#16A34A" : "#DC2626",
+                      },
+                    ]}
+                  >
+                    {restaurant.isOpen ? "Open" : "Closed"}
+                  </Text>
+                </View>
               </View>
             </View>
+
+            <Text style={styles.description}>
+              {restaurant.description || "No description available."}
+            </Text>
+
+            <Text style={styles.address}>{restaurant.address}</Text>
+
+            <View style={styles.actions}>
+              <Pressable
+                style={styles.actionButton}
+                onPress={() => openOrders(restaurant.id)}
+              >
+                <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.actionText}>Orders</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => openMenu(restaurant.id)}
+              >
+                <Ionicons name="fast-food-outline" size={20} color="#071B2C" />
+                <Text style={styles.secondaryText}>Manage Menu</Text>
+              </Pressable>
+            </View>
           </View>
-
-          <Text style={styles.description}>
-            {restaurant.description || "No description available."}
-          </Text>
-
-          <Text style={styles.address}>{restaurant.address}</Text>
-
-          <View style={styles.actions}>
-            <Pressable
-              style={styles.actionButton}
-              onPress={() => openOrders(restaurant.id)}
-            >
-              <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.actionText}>Orders</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={() => openMenu(restaurant.id)}
-            >
-              <Ionicons name="fast-food-outline" size={20} color="#071B2C" />
-              <Text style={styles.secondaryText}>Manage Menu</Text>
-            </Pressable>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
-</RoleGuard>
-   
+        ))}
+      </ScrollView>
+    </RoleGuard>
   );
 }
 
@@ -185,8 +202,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
 
+  exitRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    marginBottom: 24,
+  },
+
   header: {
     marginBottom: 24,
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
   title: {

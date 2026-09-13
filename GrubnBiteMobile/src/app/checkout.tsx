@@ -18,7 +18,7 @@ import { checkoutCart } from "@/services/cartService";
 
 export default function CheckoutScreen() {
   const { cartId } = useLocalSearchParams<{ cartId?: string }>();
-  const { carts, refreshCart } = useCart();
+  const { carts, setPendingCheckout } = useCart();
   const selectedCartId = Number(cartId);
   const cart = carts.find((item) => item.cartId === selectedCartId);
 
@@ -66,18 +66,19 @@ export default function CheckoutScreen() {
 
     try {
       setPlacingOrder(true);
+      setPendingCheckout(cart);
       const result = await checkoutCart(cart.cartId, selectedAddressId);
 
       if (!result.orderId) {
         throw new Error("Checkout completed without an order ID.");
       }
 
-      refreshCart().catch(() => undefined);
       router.replace({
         pathname: "/orders/[id]",
         params: { id: String(result.orderId) },
       });
     } catch (error) {
+      setPendingCheckout(cart);
       Alert.alert(
         "Checkout failed",
         error instanceof Error ? error.message : "Please try again.",

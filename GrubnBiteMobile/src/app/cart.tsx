@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { FoodColors } from "@/constants/theme";
@@ -22,13 +22,23 @@ export default function CartScreen() {
     loading,
     refreshing,
     refreshCart,
+    restorePendingCheckout,
     setItemQuantity,
     removeItem,
   } = useCart();
   useFocusEffect(
     useCallback(() => {
-      refreshCart().catch(() => undefined);
-    }, []),
+      const restoreCart = async () => {
+        try {
+          await refreshCart();
+          await restorePendingCheckout();
+        } catch {
+          // The cart remains available to retry on the next focus.
+        }
+      };
+
+      restoreCart();
+    }, [refreshCart, restorePendingCheckout]),
   );
 
   const changeQuantity = async (cartItemId: number, quantity: number) => {
@@ -57,6 +67,8 @@ export default function CartScreen() {
     } as never);
   };
 
+  const activeCarts = carts.filter((cart) => cart.items.length > 0);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -79,9 +91,9 @@ export default function CartScreen() {
           <Text style={styles.eyebrow}>YOUR ORDER</Text>
           <Text style={styles.title}>Cart</Text>
           <Text style={styles.subtitle}>
-            {carts.length === 0
+            {activeCarts.length === 0
               ? "Review your items before checkout"
-              : `${carts.length} store${carts.length === 1 ? "" : "s"}`}
+              : `${activeCarts.length} store${activeCarts.length === 1 ? "" : "s"}`}
           </Text>
         </View>
         <Ionicons
@@ -91,7 +103,7 @@ export default function CartScreen() {
         />
       </View>
 
-      {carts.length === 0 ? (
+      {activeCarts.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="basket-outline" size={54} color={FoodColors.muted} />
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
@@ -107,7 +119,7 @@ export default function CartScreen() {
         </View>
       ) : (
         <>
-          {carts.map((cart) => (
+          {activeCarts.map((cart) => (
             <View key={cart.cartId}>
               <View style={styles.storeHeading}>
                 <Text style={styles.storeName}>{cart.restaurantName}</Text>

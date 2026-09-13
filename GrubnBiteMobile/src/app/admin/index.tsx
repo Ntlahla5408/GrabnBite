@@ -1,3 +1,4 @@
+import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -79,6 +80,9 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <ActivityIndicator size="large" color={COLORS.blue} />
         <Text style={styles.loadingText}>Loading admin dashboard...</Text>
       </View>
@@ -88,6 +92,9 @@ export default function AdminDashboard() {
   if (!authorized) {
     return (
       <View style={styles.center}>
+        <View style={styles.exitRow}>
+          <LogoutButton />
+        </View>
         <Text style={styles.errorTitle}>Admin access required</Text>
 
         <Text style={styles.errorText}>
@@ -96,7 +103,10 @@ export default function AdminDashboard() {
 
         {error ? <Text style={styles.errorDetails}>{error}</Text> : null}
 
-        <Pressable style={styles.primaryButton} onPress={() => router.replace("/")}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => router.replace("/")}
+        >
           <Text style={styles.primaryButtonText}>Back to Home</Text>
         </Pressable>
       </View>
@@ -104,75 +114,71 @@ export default function AdminDashboard() {
   }
 
   return (
-     <RoleGuard allowedRoles={["admin"]}>
-<ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Admin Dashboard</Text>
-          <Text style={styles.subtitle}>
-            Manage the GrubnBite platform
-          </Text>
+    <RoleGuard allowedRoles={["admin"]}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.subtitle}>Manage the GrubnBite platform</Text>
+          </View>
+
+          <View style={styles.headerActions}>
+            <Pressable
+              style={styles.homeButton}
+              onPress={() => router.replace("/")}
+            >
+              <Text style={styles.homeButtonText}>Home</Text>
+            </Pressable>
+            <LogoutButton />
+          </View>
         </View>
 
-        <Pressable
-          style={styles.homeButton}
-          onPress={() => router.replace("/")}
-        >
-          <Text style={styles.homeButtonText}>Home</Text>
-        </Pressable>
-      </View>
+        <View style={styles.statsRow}>
+          <StatCard title="Restaurants" value={restaurantCount} icon="🍽️" />
 
-      <View style={styles.statsRow}>
-        <StatCard
+          <StatCard title="Categories" value={categoryCount} icon="📂" />
+
+          <StatCard title="Menu Items" value={menuItemCount} icon="🍽️" />
+        </View>
+
+        <Text style={styles.sectionTitle}>Management</Text>
+
+        <AdminAction
+          title="User Management"
+          description="Update user roles and platform access."
+          icon="👥"
+          onPress={() => router.push("/admin/users")}
+        />
+
+        <AdminAction
           title="Restaurants"
-          value={restaurantCount}
+          description="Add, edit, open, close and remove restaurants."
           icon="🍽️"
+          onPress={() => router.push("/admin/restaurants")}
         />
 
-        <StatCard
-          title="Categories"
-          value={categoryCount}
-          icon="📂"
+        <AdminAction
+          title="Menu Management"
+          description="Manage menu categories and menu items."
+          icon="📋"
+          onPress={() => router.push("/admin/menu")}
         />
 
-        <StatCard
-          title="Menu Items"
-          value={menuItemCount}
-          icon="🍽️"
+        <AdminAction
+          title="Orders"
+          description="View restaurant orders where supported by the backend."
+          icon="📦"
+          onPress={() => router.push("/admin/orders")}
         />
-      </View>
 
-      <Text style={styles.sectionTitle}>Management</Text>
-
-      <AdminAction
-        title="Restaurants"
-        description="Add, edit, open, close and remove restaurants."
-        icon="🍽️"
-        onPress={() => router.push("/admin/restaurants")}
-      />
-
-      <AdminAction
-        title="Menu Management"
-        description="Manage menu categories and menu items."
-        icon="📋"
-        onPress={() => router.push("/admin/menu")}
-      />
-
-      <AdminAction
-        title="Orders"
-        description="View restaurant orders where supported by the backend."
-        icon="📦"
-        onPress={() => router.push("/admin/orders")}
-      />
-
-      <AdminAction
-        title="Drivers"
-        description="Driver administration will be connected when the backend exposes a driver listing endpoint."
-        icon="🚗"
-        onPress={() => router.push("/admin/drivers")}
-      />
-    </ScrollView>
-     </RoleGuard>
+        <AdminAction
+          title="Drivers"
+          description="Driver administration will be connected when the backend exposes a driver listing endpoint."
+          icon="🚗"
+          onPress={() => router.push("/admin/drivers")}
+        />
+      </ScrollView>
+    </RoleGuard>
   );
 }
 
@@ -235,6 +241,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
+  exitRow: {
+    width: "100%",
+    alignItems: "flex-end",
+    marginBottom: 24,
+  },
+
   loadingText: {
     marginTop: 12,
     color: COLORS.muted,
@@ -270,6 +282,10 @@ const styles = StyleSheet.create({
   homeButtonText: {
     color: COLORS.navy,
     fontWeight: "700",
+  },
+
+  headerActions: {
+    alignItems: "flex-end",
   },
 
   statsRow: {

@@ -2,6 +2,7 @@ import { apiRequest } from "./api";
 
 export interface Restaurant {
   id: number;
+  userId?: number;
   name: string;
   description: string;
   phoneNumber: string;
@@ -32,6 +33,9 @@ interface RestaurantResponse {
   categories?: string[];
   imageUrl?: string;
   image?: string;
+  userId?: number;
+  ownerId?: number;
+  managerId?: number;
 }
 
 const categoryKeywords: Record<string, string[]> = {
@@ -106,7 +110,8 @@ function inferCategories(restaurant: RestaurantResponse): string[] {
     .join(" ")
     .toLowerCase();
 
-  const searchableText = `${restaurant.name} ${restaurant.description ?? ""} ${explicitCategories}`.toLowerCase();
+  const searchableText =
+    `${restaurant.name} ${restaurant.description ?? ""} ${explicitCategories}`.toLowerCase();
 
   return Object.entries(categoryKeywords)
     .filter(([, keywords]) =>
@@ -115,10 +120,9 @@ function inferCategories(restaurant: RestaurantResponse): string[] {
     .map(([category]) => category);
 }
 
-const normalizeRestaurant = (
-  restaurant: RestaurantResponse,
-): Restaurant => ({
+const normalizeRestaurant = (restaurant: RestaurantResponse): Restaurant => ({
   id: restaurant.id ?? restaurant.restaurantId ?? 0,
+  userId: restaurant.userId ?? restaurant.ownerId ?? restaurant.managerId,
   name: restaurant.name,
   description: restaurant.description ?? "",
   phoneNumber: restaurant.phoneNumber ?? "",
@@ -142,14 +146,23 @@ export const getRestaurants = async (): Promise<Restaurant[]> => {
 
     return restaurants;
   } catch (error) {
-    console.warn("Restaurant API unavailable, showing fallback restaurants", error);
+    console.warn(
+      "Restaurant API unavailable, showing fallback restaurants",
+      error,
+    );
     return fallbackRestaurants;
   }
 };
 
-export const getRestaurant = async (
-  id: number,
-): Promise<Restaurant> => {
+export const getRestaurant = async (id: number): Promise<Restaurant> => {
   const data = await apiRequest<RestaurantResponse>(`/api/Restaurant/${id}`);
   return normalizeRestaurant(data);
+};
+
+export const getRestaurantsForUser = async (
+  userId: number,
+): Promise<Restaurant[]> => {
+  const restaurants = await getRestaurants();
+
+  return restaurants.filter((restaurant) => restaurant.userId === userId);
 };

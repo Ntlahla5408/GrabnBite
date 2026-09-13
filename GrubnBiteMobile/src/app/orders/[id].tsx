@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import RoleGuard from "@/components/RoleGuard";
+import { FoodColors } from "@/constants/theme";
 import {
     getOrder,
     getOrderStatusHistory,
@@ -19,15 +20,15 @@ import {
 } from "@/services/orderService";
 
 const COLORS = {
-  navy: "#071B2C",
-  blue: "#2C7A9E",
+  navy: FoodColors.oat,
+  blue: FoodColors.tomato,
   white: "#FFFFFF",
-  background: "#F5F7F9",
-  text: "#17212B",
-  muted: "#6B7280",
-  border: "#E1E7EB",
-  green: "#228B55",
-  red: "#C83C3C",
+  background: "#FFF9F4",
+  text: "#1B1F22",
+  muted: "#6E6A66",
+  border: "#E8DDD5",
+  green: FoodColors.green,
+  red: FoodColors.tomatoDark,
 };
 
 export default function OrderDetailsScreen() {
@@ -380,13 +381,13 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.white,
     padding: 20,
     paddingTop: 24,
   },
 
   back: {
-    color: "#D9E6ED",
+    color: COLORS.blue,
     fontWeight: "700",
     marginBottom: 12,
   },
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: "#D9E6ED",
+    color: COLORS.muted,
     marginTop: 5,
   },
 
@@ -467,7 +468,7 @@ const styles = StyleSheet.create({
 
   trackSubtitle: {
     marginTop: 3,
-    color: "#DCEEF4",
+    color: "#FFE1D5",
     fontSize: 12,
   },
 
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEF1F3",
+    borderBottomColor: COLORS.border,
   },
 
   quantity: {

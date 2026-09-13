@@ -1,15 +1,17 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
+import { FoodColors } from "@/constants/theme";
+import { useCart } from "@/context/CartContext";
 import { ApiError, apiRequest } from "../services/api";
 import { getCurrentUser } from "../services/sessionService";
 
@@ -24,17 +26,17 @@ interface Payment {
 }
 
 const COLORS = {
-  primary: "#1A4B6B",
-  primaryDark: "#071B2C",
-  secondary: "#2C7A9E",
-  accent: "#F4C542",
-  background: "#F7F9FB",
+  primary: FoodColors.tomato,
+  primaryDark: FoodColors.oat,
+  secondary: FoodColors.tomatoDark,
+  accent: FoodColors.tomato,
+  background: "#FFF9F4",
   white: "#FFFFFF",
-  text: "#17212B",
-  muted: "#6B7785",
-  border: "#DDE4EA",
-  danger: "#C0392B",
-  success: "#2E7D32",
+  text: "#1B1F22",
+  muted: "#6E6A66",
+  border: "#E8DDD5",
+  danger: FoodColors.tomatoDark,
+  success: FoodColors.green,
 };
 
 const CARD_METHOD = "CARD";
@@ -42,6 +44,7 @@ const EFT_METHOD = "EFT";
 const CASH_METHOD = "CASH";
 
 export default function PaymentScreen() {
+  const { clearPendingCheckout } = useCart();
   const { orderId } = useLocalSearchParams<{
     orderId?: string | string[];
   }>();
@@ -125,6 +128,7 @@ export default function PaymentScreen() {
       );
 
       setPayment(data);
+      clearPendingCheckout();
 
       Alert.alert(
         "Payment created",
@@ -630,7 +634,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#EEF3F7",
+    backgroundColor: "#F4EEE7",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -677,7 +681,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#EAF2F7",
+    backgroundColor: "#FFE1D5",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -715,23 +719,23 @@ const styles = StyleSheet.create({
   },
 
   statusCard: {
-    backgroundColor: "#FFF8E7",
+    backgroundColor: "#FFF3E5",
     borderRadius: 14,
     padding: 16,
     flexDirection: "row",
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#F0D98B",
+    borderColor: "#F2C7A5",
   },
 
   successStatusCard: {
-    backgroundColor: "#ECF7ED",
-    borderColor: "#B8DDBB",
+    backgroundColor: "#E8F4EC",
+    borderColor: "#B5D8C0",
   },
 
   failedStatusCard: {
-    backgroundColor: "#FDEEEE",
-    borderColor: "#E7B9B5",
+    backgroundColor: "#FDEBE7",
+    borderColor: "#E5B8AD",
   },
 
   statusIcon: {
@@ -802,14 +806,14 @@ const styles = StyleSheet.create({
 
   methodCardSelected: {
     borderColor: COLORS.primary,
-    backgroundColor: "#F1F7FA",
+    backgroundColor: "#FFF0EB",
   },
 
   methodIcon: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: "#F1F4F6",
+    backgroundColor: "#F4EEE7",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -899,7 +903,7 @@ const styles = StyleSheet.create({
   successContainer: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: "#B8DDBB",
+    borderColor: "#B5D8C0",
     borderRadius: 16,
     padding: 25,
     alignItems: "center",
@@ -910,7 +914,7 @@ const styles = StyleSheet.create({
     width: 65,
     height: 65,
     borderRadius: 33,
-    backgroundColor: "#E7F4E8",
+    backgroundColor: "#E8F4EC",
     color: COLORS.success,
     textAlign: "center",
     lineHeight: 65,
@@ -952,9 +956,9 @@ const styles = StyleSheet.create({
   },
 
   demoNotice: {
-    backgroundColor: "#FFF9E8",
+    backgroundColor: "#FFF3E5",
     borderWidth: 1,
-    borderColor: "#EEDB9C",
+    borderColor: "#F2C7A5",
     borderRadius: 12,
     padding: 14,
   },

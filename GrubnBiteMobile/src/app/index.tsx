@@ -1,4 +1,5 @@
 import { getRestaurantImage } from "@/constants/assetImages";
+import { FoodColors } from "@/constants/theme";
 import { getRestaurants, Restaurant } from "@/services/restaurantService";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -19,38 +20,38 @@ export default function CustomerHomeScreen() {
   const isDark = scheme === "dark";
   const palette = isDark
     ? {
-        background: "#11151b",
-        header: "#171b22",
-        card: "#1d222b",
-        cardBorder: "#303540",
-        text: "#eef2f7",
-        textSoft: "#aeb4bf",
-        textMuted: "#7f8a99",
-        input: "#171b22",
-        inputBorder: "#303540",
-        imageBackground: "#313640",
-        cardDivider: "#313640",
-        accent: "#ff8a65",
-        badgeOpen: "#2ba86b",
-        badgeClosed: "#d64545",
-        button: "#ff8a65",
+        background: FoodColors.oat,
+        header: FoodColors.surface,
+        card: FoodColors.surface,
+        cardBorder: FoodColors.line,
+        text: FoodColors.ink,
+        textSoft: FoodColors.muted,
+        textMuted: "#7F7770",
+        input: FoodColors.surface,
+        inputBorder: FoodColors.line,
+        imageBackground: "#302A27",
+        cardDivider: FoodColors.line,
+        accent: FoodColors.tomato,
+        badgeOpen: FoodColors.green,
+        badgeClosed: "#C84A32",
+        button: FoodColors.tomato,
       }
     : {
-        background: "#F7F9FC",
+        background: "#FFF9F4",
         header: "#FFFFFF",
         card: "#FFFFFF",
-        cardBorder: "#E1E6EC",
-        text: "#222831",
-        textSoft: "#69717D",
-        textMuted: "#8A8F98",
-        input: "#FFFFFF",
-        inputBorder: "#DDE3EA",
-        imageBackground: "#DCEBFA",
-        cardDivider: "#EDF0F3",
-        accent: "#208AEF",
+        cardBorder: "#E8DDD5",
+        text: "#1B1F22",
+        textSoft: "#6E6A66",
+        textMuted: "#9B9189",
+        input: "#F4EEE7",
+        inputBorder: "#E8DDD5",
+        imageBackground: "#F2E3D8",
+        cardDivider: "#EEE5DE",
+        accent: FoodColors.tomato,
         badgeOpen: "#2E9B59",
-        badgeClosed: "#D64545",
-        button: "#208AEF",
+        badgeClosed: FoodColors.tomatoDark,
+        button: FoodColors.tomatoDark,
       };
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -439,29 +440,6 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 18,
     fontWeight: "800",
-  },
-
-  deliveringToLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-  },
-
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 3,
-  },
-
-  locationIcon: {
-    fontSize: 15,
-    marginRight: 5,
-  },
-
-  locationTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
   },
 
   scrollView: {

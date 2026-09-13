@@ -10,28 +10,28 @@ import {
 } from "react-native";
 
 import RoleGuard from "@/components/RoleGuard";
+import { FoodColors } from "@/constants/theme";
 import { getDeliveryLocation } from "@/services/driverService";
 import { getOrder, type Order } from "@/services/orderService";
 
 const COLORS = {
-  navy: "#071B2C",
-  blue: "#2C7A9E",
+  navy: FoodColors.oat,
+  blue: FoodColors.tomato,
   white: "#FFFFFF",
-  background: "#F5F7F9",
-  text: "#17212B",
-  muted: "#6B7280",
-  border: "#E1E7EB",
-  green: "#228B55",
-  orange: "#D97917",
-  red: "#C83C3C",
+  background: "#FFF9F4",
+  text: "#1B1F22",
+  muted: "#6E6A66",
+  border: "#E8DDD5",
+  green: FoodColors.green,
+  orange: FoodColors.tomato,
+  red: FoodColors.tomatoDark,
 };
 
 export default function TrackingScreen() {
-  const { id, deliveryId: deliveryIdParam } =
-    useLocalSearchParams<{
-      id: string;
-      deliveryId?: string;
-    }>();
+  const { id, deliveryId: deliveryIdParam } = useLocalSearchParams<{
+    id: string;
+    deliveryId?: string;
+  }>();
 
   const [order, setOrder] = useState<Order | null>(null);
 
@@ -86,9 +86,7 @@ export default function TrackingScreen() {
       console.error(err);
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load the order.",
+        err instanceof Error ? err.message : "Unable to load the order.",
       );
     } finally {
       setLoading(false);
@@ -111,9 +109,7 @@ export default function TrackingScreen() {
     } catch (err) {
       console.error(err);
 
-      setLocationError(
-        "The delivery location is not available yet.",
-      );
+      setLocationError("The delivery location is not available yet.");
     } finally {
       setLocationLoading(false);
     }
@@ -123,9 +119,7 @@ export default function TrackingScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.blue} />
-        <Text style={styles.loading}>
-          Loading delivery information...
-        </Text>
+        <Text style={styles.loading}>Loading delivery information...</Text>
       </View>
     );
   }
@@ -139,10 +133,7 @@ export default function TrackingScreen() {
           {error || "Order could not be found."}
         </Text>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.back()}
-        >
+        <Pressable style={styles.primaryButton} onPress={() => router.back()}>
           <Text style={styles.primaryButtonText}>Go Back</Text>
         </Pressable>
       </View>
@@ -153,154 +144,113 @@ export default function TrackingScreen() {
 
   return (
     <RoleGuard allowedRoles={["customer", "user"]}>
-<ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Order #{order.id}</Text>
-        </Pressable>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.back}>‹ Order #{order.id}</Text>
+          </Pressable>
 
-        <Text style={styles.title}>Track Delivery</Text>
+          <Text style={styles.title}>Track Delivery</Text>
 
-        <Text style={styles.subtitle}>
-          Follow your order's latest location
-        </Text>
-      </View>
-
-      <View style={styles.statusCard}>
-        <Text style={styles.statusLabel}>Order status</Text>
-
-        <Text style={styles.statusValue}>{status}</Text>
-
-        <View style={styles.progress}>
-          <ProgressStep
-            label="Placed"
-            active={true}
-          />
-
-          <ProgressStep
-            label="Preparing"
-            active={isPreparing(status)}
-          />
-
-          <ProgressStep
-            label="On the way"
-            active={isOnTheWay(status)}
-          />
-
-          <ProgressStep
-            label="Delivered"
-            active={isDelivered(status)}
-          />
-        </View>
-      </View>
-
-      <View style={styles.mapContainer}>
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapTitle}>
-            Delivery Location
+          <Text style={styles.subtitle}>
+            Follow your order's latest location
           </Text>
-
-          {locationLoading ? (
-            <ActivityIndicator
-              color={COLORS.blue}
-              style={{ marginTop: 12 }}
-            />
-          ) : latitude !== null && longitude !== null ? (
-            <>
-              <Text style={styles.coordinates}>
-                Latitude: {latitude.toFixed(6)}
-              </Text>
-
-              <Text style={styles.coordinates}>
-                Longitude: {longitude.toFixed(6)}
-              </Text>
-
-              <Text style={styles.updated}>
-                Location updates automatically every 15 seconds.
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.noLocation}>
-              {locationError ||
-                "The driver has not shared a location yet."}
-            </Text>
-          )}
         </View>
-      </View>
 
-      <View style={styles.infoCard}>
-        <Text style={styles.sectionTitle}>
-          Delivery information
-        </Text>
+        <View style={styles.statusCard}>
+          <Text style={styles.statusLabel}>Order status</Text>
 
-        <InfoRow
-          label="Order"
-          value={`#${order.id}`}
-        />
+          <Text style={styles.statusValue}>{status}</Text>
 
-        {order.restaurant?.name ? (
-          <InfoRow
-            label="Restaurant"
-            value={order.restaurant.name}
-          />
-        ) : null}
+          <View style={styles.progress}>
+            <ProgressStep label="Placed" active={true} />
 
-        {order.deliveryAddress?.streetAddress ? (
-          <InfoRow
-            label="Delivering to"
-            value={order.deliveryAddress.streetAddress}
-          />
-        ) : null}
+            <ProgressStep label="Preparing" active={isPreparing(status)} />
 
-        {deliveryId ? (
-          <InfoRow
-            label="Delivery"
-            value={`#${deliveryId}`}
-          />
-        ) : null}
-      </View>
+            <ProgressStep label="On the way" active={isOnTheWay(status)} />
 
-      <View style={styles.notice}>
-        <Text style={styles.noticeIcon}>ℹ️</Text>
+            <ProgressStep label="Delivered" active={isDelivered(status)} />
+          </View>
+        </View>
 
-        <Text style={styles.noticeText}>
-          The map will use the driver's latest GPS coordinates.
-          For now, the system displays the coordinates received
-          from the backend. A full interactive map can be connected
-          once the delivery flow is being tested end-to-end.
-        </Text>
-      </View>
-    </ScrollView>
+        <View style={styles.mapContainer}>
+          <View style={styles.mapPlaceholder}>
+            <Text style={styles.mapTitle}>Delivery Location</Text>
+
+            {locationLoading ? (
+              <ActivityIndicator
+                color={COLORS.blue}
+                style={{ marginTop: 12 }}
+              />
+            ) : latitude !== null && longitude !== null ? (
+              <>
+                <Text style={styles.coordinates}>
+                  Latitude: {latitude.toFixed(6)}
+                </Text>
+
+                <Text style={styles.coordinates}>
+                  Longitude: {longitude.toFixed(6)}
+                </Text>
+
+                <Text style={styles.updated}>
+                  Location updates automatically every 15 seconds.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.noLocation}>
+                {locationError || "The driver has not shared a location yet."}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.sectionTitle}>Delivery information</Text>
+
+          <InfoRow label="Order" value={`#${order.id}`} />
+
+          {order.restaurant?.name ? (
+            <InfoRow label="Restaurant" value={order.restaurant.name} />
+          ) : null}
+
+          {order.deliveryAddress?.streetAddress ? (
+            <InfoRow
+              label="Delivering to"
+              value={order.deliveryAddress.streetAddress}
+            />
+          ) : null}
+
+          {deliveryId ? (
+            <InfoRow label="Delivery" value={`#${deliveryId}`} />
+          ) : null}
+        </View>
+
+        <View style={styles.notice}>
+          <Text style={styles.noticeIcon}>ℹ️</Text>
+
+          <Text style={styles.noticeText}>
+            The map will use the driver's latest GPS coordinates. For now, the
+            system displays the coordinates received from the backend. A full
+            interactive map can be connected once the delivery flow is being
+            tested end-to-end.
+          </Text>
+        </View>
+      </ScrollView>
     </RoleGuard>
-    
   );
 }
 
-function ProgressStep({
-  label,
-  active,
-}: {
-  label: string;
-  active: boolean;
-}) {
+function ProgressStep({ label, active }: { label: string; active: boolean }) {
   return (
     <View style={styles.progressStep}>
       <View
-        style={[
-          styles.progressCircle,
-          active && styles.progressCircleActive,
-        ]}
+        style={[styles.progressCircle, active && styles.progressCircleActive]}
       >
-        {active ? (
-          <Text style={styles.check}>✓</Text>
-        ) : null}
+        {active ? <Text style={styles.check}>✓</Text> : null}
       </View>
 
       <Text
-        style={[
-          styles.progressLabel,
-          active && styles.progressLabelActive,
-        ]}
+        style={[styles.progressLabel, active && styles.progressLabelActive]}
       >
         {label}
       </Text>
@@ -308,13 +258,7 @@ function ProgressStep({
   );
 }
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -353,10 +297,7 @@ function isOnTheWay(status: string) {
 function isDelivered(status: string) {
   const value = normalizeStatus(status);
 
-  return (
-    value.includes("deliver") ||
-    value.includes("complete")
-  );
+  return value.includes("deliver") || value.includes("complete");
 }
 
 const styles = StyleSheet.create({
@@ -379,13 +320,13 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.white,
     padding: 20,
     paddingTop: 24,
   },
 
   back: {
-    color: "#D9E6ED",
+    color: COLORS.blue,
     fontWeight: "700",
     marginBottom: 12,
   },
@@ -398,7 +339,7 @@ const styles = StyleSheet.create({
 
   subtitle: {
     marginTop: 5,
-    color: "#D9E6ED",
+    color: COLORS.muted,
   },
 
   statusCard: {
@@ -437,7 +378,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#E5E9EC",
+    backgroundColor: "#F4EEE7",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -470,7 +411,7 @@ const styles = StyleSheet.create({
   mapPlaceholder: {
     minHeight: 260,
     borderRadius: 18,
-    backgroundColor: "#E7EFF2",
+    backgroundColor: "#F4EEE7",
     justifyContent: "center",
     alignItems: "center",
     padding: 25,
@@ -530,7 +471,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 9,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEF1F3",
+    borderBottomColor: COLORS.border,
   },
 
   infoLabel: {
@@ -560,7 +501,7 @@ const styles = StyleSheet.create({
 
   noticeText: {
     flex: 1,
-    color: "#76501F",
+    color: COLORS.red,
     lineHeight: 19,
     fontSize: 12,
   },

@@ -74,6 +74,19 @@ export interface UpdateMenuItemRequest {
   isAvailable: boolean;
 }
 
+export interface AdminUser {
+  id: number;
+  userId?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
+export interface UpdateUserRoleRequest {
+  role: string;
+}
+
 // -----------------------------
 // RESTAURANTS
 // -----------------------------
@@ -187,4 +200,18 @@ export const deleteMenuItem = async (id: number): Promise<void> => {
 
 export const adminTest = async (): Promise<unknown> => {
   return await apiRequest<unknown>("/api/Authentication/admin-test");
+};
+
+export const getUsers = async (): Promise<AdminUser[]> => {
+  return await apiRequest<AdminUser[]>("/api/User");
+};
+
+export const updateUserRole = async (
+  userId: number,
+  data: UpdateUserRoleRequest,
+): Promise<AdminUser> => {
+  return await apiRequest<AdminUser>(`/api/User/${userId}/role`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 };

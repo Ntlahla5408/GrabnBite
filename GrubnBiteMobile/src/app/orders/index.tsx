@@ -12,10 +12,7 @@ import {
 
 import RoleGuard from "@/components/RoleGuard";
 import { FoodColors } from "@/constants/theme";
-import {
-    getMyOrders,
-    type Order,
-} from "@/services/orderService";
+import { getMyOrders, type Order } from "@/services/orderService";
 
 const COLORS: Record<string, string> = {
   navy: FoodColors.ink,
@@ -57,9 +54,7 @@ export default function OrdersScreen() {
       console.error(err);
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load your orders.",
+        err instanceof Error ? err.message : "Unable to load your orders.",
       );
     } finally {
       setLoading(false);
@@ -83,86 +78,75 @@ export default function OrdersScreen() {
 
   return (
     <RoleGuard allowedRoles={["customer", "user"]}>
-<ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refresh}
-          tintColor={COLORS.blue}
-        />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>My Orders</Text>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={COLORS.blue}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>My Orders</Text>
 
-        <Text style={styles.subtitle}>
-          View your orders and track deliveries
-        </Text>
-      </View>
-
-      {error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
-          <Text style={styles.errorText}>{error}</Text>
-
-          <Pressable style={styles.retryButton} onPress={loadOrders}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </Pressable>
-        </View>
-      ) : orders.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>📦</Text>
-
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-
-          <Text style={styles.emptyText}>
-            Once you place an order, it will appear here.
+          <Text style={styles.subtitle}>
+            View your orders and track deliveries
           </Text>
+        </View>
 
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => router.replace("/")}
-          >
-            <Text style={styles.primaryButtonText}>
-              Browse Restaurants
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Something went wrong</Text>
+            <Text style={styles.errorText}>{error}</Text>
+
+            <Pressable style={styles.retryButton} onPress={loadOrders}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </Pressable>
+          </View>
+        ) : orders.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyIcon}>📦</Text>
+
+            <Text style={styles.emptyTitle}>No orders yet</Text>
+
+            <Text style={styles.emptyText}>
+              Once you place an order, it will appear here.
             </Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.ordersContainer}>
-          {orders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onPress={() =>
-                router.push({
-                  pathname: "/orders/[id]",
-                  params: { id: String(order.id) },
-                })
-              }
-            />
-          ))}
-        </View>
-      )}
-    </ScrollView>
+
+            <Pressable
+              style={styles.primaryButton}
+              onPress={() => router.replace("/")}
+            >
+              <Text style={styles.primaryButtonText}>Browse Restaurants</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.ordersContainer}>
+            {orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onPress={() =>
+                  router.push({
+                    pathname: "/orders/[id]",
+                    params: { id: String(order.id) },
+                  })
+                }
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </RoleGuard>
-    
   );
 }
 
-function OrderCard({
-  order,
-  onPress,
-}: {
-  order: Order;
-  onPress: () => void;
-}) {
+function OrderCard({ order, onPress }: { order: Order; onPress: () => void }) {
   const restaurantName =
     order.restaurant?.name ??
-    (order.restaurantId
-      ? `Restaurant #${order.restaurantId}`
-      : "Restaurant");
+    (order.restaurantId ? `Restaurant #${order.restaurantId}` : "Restaurant");
 
   const total = order.totalAmount ?? order.total ?? 0;
 
@@ -179,13 +163,9 @@ function OrderCard({
     <Pressable style={styles.orderCard} onPress={onPress}>
       <View style={styles.orderTop}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.restaurantName}>
-            {restaurantName}
-          </Text>
+          <Text style={styles.restaurantName}>{restaurantName}</Text>
 
-          <Text style={styles.orderNumber}>
-            Order #{order.id}
-          </Text>
+          <Text style={styles.orderNumber}>Order #{order.id}</Text>
         </View>
 
         <StatusBadge status={status} />
@@ -203,9 +183,7 @@ function OrderCard({
 
         <View>
           <Text style={styles.infoLabel}>Total</Text>
-          <Text style={styles.total}>
-            R {Number(total).toFixed(2)}
-          </Text>
+          <Text style={styles.total}>R {Number(total).toFixed(2)}</Text>
         </View>
       </View>
 
@@ -216,9 +194,7 @@ function OrderCard({
       ) : null}
 
       <View style={styles.viewOrder}>
-        <Text style={styles.viewOrderText}>
-          View order →
-        </Text>
+        <Text style={styles.viewOrderText}>View order →</Text>
       </View>
     </Pressable>
   );
@@ -237,25 +213,17 @@ function StatusBadge({ status }: { status: string }) {
   ) {
     background = FoodColors.mint;
     text = COLORS.green;
-  } else if (
-    normalized.includes("cancel") ||
-    normalized.includes("fail")
-  ) {
+  } else if (normalized.includes("cancel") || normalized.includes("fail")) {
     background = FoodColors.peach;
     text = COLORS.red;
-  } else if (
-    normalized.includes("pending") ||
-    normalized.includes("prepar")
-  ) {
+  } else if (normalized.includes("pending") || normalized.includes("prepar")) {
     background = FoodColors.peach;
     text = COLORS.orange;
   }
 
   return (
     <View style={[styles.statusBadge, { backgroundColor: background }]}>
-      <Text style={[styles.statusText, { color: text }]}>
-        {status}
-      </Text>
+      <Text style={[styles.statusText, { color: text }]}>{status}</Text>
     </View>
   );
 }
@@ -290,7 +258,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: "#D9E6ED",
+    color: COLORS.muted,
     marginTop: 6,
   },
 

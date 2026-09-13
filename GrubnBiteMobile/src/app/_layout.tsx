@@ -1,10 +1,11 @@
-import { DarkTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { DarkTheme, ThemeProvider } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect, useState } from "react";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-import { restoreSession } from '@/services/sessionService';
+import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import AppTabs from "@/components/app-tabs";
+import { CartProvider } from "@/context/CartContext";
+import { restoreSession } from "@/services/sessionService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,8 +22,10 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={DarkTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+      <CartProvider>
+        <AnimatedSplashOverlay />
+        <AppTabs />
+      </CartProvider>
     </ThemeProvider>
   );
 }

@@ -1,16 +1,13 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Cart;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Customer")]
     public class CartController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,40 +17,29 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private int GetCurrentUserId()
+        // GET: api/cart/{userId}
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetCart(int userId)
         {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
-
-        // GET: api/cart
-        [HttpGet]
-        public async Task<IActionResult> GetCart()
-        {
-            var userId = GetCurrentUserId();
-
-            var cart = await _context.Carts
+            var carts = await _context.Carts
                 .Include(c => c.Restaurant)
                 .Include(c => c.CartItems)
                     .ThenInclude(ci => ci.MenuItem)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
+                .Where(c => c.UserId == userId)
+                .OrderByDescending(c => c.UpdatedAt)
+                .ToListAsync();
 
-            if (cart == null)
+            if (carts.Count == 0)
             {
-                return Ok(new
-                {
-                    message = "Cart is empty.",
-                    items = new List<CartItemResponseDto>(),
-                    totalAmount = 0
-                });
+                return Ok(Array.Empty<CartResponseDto>());
             }
 
-            var response = new CartResponseDto
+            var response = carts.Select(cart => new CartResponseDto
             {
                 CartId = cart.CartId,
                 RestaurantId = cart.RestaurantId,
                 RestaurantName = cart.Restaurant.Name,
+
                 Items = cart.CartItems.Select(ci => new CartItemResponseDto
                 {
                     CartItemId = ci.CartItemId,
@@ -63,17 +49,22 @@ namespace GrabnBite.Controllers
                     UnitPrice = ci.UnitPrice,
                     Subtotal = ci.UnitPrice * ci.Quantity
                 }).ToList()
-            };
+            }).ToList();
 
-            response.TotalAmount = response.Items
-                .Sum(i => i.Subtotal);
+            foreach (var cartResponse in response)
+            {
+                cartResponse.TotalAmount = cartResponse.Items
+                    .Sum(i => i.Subtotal);
+            }
 
             return Ok(response);
         }
 
-        // POST: api/cart/items
-        [HttpPost("items")]
+
+        // POST: api/cart/{userId}/items
+        [HttpPost("{userId}/items")]
         public async Task<IActionResult> AddItem(
+            int userId,
             AddCartItemDto dto)
         {
             if (dto.Quantity <= 0)
@@ -81,11 +72,10 @@ namespace GrabnBite.Controllers
                 return BadRequest("Quantity must be greater than zero.");
             }
 
-            var userId = GetCurrentUserId();
-
             var menuItem = await _context.MenuItems
                 .Include(m => m.Restaurant)
-                .FirstOrDefaultAsync(m => m.MenuItemId == dto.MenuItemId);
+                .FirstOrDefaultAsync(m =>
+                    m.MenuItemId == dto.MenuItemId);
 
             if (menuItem == null)
             {
@@ -94,17 +84,20 @@ namespace GrabnBite.Controllers
 
             if (!menuItem.IsAvailable)
             {
-                return BadRequest("This menu item is currently unavailable.");
+                return BadRequest(
+                    "This menu item is currently unavailable.");
             }
 
             if (!menuItem.Restaurant.IsOpen)
             {
-                return BadRequest("This restaurant is currently closed.");
+                return BadRequest(
+                    "This restaurant is currently closed.");
             }
 
             if (!menuItem.Restaurant.IsApproved)
             {
-                return BadRequest("This restaurant is not approved.");
+                return BadRequest(
+                    "This restaurant is not approved.");
             }
 
             var cart = await _context.Carts
@@ -160,9 +153,11 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // PUT: api/cart/items/{id}
-        [HttpPut("items/{id}")]
+
+        // PUT: api/cart/{userId}/items/{id}
+        [HttpPut("{userId}/items/{id}")]
         public async Task<IActionResult> UpdateItem(
+            int userId,
             int id,
             UpdateCartItemDto dto)
         {
@@ -171,8 +166,6 @@ namespace GrabnBite.Controllers
                 return BadRequest(
                     "Quantity must be greater than zero.");
             }
-
-            var userId = GetCurrentUserId();
 
             var cartItem = await _context.CartItems
                 .Include(ci => ci.Cart)
@@ -196,12 +189,13 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // DELETE: api/cart/items/{id}
-        [HttpDelete("items/{id}")]
-        public async Task<IActionResult> RemoveItem(int id)
-        {
-            var userId = GetCurrentUserId();
 
+        // DELETE: api/cart/{userId}/items/{id}
+        [HttpDelete("{userId}/items/{id}")]
+        public async Task<IActionResult> RemoveItem(
+            int userId,
+            int id)
+        {
             var cartItem = await _context.CartItems
                 .Include(ci => ci.Cart)
                 .FirstOrDefaultAsync(ci =>
@@ -225,12 +219,11 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // DELETE: api/cart
-        [HttpDelete]
-        public async Task<IActionResult> ClearCart()
-        {
-            var userId = GetCurrentUserId();
 
+        // DELETE: api/cart/{userId}
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> ClearCart(int userId)
+        {
             var cart = await _context.Carts
                 .Include(c => c.CartItems)
                 .FirstOrDefaultAsync(c => c.UserId == userId);

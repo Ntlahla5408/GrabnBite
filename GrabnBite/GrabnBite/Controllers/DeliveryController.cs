@@ -1,17 +1,13 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Delivery;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class DeliveryController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -21,20 +17,12 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
-
         // ============================================================
         // CREATE DELIVERY
         // Admin creates delivery for ready order
         // ============================================================
 
         [HttpPost("{orderId}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateDelivery(
             int orderId)
         {
@@ -89,7 +77,6 @@ namespace GrabnBite.Controllers
         // ============================================================
 
         [HttpPut("{deliveryId}/assign")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AssignDriver(
             int deliveryId,
             AssignDriverDto dto)
@@ -144,29 +131,32 @@ namespace GrabnBite.Controllers
                 Status = delivery.Status,
                 PickedUpAt = delivery.PickedUpAt,
                 DeliveredAt = delivery.DeliveredAt,
-                DriverLatitude =
-                    delivery.DriverLatitude,
-                DriverLongitude =
-                    delivery.DriverLongitude
+                DriverLatitude = delivery.DriverLatitude,
+                DriverLongitude = delivery.DriverLongitude
             });
         }
 
         // ============================================================
         // GET MY DELIVERY
+        // driverId is supplied explicitly
         // ============================================================
 
-        [HttpGet("my-delivery")]
-        [Authorize(Roles = "Driver")]
-        public async Task<IActionResult> GetMyDelivery()
+        [HttpGet("driver/{driverId}/my-delivery")]
+        public async Task<IActionResult> GetMyDelivery(
+            int driverId)
         {
-            var userId = GetCurrentUserId();
+            if (driverId <= 0)
+            {
+                return BadRequest("A valid driverId is required.");
+            }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId);
+                .FirstOrDefaultAsync(d =>
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
-                return NotFound("Driver profile not found.");
+                return NotFound("Driver not found.");
             }
 
             var delivery = await _context.Deliveries
@@ -188,10 +178,8 @@ namespace GrabnBite.Controllers
                 Status = delivery.Status,
                 PickedUpAt = delivery.PickedUpAt,
                 DeliveredAt = delivery.DeliveredAt,
-                DriverLatitude =
-                    delivery.DriverLatitude,
-                DriverLongitude =
-                    delivery.DriverLongitude
+                DriverLatitude = delivery.DriverLatitude,
+                DriverLongitude = delivery.DriverLongitude
             });
         }
 
@@ -199,20 +187,23 @@ namespace GrabnBite.Controllers
         // DRIVER PICKS UP ORDER
         // ============================================================
 
-        [HttpPut("{deliveryId}/pickup")]
-        [Authorize(Roles = "Driver")]
+        [HttpPut("{driverId}/{deliveryId}/pickup")]
         public async Task<IActionResult> PickUpOrder(
+            int driverId,
             int deliveryId)
         {
-            var userId = GetCurrentUserId();
+            if (driverId <= 0)
+            {
+                return BadRequest("A valid driverId is required.");
+            }
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId);
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
-                return NotFound("Driver profile not found.");
+                return NotFound("Driver not found.");
             }
 
             var delivery = await _context.Deliveries
@@ -257,20 +248,23 @@ namespace GrabnBite.Controllers
         // DRIVER STARTS DELIVERY
         // ============================================================
 
-        [HttpPut("{deliveryId}/start")]
-        [Authorize(Roles = "Driver")]
+        [HttpPut("{driverId}/{deliveryId}/start")]
         public async Task<IActionResult> StartDelivery(
+            int driverId,
             int deliveryId)
         {
-            var userId = GetCurrentUserId();
+            if (driverId <= 0)
+            {
+                return BadRequest("A valid driverId is required.");
+            }
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId);
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
-                return NotFound("Driver profile not found.");
+                return NotFound("Driver not found.");
             }
 
             var delivery = await _context.Deliveries
@@ -314,20 +308,23 @@ namespace GrabnBite.Controllers
         // DRIVER COMPLETES DELIVERY
         // ============================================================
 
-        [HttpPut("{deliveryId}/complete")]
-        [Authorize(Roles = "Driver")]
+        [HttpPut("{driverId}/{deliveryId}/complete")]
         public async Task<IActionResult> CompleteDelivery(
+            int driverId,
             int deliveryId)
         {
-            var userId = GetCurrentUserId();
+            if (driverId <= 0)
+            {
+                return BadRequest("A valid driverId is required.");
+            }
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId);
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
-                return NotFound("Driver profile not found.");
+                return NotFound("Driver not found.");
             }
 
             var delivery = await _context.Deliveries
@@ -374,24 +371,26 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // UPDATE DRIVER LOCATION
-        // Location is now stored directly in SQL Server
         // ============================================================
 
-        [HttpPut("{deliveryId}/location")]
-        [Authorize(Roles = "Driver")]
+        [HttpPut("{driverId}/{deliveryId}/location")]
         public async Task<IActionResult> UpdateDriverLocation(
+            int driverId,
             int deliveryId,
             UpdateDriverLocationDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (driverId <= 0)
+            {
+                return BadRequest("A valid driverId is required.");
+            }
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId);
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
-                return NotFound("Driver profile not found.");
+                return NotFound("Driver not found.");
             }
 
             var delivery = await _context.Deliveries
@@ -429,10 +428,6 @@ namespace GrabnBite.Controllers
                     "Invalid longitude.");
             }
 
-            // ------------------------------------------------------------
-            // Save latest location directly to the database
-            // ------------------------------------------------------------
-
             delivery.DriverLatitude = dto.Latitude;
             delivery.DriverLongitude = dto.Longitude;
 
@@ -450,11 +445,9 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // GET DRIVER LOCATION
-        // Location is retrieved directly from SQL Server
         // ============================================================
 
         [HttpGet("{deliveryId}/location")]
-        [Authorize]
         public async Task<IActionResult> GetDriverLocation(
             int deliveryId)
         {
@@ -467,47 +460,6 @@ namespace GrabnBite.Controllers
             {
                 return NotFound("Delivery not found.");
             }
-
-            var userId = GetCurrentUserId();
-
-            if (User.IsInRole("Customer"))
-            {
-                if (delivery.Order.UserId != userId)
-                {
-                    return Forbid();
-                }
-            }
-
-            if (User.IsInRole("Driver"))
-            {
-                var driver = await _context.Drivers
-                    .FirstOrDefaultAsync(d =>
-                        d.UserId == userId);
-
-                if (driver == null ||
-                    delivery.DriverId != driver.DriverId)
-                {
-                    return Forbid();
-                }
-            }
-
-            if (User.IsInRole("Restaurant"))
-            {
-                var restaurant = await _context.Restaurants
-                    .FirstOrDefaultAsync(r =>
-                        r.RestaurantId ==
-                        delivery.Order.RestaurantId &&
-                        r.UserId == userId);
-
-                if (restaurant == null)
-                {
-                    return Forbid();
-                }
-            }
-
-            // ------------------------------------------------------------
-            // Return the latest location stored in the database
-            // ------------------------------------------------------------
 
             if (delivery.DriverLatitude == null ||
                 delivery.DriverLongitude == null)

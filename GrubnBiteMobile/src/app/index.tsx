@@ -76,9 +76,7 @@ export default function CustomerHomeScreen() {
       console.error("Restaurant loading error:", error);
 
       setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to load restaurants.",
+        error instanceof Error ? error.message : "Failed to load restaurants.",
       );
     } finally {
       setLoading(false);
@@ -104,8 +102,16 @@ export default function CustomerHomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}> 
-      <View style={[styles.topHeader, { backgroundColor: palette.header, borderBottomColor: palette.cardBorder }]}> 
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View
+        style={[
+          styles.topHeader,
+          {
+            backgroundColor: palette.header,
+            borderBottomColor: palette.cardBorder,
+          },
+        ]}
+      >
         <View style={styles.deliveryLocationContainer}>
           <View style={styles.brandRow}>
             <Image
@@ -113,16 +119,11 @@ export default function CustomerHomeScreen() {
               style={styles.brandLogo}
               resizeMode="cover"
             />
-            <Text style={[styles.brandName, { color: palette.text }]}>Grubn<Text style={{ color: palette.accent }}>Bite</Text></Text>
+            <Text style={[styles.brandName, { color: palette.text }]}>
+              Grubn<Text style={{ color: palette.accent }}>Bite</Text>
+            </Text>
           </View>
         </View>
-
-        <Pressable
-          style={[styles.cartHeaderButton, { backgroundColor: isDark ? "#252b35" : "#EAF4FF" }]}
-          onPress={() => router.push("/cart")}
-        >
-          <Text style={styles.cartIcon}>🛒</Text>
-        </Pressable>
       </View>
 
       <ScrollView
@@ -131,15 +132,27 @@ export default function CustomerHomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.greetingSection}>
-          <Text style={[styles.greetingTitle, { color: palette.accent }]}>Hungry?</Text>
+          <Text style={[styles.greetingTitle, { color: palette.accent }]}>
+            Hungry?
+          </Text>
 
-          <Text style={[styles.greetingSubtitle, { color: palette.accent }]}> 
+          <Text style={[styles.greetingSubtitle, { color: palette.accent }]}>
             Order delicious food from local restaurants
           </Text>
         </View>
 
-        <View style={[styles.searchContainer, { backgroundColor: palette.input, borderColor: palette.inputBorder }]}> 
-          <Text style={[styles.searchIcon, { color: palette.textMuted }]}>⌕</Text>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: palette.input,
+              borderColor: palette.inputBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.searchIcon, { color: palette.textMuted }]}>
+            ⌕
+          </Text>
 
           <TextInput
             style={[styles.searchInput, { color: palette.text }]}
@@ -153,15 +166,21 @@ export default function CustomerHomeScreen() {
 
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery("")} hitSlop={8}>
-              <Text style={[styles.clearButton, { color: palette.textMuted }]}>×</Text>
+              <Text style={[styles.clearButton, { color: palette.textMuted }]}>
+                ×
+              </Text>
             </Pressable>
           )}
         </View>
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>Popular Restaurants</Text>
-            <Text style={[styles.sectionSubtitle, { color: palette.textMuted }]}> 
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>
+              Popular Restaurants
+            </Text>
+            <Text
+              style={[styles.sectionSubtitle, { color: palette.textMuted }]}
+            >
               {filteredRestaurants.length}{" "}
               {filteredRestaurants.length === 1 ? "restaurant" : "restaurants"}{" "}
               available
@@ -172,16 +191,25 @@ export default function CustomerHomeScreen() {
         {loading && (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={palette.accent} />
-            <Text style={[styles.loadingText, { color: palette.textSoft }]}>Finding restaurants...</Text>
+            <Text style={[styles.loadingText, { color: palette.textSoft }]}>
+              Finding restaurants...
+            </Text>
           </View>
         )}
 
         {!loading && error !== "" && (
           <View style={styles.centerContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
-            <Text style={[styles.emptyTitle, { color: palette.text }]}>Couldn't load restaurants</Text>
-            <Text style={[styles.emptySubtitle, { color: palette.textSoft }]}>{error}</Text>
-            <Pressable style={[styles.retryButton, { backgroundColor: palette.button }]} onPress={loadRestaurants}>
+            <Text style={[styles.emptyTitle, { color: palette.text }]}>
+              Couldn't load restaurants
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: palette.textSoft }]}>
+              {error}
+            </Text>
+            <Pressable
+              style={[styles.retryButton, { backgroundColor: palette.button }]}
+              onPress={loadRestaurants}
+            >
               <Text style={styles.retryButtonText}>Try Again</Text>
             </Pressable>
           </View>
@@ -190,8 +218,12 @@ export default function CustomerHomeScreen() {
         {!loading && error === "" && filteredRestaurants.length === 0 && (
           <View style={styles.centerContainer}>
             <Text style={styles.emptyIcon}>🔎</Text>
-            <Text style={[styles.emptyTitle, { color: palette.text }]}>No restaurants found</Text>
-            <Text style={[styles.emptySubtitle, { color: palette.textSoft }]}>Try searching for another restaurant.</Text>
+            <Text style={[styles.emptyTitle, { color: palette.text }]}>
+              No restaurants found
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: palette.textSoft }]}>
+              Try searching for another restaurant.
+            </Text>
           </View>
         )}
 
@@ -202,12 +234,20 @@ export default function CustomerHomeScreen() {
                 key={restaurant.id}
                 style={({ pressed }) => [
                   styles.restaurantCard,
-                  { backgroundColor: palette.card, borderColor: palette.cardBorder },
+                  {
+                    backgroundColor: palette.card,
+                    borderColor: palette.cardBorder,
+                  },
                   pressed && styles.restaurantCardPressed,
                 ]}
                 onPress={() => handleRestaurantPress(restaurant)}
               >
-                <View style={[styles.imageWrapper, { backgroundColor: palette.imageBackground }]}> 
+                <View
+                  style={[
+                    styles.imageWrapper,
+                    { backgroundColor: palette.imageBackground },
+                  ]}
+                >
                   <Image
                     source={
                       restaurant.imageUrl
@@ -219,28 +259,64 @@ export default function CustomerHomeScreen() {
                   />
 
                   <View style={styles.imageOverlayBadge}>
-                    <View style={[styles.statusBadge, restaurant.isOpen ? { backgroundColor: palette.badgeOpen } : { backgroundColor: palette.badgeClosed }]}> 
-                      <Text style={styles.statusBadgeText}>{restaurant.isOpen ? "OPEN NOW" : "CLOSED"}</Text>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        restaurant.isOpen
+                          ? { backgroundColor: palette.badgeOpen }
+                          : { backgroundColor: palette.badgeClosed },
+                      ]}
+                    >
+                      <Text style={styles.statusBadgeText}>
+                        {restaurant.isOpen ? "OPEN NOW" : "CLOSED"}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.cardContent}>
                   <View style={styles.cardTopRow}>
-                    <Text style={[styles.restaurantName, { color: palette.text }]} numberOfLines={1}>{restaurant.name}</Text>
+                    <Text
+                      style={[styles.restaurantName, { color: palette.text }]}
+                      numberOfLines={1}
+                    >
+                      {restaurant.name}
+                    </Text>
                   </View>
 
-                  <Text style={[styles.restaurantDescription, { color: palette.textSoft }]} numberOfLines={2}>
-                    {restaurant.description || "Delicious food waiting for you."}
+                  <Text
+                    style={[
+                      styles.restaurantDescription,
+                      { color: palette.textSoft },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {restaurant.description ||
+                      "Delicious food waiting for you."}
                   </Text>
 
-                  <View style={[styles.cardFooter, { borderTopColor: palette.cardDivider }]}> 
+                  <View
+                    style={[
+                      styles.cardFooter,
+                      { borderTopColor: palette.cardDivider },
+                    ]}
+                  >
                     <View style={styles.addressRow}>
                       <Text style={styles.addressIcon}>📍</Text>
-                      <Text style={[styles.addressText, { color: palette.textMuted }]} numberOfLines={1}>{restaurant.address}</Text>
+                      <Text
+                        style={[
+                          styles.addressText,
+                          { color: palette.textMuted },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {restaurant.address}
+                      </Text>
                     </View>
 
-                    <Text style={[styles.viewText, { color: palette.accent }]}>View menu →</Text>
+                    <Text style={[styles.viewText, { color: palette.accent }]}>
+                      View menu →
+                    </Text>
                   </View>
                 </View>
               </Pressable>
@@ -252,10 +328,18 @@ export default function CustomerHomeScreen() {
           <View style={styles.dealsSection}>
             <View style={styles.dealsHeader}>
               <View>
-                <Text style={[styles.sectionTitle, { color: palette.text }]}>Deals & Discounts</Text>
-                <Text style={[styles.sectionSubtitle, { color: palette.textMuted }]}>Save more on your next order</Text>
+                <Text style={[styles.sectionTitle, { color: palette.text }]}>
+                  Deals & Discounts
+                </Text>
+                <Text
+                  style={[styles.sectionSubtitle, { color: palette.textMuted }]}
+                >
+                  Save more on your next order
+                </Text>
               </View>
-              <Text style={[styles.dealsAccent, { color: palette.accent }]}>TODAY</Text>
+              <Text style={[styles.dealsAccent, { color: palette.accent }]}>
+                TODAY
+              </Text>
             </View>
 
             <ScrollView
@@ -268,7 +352,10 @@ export default function CustomerHomeScreen() {
                   key={`${restaurant.id}-deal`}
                   style={({ pressed }) => [
                     styles.dealCard,
-                    { backgroundColor: palette.card, borderColor: palette.cardBorder },
+                    {
+                      backgroundColor: palette.card,
+                      borderColor: palette.cardBorder,
+                    },
                     pressed && styles.restaurantCardPressed,
                   ]}
                   onPress={() => handleRestaurantPress(restaurant)}
@@ -283,13 +370,27 @@ export default function CustomerHomeScreen() {
                     resizeMode="cover"
                   />
                   <View style={styles.dealBadge}>
-                    <Text style={styles.dealBadgeText}>{index % 2 === 0 ? "20% OFF" : "15% OFF"}</Text>
+                    <Text style={styles.dealBadgeText}>
+                      {index % 2 === 0 ? "20% OFF" : "15% OFF"}
+                    </Text>
                   </View>
                   <View style={styles.dealContent}>
-                    <Text style={[styles.dealRestaurantName, { color: palette.text }]} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.dealRestaurantName,
+                        { color: palette.text },
+                      ]}
+                      numberOfLines={1}
+                    >
                       {restaurant.name}
                     </Text>
-                    <Text style={[styles.dealDescription, { color: palette.textSoft }]} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.dealDescription,
+                        { color: palette.textSoft },
+                      ]}
+                      numberOfLines={1}
+                    >
                       Limited-time offer
                     </Text>
                   </View>
@@ -361,18 +462,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "600",
-  },
-
-  cartHeaderButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cartIcon: {
-    fontSize: 20,
   },
 
   scrollView: {

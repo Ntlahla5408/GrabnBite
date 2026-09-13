@@ -1,16 +1,13 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.Dto.AddressDto;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    
     public class AddressesController : ControllerBase
     {
         private readonly AppDbContext dbContext;
@@ -20,18 +17,18 @@ namespace GrabnBite.Controllers
             this.dbContext = dbContext;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
+        // ============================================================
+        // GET ALL ADDRESSES
+        // GET: api/Addresses/{userId}
+        // ============================================================
 
-        // GET: api/addresses
-        [HttpGet]
-        public async Task<IActionResult> GetAddresses()
+        [HttpGet("{userId:int}")]
+        public async Task<IActionResult> GetAddresses(int userId)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
 
             var addresses = await dbContext.Addresses
                 .Where(a => a.UserId == userId)
@@ -52,14 +49,30 @@ namespace GrabnBite.Controllers
             return Ok(addresses);
         }
 
-        // GET: api/addresses/{id}
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetAddress(int id)
+        // ============================================================
+        // GET ONE ADDRESS
+        // GET: api/Addresses/{userId}/{id}
+        // ============================================================
+
+        [HttpGet("{userId:int}/{id:int}")]
+        public async Task<IActionResult> GetAddress(
+            int userId,
+            int id)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("Invalid address ID.");
+            }
 
             var address = await dbContext.Addresses
-                .Where(a => a.AddressId == id && a.UserId == userId)
+                .Where(a =>
+                    a.AddressId == id &&
+                    a.UserId == userId)
                 .Select(a => new AddressResponseDto
                 {
                     AddressId = a.AddressId,
@@ -82,12 +95,49 @@ namespace GrabnBite.Controllers
             return Ok(address);
         }
 
-        // POST: api/addresses
-        [HttpPost]
+        // ============================================================
+        // CREATE ADDRESS
+        // POST: api/Addresses/{userId}
+        // ============================================================
+
+        [HttpPost("{userId:int}")]
         public async Task<IActionResult> CreateAddress(
+            int userId,
             CreateAddressDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("Address data is required.");
+            }
+
+            // --------------------------------------------------------
+            // Basic validation
+            // --------------------------------------------------------
+
+            if (string.IsNullOrWhiteSpace(dto.StreetAddress))
+            {
+                return BadRequest("Street address is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.City))
+            {
+                return BadRequest("City is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Province))
+            {
+                return BadRequest("Province is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.PostalCode))
+            {
+                return BadRequest("Postal code is required.");
+            }
 
             var address = new Address
             {
@@ -102,7 +152,10 @@ namespace GrabnBite.Controllers
                 IsDefault = dto.IsDefault
             };
 
+            // --------------------------------------------------------
             // If this is the first address, make it default.
+            // --------------------------------------------------------
+
             var hasExistingAddress = await dbContext.Addresses
                 .AnyAsync(a => a.UserId == userId);
 
@@ -111,13 +164,19 @@ namespace GrabnBite.Controllers
                 address.IsDefault = true;
             }
 
-            // If this address is being made default,
-            // remove default status from existing addresses.
+            // --------------------------------------------------------
+            // If this address is default, remove default from
+            // existing addresses.
+            // --------------------------------------------------------
+
             if (address.IsDefault)
             {
-                var existingDefaultAddresses = await dbContext.Addresses
-                    .Where(a => a.UserId == userId && a.IsDefault)
-                    .ToListAsync();
+                var existingDefaultAddresses =
+                    await dbContext.Addresses
+                        .Where(a =>
+                            a.UserId == userId &&
+                            a.IsDefault)
+                        .ToListAsync();
 
                 foreach (var existingAddress in existingDefaultAddresses)
                 {
@@ -131,7 +190,11 @@ namespace GrabnBite.Controllers
 
             return CreatedAtAction(
                 nameof(GetAddress),
-                new { id = address.AddressId },
+                new
+                {
+                    userId = userId,
+                    id = address.AddressId
+                },
                 new AddressResponseDto
                 {
                     AddressId = address.AddressId,
@@ -147,22 +210,64 @@ namespace GrabnBite.Controllers
             );
         }
 
-        // PUT: api/addresses/{id}
-        [HttpPut("{id:int}")]
+        // ============================================================
+        // UPDATE ADDRESS
+        // PUT: api/Addresses/{userId}/{id}
+        // ============================================================
+
+        [HttpPut("{userId:int}/{id:int}")]
         public async Task<IActionResult> UpdateAddress(
+            int userId,
             int id,
             UpdateAddressDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("Invalid address ID.");
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("Address data is required.");
+            }
 
             var address = await dbContext.Addresses
-                .FirstOrDefaultAsync(
-                    a => a.AddressId == id && a.UserId == userId
-                );
+                .FirstOrDefaultAsync(a =>
+                    a.AddressId == id &&
+                    a.UserId == userId);
 
             if (address == null)
             {
                 return NotFound("Address not found.");
+            }
+
+            // --------------------------------------------------------
+            // Validation
+            // --------------------------------------------------------
+
+            if (string.IsNullOrWhiteSpace(dto.StreetAddress))
+            {
+                return BadRequest("Street address is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.City))
+            {
+                return BadRequest("City is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Province))
+            {
+                return BadRequest("Province is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.PostalCode))
+            {
+                return BadRequest("Postal code is required.");
             }
 
             address.Label = dto.Label;
@@ -189,16 +294,30 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // DELETE: api/addresses/{id}
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteAddress(int id)
+        // ============================================================
+        // DELETE ADDRESS
+        // DELETE: api/Addresses/{userId}/{id}
+        // ============================================================
+
+        [HttpDelete("{userId:int}/{id:int}")]
+        public async Task<IActionResult> DeleteAddress(
+            int userId,
+            int id)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("Invalid address ID.");
+            }
 
             var address = await dbContext.Addresses
-                .FirstOrDefaultAsync(
-                    a => a.AddressId == id && a.UserId == userId
-                );
+                .FirstOrDefaultAsync(a =>
+                    a.AddressId == id &&
+                    a.UserId == userId);
 
             if (address == null)
             {
@@ -212,25 +331,42 @@ namespace GrabnBite.Controllers
             return NoContent();
         }
 
-        // PATCH: api/addresses/{id}/default
-        [HttpPatch("{id:int}/default")]
-        public async Task<IActionResult> SetDefaultAddress(int id)
+        // ============================================================
+        // SET DEFAULT ADDRESS
+        // PATCH: api/Addresses/{userId}/{id}/default
+        // ============================================================
+
+        [HttpPatch("{userId:int}/{id:int}/default")]
+        public async Task<IActionResult> SetDefaultAddress(
+            int userId,
+            int id)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("Invalid address ID.");
+            }
 
             var address = await dbContext.Addresses
-                .FirstOrDefaultAsync(
-                    a => a.AddressId == id && a.UserId == userId
-                );
+                .FirstOrDefaultAsync(a =>
+                    a.AddressId == id &&
+                    a.UserId == userId);
 
             if (address == null)
             {
                 return NotFound("Address not found.");
             }
 
-            var currentDefaultAddresses = await dbContext.Addresses
-                .Where(a => a.UserId == userId && a.IsDefault)
-                .ToListAsync();
+            var currentDefaultAddresses =
+                await dbContext.Addresses
+                    .Where(a =>
+                        a.UserId == userId &&
+                        a.IsDefault)
+                    .ToListAsync();
 
             foreach (var existingAddress in currentDefaultAddresses)
             {

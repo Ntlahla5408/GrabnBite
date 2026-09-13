@@ -1,12 +1,12 @@
 import { Platform } from "react-native";
 
+import { getToken } from "./sessionService";
+
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
 const API_URL = (
   configuredApiUrl ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:5277"
-    : "http://localhost:5277")
+  (Platform.OS === "android" ? "http://10.0.2.2:5277" : "http://localhost:5277")
 ).replace(/\/$/, "");
 
 export const getApiUrl = (): string => API_URL;
@@ -35,8 +35,10 @@ export const apiRequest = async <T>(
 
   headers.set("Content-Type", "application/json");
 
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  const authToken = token ?? getToken();
+
+  if (authToken) {
+    headers.set("Authorization", `Bearer ${authToken}`);
   }
 
   let response: Response;

@@ -1,22 +1,22 @@
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 
-import {
-  getOrder,
-  getOrderStatusHistory,
-  type Order,
-  type OrderStatusHistory,
-} from "@/services/orderService";
 import RoleGuard from "@/components/RoleGuard";
+import {
+    getOrder,
+    getOrderStatusHistory,
+    type Order,
+    type OrderStatusHistory,
+} from "@/services/orderService";
 
 const COLORS = {
   navy: "#071B2C",
@@ -73,9 +73,7 @@ export default function OrderDetailsScreen() {
       console.error(err);
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load this order.",
+        err instanceof Error ? err.message : "Unable to load this order.",
       );
     } finally {
       setLoading(false);
@@ -101,14 +99,9 @@ export default function OrderDetailsScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorTitle}>Unable to load order</Text>
-        <Text style={styles.errorText}>
-          {error || "Order not found."}
-        </Text>
+        <Text style={styles.errorText}>{error || "Order not found."}</Text>
 
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.back()}
-        >
+        <Pressable style={styles.primaryButton} onPress={() => router.back()}>
           <Text style={styles.primaryButtonText}>Go Back</Text>
         </Pressable>
       </View>
@@ -117,9 +110,7 @@ export default function OrderDetailsScreen() {
 
   const restaurantName =
     order.restaurant?.name ??
-    (order.restaurantId
-      ? `Restaurant #${order.restaurantId}`
-      : "Restaurant");
+    (order.restaurantId ? `Restaurant #${order.restaurantId}` : "Restaurant");
 
   const items = order.orderItems ?? order.items ?? [];
 
@@ -127,24 +118,16 @@ export default function OrderDetailsScreen() {
     order.subtotal ??
     items.reduce((sum, item) => {
       const unitPrice =
-        item.unitPrice ??
-        item.price ??
-        item.menuItem?.price ??
-        0;
+        item.unitPrice ?? item.price ?? item.menuItem?.price ?? 0;
 
       return sum + unitPrice * item.quantity;
     }, 0);
 
   const deliveryFee = order.deliveryFee ?? 0;
 
-  const total =
-    order.totalAmount ??
-    order.total ??
-    subtotal + deliveryFee;
+  const total = order.totalAmount ?? order.total ?? subtotal + deliveryFee;
 
-  const deliveryId =
-    order.deliveryId ??
-    order.delivery?.id;
+  const deliveryId = order.deliveryId ?? order.delivery?.id;
 
   const currentStatus = order.status ?? "Unknown";
 
@@ -156,201 +139,206 @@ export default function OrderDetailsScreen() {
 
   return (
     <RoleGuard allowedRoles={["customer", "user"]}>
- <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refresh}
-          tintColor={COLORS.blue}
-        />
-      }
-    >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ My Orders</Text>
-        </Pressable>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={COLORS.blue}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.back}>‹ My Orders</Text>
+          </Pressable>
 
-        <Text style={styles.title}>Order #{order.id}</Text>
+          <Text style={styles.title}>Order #{order.id}</Text>
 
-        <Text style={styles.subtitle}>{restaurantName}</Text>
-      </View>
+          <Text style={styles.subtitle}>{restaurantName}</Text>
+        </View>
 
-      <View style={styles.statusCard}>
-        <Text style={styles.statusLabel}>Current status</Text>
+        <View style={styles.statusCard}>
+          <Text style={styles.statusLabel}>Current status</Text>
 
-        <Text style={styles.statusValue}>{currentStatus}</Text>
+          <Text style={styles.statusValue}>{currentStatus}</Text>
 
-        {order.createdAt ? (
-          <Text style={styles.date}>
-            Placed {new Date(order.createdAt).toLocaleString()}
-          </Text>
-        ) : null}
-      </View>
+          {order.createdAt ? (
+            <Text style={styles.date}>
+              Placed {new Date(order.createdAt).toLocaleString()}
+            </Text>
+          ) : null}
+        </View>
 
-      {deliveryId !== undefined && canTrack ? (
         <Pressable
-          style={styles.trackButton}
+          style={styles.paymentButton}
           onPress={() =>
             router.push({
-              pathname: "/orders/[id]/tracking",
-              params: {
-                id: String(order.id),
-                deliveryId: String(deliveryId),
-              },
+              pathname: "/payment",
+              params: { orderId: String(order.id) },
             })
           }
         >
-          <Text style={styles.trackIcon}>🚗</Text>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.trackTitle}>Track your delivery</Text>
-            <Text style={styles.trackSubtitle}>
-              See the latest delivery location
-            </Text>
-          </View>
-
-          <Text style={styles.arrow}>›</Text>
+          <Text style={styles.paymentButtonText}>Continue to payment</Text>
         </Pressable>
-      ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Items</Text>
+        {deliveryId !== undefined && canTrack ? (
+          <Pressable
+            style={styles.trackButton}
+            onPress={() =>
+              router.push({
+                pathname: "/orders/[id]/tracking",
+                params: {
+                  id: String(order.id),
+                  deliveryId: String(deliveryId),
+                },
+              })
+            }
+          >
+            <Text style={styles.trackIcon}>🚗</Text>
 
-        {items.length === 0 ? (
-          <Text style={styles.muted}>No item details available.</Text>
-        ) : (
-          items.map((item, index) => {
-            const name =
-              item.menuItem?.name ??
-              `Menu item #${item.menuItemId ?? index + 1}`;
+            <View style={{ flex: 1 }}>
+              <Text style={styles.trackTitle}>Track your delivery</Text>
+              <Text style={styles.trackSubtitle}>
+                See the latest delivery location
+              </Text>
+            </View>
 
-            const price =
-              item.unitPrice ??
-              item.price ??
-              item.menuItem?.price ??
-              0;
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+        ) : null}
 
-            return (
-              <View
-                style={styles.item}
-                key={item.id ?? `${item.menuItemId}-${index}`}
-              >
-                <View style={styles.quantity}>
-                  <Text style={styles.quantityText}>
-                    {item.quantity}×
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Items</Text>
+
+          {items.length === 0 ? (
+            <Text style={styles.muted}>No item details available.</Text>
+          ) : (
+            items.map((item, index) => {
+              const name =
+                item.menuItem?.name ??
+                `Menu item #${item.menuItemId ?? index + 1}`;
+
+              const price =
+                item.unitPrice ?? item.price ?? item.menuItem?.price ?? 0;
+
+              return (
+                <View
+                  style={styles.item}
+                  key={item.id ?? `${item.menuItemId}-${index}`}
+                >
+                  <View style={styles.quantity}>
+                    <Text style={styles.quantityText}>{item.quantity}×</Text>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>{name}</Text>
+
+                    <Text style={styles.itemPrice}>
+                      R {Number(price).toFixed(2)} each
+                    </Text>
+                  </View>
+
+                  <Text style={styles.itemTotal}>
+                    R {(price * item.quantity).toFixed(2)}
                   </Text>
                 </View>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Delivery address</Text>
+
+          {order.deliveryAddress ? (
+            <>
+              {order.deliveryAddress.label ? (
+                <Text style={styles.addressLabel}>
+                  {order.deliveryAddress.label}
+                </Text>
+              ) : null}
+
+              <Text style={styles.address}>
+                {order.deliveryAddress.streetAddress}
+              </Text>
+
+              <Text style={styles.address}>
+                {order.deliveryAddress.city}, {order.deliveryAddress.province}
+              </Text>
+
+              <Text style={styles.address}>
+                {order.deliveryAddress.postalCode}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.muted}>
+              Delivery address details are not available.
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment summary</Text>
+
+          <SummaryRow
+            label="Subtotal"
+            value={`R ${Number(subtotal).toFixed(2)}`}
+          />
+
+          <SummaryRow
+            label="Delivery"
+            value={
+              order.deliveryFee !== undefined
+                ? `R ${Number(deliveryFee).toFixed(2)}`
+                : "Calculated"
+            }
+          />
+
+          <View style={styles.totalDivider} />
+
+          <SummaryRow
+            label="Total"
+            value={`R ${Number(total).toFixed(2)}`}
+            bold
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order progress</Text>
+
+          {history.length === 0 ? (
+            <Text style={styles.muted}>
+              No status history is available yet.
+            </Text>
+          ) : (
+            history.map((entry, index) => (
+              <View
+                style={styles.historyRow}
+                key={entry.id ?? `${entry.status}-${index}`}
+              >
+                <View style={styles.timelineDot} />
 
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>{name}</Text>
-
-                  <Text style={styles.itemPrice}>
-                    R {Number(price).toFixed(2)} each
+                  <Text style={styles.historyStatus}>
+                    {entry.status ?? "Status update"}
                   </Text>
+
+                  {(entry.createdAt ?? entry.timestamp) ? (
+                    <Text style={styles.historyDate}>
+                      {new Date(
+                        entry.createdAt ?? entry.timestamp!,
+                      ).toLocaleString()}
+                    </Text>
+                  ) : null}
                 </View>
-
-                <Text style={styles.itemTotal}>
-                  R {(price * item.quantity).toFixed(2)}
-                </Text>
               </View>
-            );
-          })
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Delivery address</Text>
-
-        {order.deliveryAddress ? (
-          <>
-            {order.deliveryAddress.label ? (
-              <Text style={styles.addressLabel}>
-                {order.deliveryAddress.label}
-              </Text>
-            ) : null}
-
-            <Text style={styles.address}>
-              {order.deliveryAddress.streetAddress}
-            </Text>
-
-            <Text style={styles.address}>
-              {order.deliveryAddress.city},{" "}
-              {order.deliveryAddress.province}
-            </Text>
-
-            <Text style={styles.address}>
-              {order.deliveryAddress.postalCode}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.muted}>
-            Delivery address details are not available.
-          </Text>
-        )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment summary</Text>
-
-        <SummaryRow
-          label="Subtotal"
-          value={`R ${Number(subtotal).toFixed(2)}`}
-        />
-
-        <SummaryRow
-          label="Delivery"
-          value={
-            order.deliveryFee !== undefined
-              ? `R ${Number(deliveryFee).toFixed(2)}`
-              : "Calculated"
-          }
-        />
-
-        <View style={styles.totalDivider} />
-
-        <SummaryRow
-          label="Total"
-          value={`R ${Number(total).toFixed(2)}`}
-          bold
-        />
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order progress</Text>
-
-        {history.length === 0 ? (
-          <Text style={styles.muted}>
-            No status history is available yet.
-          </Text>
-        ) : (
-          history.map((entry, index) => (
-            <View
-              style={styles.historyRow}
-              key={entry.id ?? `${entry.status}-${index}`}
-            >
-              <View style={styles.timelineDot} />
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.historyStatus}>
-                  {entry.status ?? "Status update"}
-                </Text>
-
-                {(entry.createdAt ?? entry.timestamp) ? (
-                  <Text style={styles.historyDate}>
-                    {new Date(
-                      entry.createdAt ?? entry.timestamp!,
-                    ).toLocaleString()}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-          ))
-        )}
-      </View>
-    </ScrollView>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </RoleGuard>
-   
   );
 }
 
@@ -365,13 +353,9 @@ function SummaryRow({
 }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={[styles.summaryLabel, bold && styles.bold]}>
-        {label}
-      </Text>
+      <Text style={[styles.summaryLabel, bold && styles.bold]}>{label}</Text>
 
-      <Text style={[styles.summaryValue, bold && styles.bold]}>
-        {value}
-      </Text>
+      <Text style={[styles.summaryValue, bold && styles.bold]}>{value}</Text>
     </View>
   );
 }
@@ -437,6 +421,21 @@ const styles = StyleSheet.create({
     fontSize: 23,
     fontWeight: "900",
     color: COLORS.blue,
+  },
+
+  paymentButton: {
+    marginHorizontal: 20,
+    marginBottom: 5,
+    backgroundColor: COLORS.blue,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  paymentButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "900",
   },
 
   date: {

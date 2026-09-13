@@ -1,8 +1,6 @@
-﻿using System.Security.Claims;
-using GrabnBite.Data;
+﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Checkout;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +8,6 @@ namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Customer")]
     public class CheckoutController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,22 +17,39 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
-
         // ============================================================
         // CHECKOUT CART
+        // POST: /api/Checkout/{userId}
         // ============================================================
 
-        [HttpPost]
+        [HttpPost("{userId:int}")]
         public async Task<IActionResult> Checkout(
+            int userId,
             CreateCheckoutDto dto)
         {
-            var userId = GetCurrentUserId();
+            // --------------------------------------------------------
+            // Validate user ID
+            // --------------------------------------------------------
+
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("Checkout data is required.");
+            }
+
+            if (dto.CartId <= 0)
+            {
+                return BadRequest("Invalid cart ID.");
+            }
+
+            if (dto.DeliveryAddressId <= 0)
+            {
+                return BadRequest("Invalid delivery address ID.");
+            }
 
             // --------------------------------------------------------
             // Find customer's cart
@@ -54,6 +68,10 @@ namespace GrabnBite.Controllers
                 return BadRequest("Cart not found.");
             }
 
+            // --------------------------------------------------------
+            // Check cart
+            // --------------------------------------------------------
+
             if (!cart.CartItems.Any())
             {
                 return BadRequest("Your cart is empty.");
@@ -62,6 +80,12 @@ namespace GrabnBite.Controllers
             // --------------------------------------------------------
             // Validate restaurant
             // --------------------------------------------------------
+
+            if (cart.Restaurant == null)
+            {
+                return BadRequest(
+                    "The restaurant associated with this cart was not found.");
+            }
 
             if (!cart.Restaurant.IsApproved)
             {
@@ -87,7 +111,7 @@ namespace GrabnBite.Controllers
             if (address == null)
             {
                 return BadRequest(
-                    "The delivery address does not belong to the current user.");
+                    "The delivery address does not belong to this user.");
             }
 
             // --------------------------------------------------------
@@ -96,6 +120,12 @@ namespace GrabnBite.Controllers
 
             foreach (var cartItem in cart.CartItems)
             {
+                if (cartItem.MenuItem == null)
+                {
+                    return BadRequest(
+                        "A menu item in the cart could not be found.");
+                }
+
                 if (!cartItem.MenuItem.IsAvailable)
                 {
                     return BadRequest(
@@ -113,6 +143,12 @@ namespace GrabnBite.Controllers
                     return BadRequest(
                         "Cart contains an invalid quantity.");
                 }
+
+                if (cartItem.UnitPrice < 0)
+                {
+                    return BadRequest(
+                        "Cart contains an invalid item price.");
+                }
             }
 
             // --------------------------------------------------------
@@ -127,6 +163,10 @@ namespace GrabnBite.Controllers
                 Status = "PENDING",
                 OrderDate = DateTime.UtcNow
             };
+
+            // --------------------------------------------------------
+            // Add initial order status history
+            // --------------------------------------------------------
 
             order.StatusHistory.Add(new OrderStatusHistory
             {
@@ -144,15 +184,16 @@ namespace GrabnBite.Controllers
                 {
                     MenuItemId = cartItem.MenuItemId,
 
-                    // Historical snapshot
+                    // Historical snapshot of the item name
                     ItemName = cartItem.MenuItem.Name,
 
                     Quantity = cartItem.Quantity,
 
-                    // Price stored when item was added to cart
+                    // Use the price stored in the cart
                     UnitPrice = cartItem.UnitPrice,
 
-                    Subtotal = cartItem.UnitPrice * cartItem.Quantity
+                    Subtotal =
+                        cartItem.UnitPrice * cartItem.Quantity
                 };
 
                 order.OrderItems.Add(orderItem);
@@ -165,6 +206,12 @@ namespace GrabnBite.Controllers
             order.TotalAmount = order.OrderItems
                 .Sum(item => item.Subtotal);
 
+            if (order.TotalAmount <= 0)
+            {
+                return BadRequest(
+                    "The order total must be greater than zero.");
+            }
+
             // --------------------------------------------------------
             // Save order
             // --------------------------------------------------------
@@ -172,7 +219,7 @@ namespace GrabnBite.Controllers
             _context.Orders.Add(order);
 
             // --------------------------------------------------------
-            // Clear cart
+            // Clear cart after creating order
             // --------------------------------------------------------
 
             _context.CartItems.RemoveRange(cart.CartItems);
@@ -187,6 +234,7 @@ namespace GrabnBite.Controllers
             {
                 message = "Checkout successful.",
                 orderId = order.OrderId,
+                userId = order.UserId,
                 restaurantId = order.RestaurantId,
                 deliveryAddressId = order.DeliveryAddressId,
                 totalAmount = order.TotalAmount,

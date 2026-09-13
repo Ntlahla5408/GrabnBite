@@ -1,96 +1,100 @@
 import { apiRequest } from "./api";
-import { getToken } from "./sessionService";
+import { getCurrentUser } from "./sessionService";
 
 export interface CartItem {
-  id: number;
+  cartItemId: number;
   menuItemId: number;
+  menuItemName: string;
   quantity: number;
-  menuItem?: {
-    name: string;
-    price: number;
-  };
+  unitPrice: number;
+  subtotal: number;
 }
 
 export interface Cart {
-  id: number;
+  cartId: number;
+  restaurantId: number;
+  restaurantName: string;
   items: CartItem[];
+  totalAmount: number;
 }
 
-export interface AddCartItemRequest {
-  menuItemId: number;
-  quantity: number;
+interface LegacyEmptyCartResponse {
+  items?: CartItem[];
+  totalAmount?: number;
 }
 
-export interface UpdateCartItemRequest {
-  quantity: number;
-}
+const normalizeCart = (cart: Cart): Cart => ({
+  ...cart,
+  items: cart.items ?? [],
+  totalAmount: Number(cart.totalAmount ?? 0),
+});
 
-const CART_ENDPOINT = "/api/Cart";
-const CART_ITEMS_ENDPOINT = "/api/Cart/items";
+export const getCarts = async (userId: number): Promise<Cart[]> => {
+  const response = await apiRequest<Cart[] | Cart | LegacyEmptyCartResponse>(
+    `/api/Cart/${userId}`,
+  );
 
-export const getCart = async (): Promise<Cart> => {
-  const response = await apiRequest<unknown>(CART_ENDPOINT, {
-    token: getToken(),
-  });
-  const payload = response && typeof response === "object" ? response as Record<string, unknown> : {};
-  const rawItems = Array.isArray(response)
-    ? response
-    : payload.items ?? payload.cartItems ?? (payload.data as Record<string, unknown> | undefined)?.items;
+  if (Array.isArray(response)) {
+    return response.map(normalizeCart);
+  }
 
-  const items = Array.isArray(rawItems) ? rawItems : [];
+  if ("cartId" in response) {
+    return [normalizeCart(response)];
+  }
 
-  return {
-    id: Number(payload.cartId ?? payload.id ?? 0),
-    items: items.map((rawItem) => {
-      const item = rawItem as Record<string, unknown>;
-      const menuItem = item.menuItem as Record<string, unknown> | undefined;
-
-      return {
-      id: Number(item.cartItemId ?? item.id ?? 0),
-      menuItemId: Number(item.menuItemId ?? menuItem?.id ?? 0),
-      quantity: Number(item.quantity ?? 0),
-      menuItem: {
-        name: String(item.menuItemName ?? item.name ?? menuItem?.name ?? "Menu item"),
-        price: Number(item.unitPrice ?? item.price ?? menuItem?.price ?? 0),
-      },
-      };
-    }),
-  };
+  return [];
 };
 
 export const addCartItem = async (
-  data: AddCartItemRequest,
+  userId: number,
+  menuItemId: number,
+  quantity = 1,
 ): Promise<void> => {
-  await apiRequest<void>(CART_ITEMS_ENDPOINT, {
+  await apiRequest(`/api/Cart/${userId}/items`, {
     method: "POST",
-    body: JSON.stringify(data),
-    token: getToken(),
+    body: JSON.stringify({ menuItemId, quantity }),
   });
 };
 
 export const updateCartItem = async (
-  id: number,
-  data: UpdateCartItemRequest,
+  userId: number,
+  cartItemId: number,
+  quantity: number,
 ): Promise<void> => {
-  await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
+  await apiRequest(`/api/Cart/${userId}/items/${cartItemId}`, {
     method: "PUT",
-    body: JSON.stringify(data),
-    token: getToken(),
+    body: JSON.stringify({ quantity }),
   });
 };
 
 export const removeCartItem = async (
-  id: number,
+  userId: number,
+  cartItemId: number,
 ): Promise<void> => {
-  await apiRequest<void>(`${CART_ITEMS_ENDPOINT}/${id}`, {
+  await apiRequest(`/api/Cart/${userId}/items/${cartItemId}`, {
     method: "DELETE",
-    token: getToken(),
   });
 };
 
-export const clearCart = async (): Promise<void> => {
-  await apiRequest<void>(CART_ENDPOINT, {
-    method: "DELETE",
-    token: getToken(),
+export const checkoutCart = async (
+  cartId: number,
+  deliveryAddressId: number,
+): Promise<{
+  orderId: number;
+  userId: number;
+  restaurantId: number;
+  deliveryAddressId: number;
+  totalAmount: number;
+  status: string;
+}> => {
+  const userId = getCurrentUser()?.userId;
+
+  if (!userId) {
+    throw new Error("Please sign in before checking out.");
+  }
+
+  return await apiRequest(`/api/Checkout/${userId}`, {
+    method: "POST",
+    body: JSON.stringify({ cartId, deliveryAddressId }),
   });
 };

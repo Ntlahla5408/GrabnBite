@@ -1,20 +1,19 @@
 import { getMenuItemImage, getRestaurantImage } from "@/constants/assetImages";
 import { FoodColors } from "@/constants/theme";
+import { useCart } from "@/context/CartContext";
 import { apiRequest } from "@/services/api";
-import { addCartItem } from "@/services/cartService";
 import { Restaurant, getRestaurant } from "@/services/restaurantService";
-import { isLoggedIn } from "@/services/sessionService";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 interface MenuItem {
@@ -26,16 +25,24 @@ interface MenuItem {
   menuCategoryId: number;
 }
 
+interface MenuItemResponse {
+  menuItemId?: number;
+  id?: number;
+  name: string;
+  description?: string;
+  price: number;
+  isAvailable: boolean;
+  menuCategoryId?: number;
+}
+
 export default function RestaurantDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { addItem } = useCart();
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [addingItemId, setAddingItemId] = useState<number | null>(null);
-  const [cartTotal, setCartTotal] = useState(0);
-  const [cartItemCount, setCartItemCount] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -55,45 +62,43 @@ export default function RestaurantDetailsScreen() {
 
       const [restaurantData, menuData] = await Promise.all([
         getRestaurant(restaurantId),
-        apiRequest<MenuItem[]>(`/api/MenuItem/restaurant/${restaurantId}`),
+        apiRequest<MenuItemResponse[]>(
+          `/api/MenuItem/restaurant/${restaurantId}`,
+        ),
       ]);
 
       setRestaurant(restaurantData);
-      setMenuItems(Array.isArray(menuData) ? menuData : []);
+      setMenuItems(
+        Array.isArray(menuData)
+          ? menuData.map((menuItem) => ({
+              id: Number(menuItem.menuItemId ?? menuItem.id ?? 0),
+              name: menuItem.name,
+              description: menuItem.description ?? "",
+              price: Number(menuItem.price),
+              isAvailable: menuItem.isAvailable,
+              menuCategoryId: Number(menuItem.menuCategoryId ?? 0),
+            }))
+          : [],
+      );
     } catch (err) {
       console.error("Restaurant details error:", err);
-      setError(err instanceof Error ? err.message : "Failed to load restaurant.");
+      setError(
+        err instanceof Error ? err.message : "Failed to load restaurant.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddToCart = async (item: MenuItem) => {
-    if (!isLoggedIn()) {
-      Alert.alert(
-        "Log in to order",
-        "Create an account or log in before adding items to your cart.",
-        [
-          { text: "mCancel", style: "cancel" },
-          { text: "Log in", onPress: () => router.push("/login") },
-        ],
-      );
-      return;
-    }
-
+  const handleAddItem = async (item: MenuItem) => {
     try {
-      setAddingItemId(item.id);
-      await addCartItem({ menuItemId: item.id, quantity: 1 });
-      setCartTotal((total) => total + Number(item.price));
-      setCartItemCount((count) => count + 1);
+      await addItem(item.id);
       Alert.alert("Added to cart", `${item.name} is ready for checkout.`);
-    } catch (error) {
+    } catch (err) {
       Alert.alert(
         "Could not add item",
-        error instanceof Error ? error.message : "Please try again.",
+        err instanceof Error ? err.message : "Please try again.",
       );
-    } finally {
-      setAddingItemId(null);
     }
   };
 
@@ -102,9 +107,7 @@ export default function RestaurantDetailsScreen() {
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={FoodColors.tomato} />
 
-        <Text style={styles.loadingText}>
-          Loading restaurant...
-        </Text>
+        <Text style={styles.loadingText}>Loading restaurant...</Text>
       </View>
     );
   }
@@ -114,7 +117,9 @@ export default function RestaurantDetailsScreen() {
       <View style={styles.centerContainer}>
         <Text style={styles.errorIcon}>⚠️</Text>
         <Text style={styles.errorTitle}>Couldn't load restaurant</Text>
-        <Text style={styles.errorMessage}>{error || "Restaurant not found."}</Text>
+        <Text style={styles.errorMessage}>
+          {error || "Restaurant not found."}
+        </Text>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </Pressable>
@@ -133,18 +138,11 @@ export default function RestaurantDetailsScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {restaurant.name}
         </Text>
-
-        <Pressable style={styles.cartButton} onPress={() => router.push("/cart")}>
-          <Text style={styles.cartIcon}>🛒</Text>
-        </Pressable>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          cartItemCount > 0 && styles.scrollContentWithCart,
-        ]}
+        contentContainerStyle={[styles.scrollContent]}
         showsVerticalScrollIndicator={false}
       >
         {/* Restaurant Hero */}
@@ -168,15 +166,11 @@ export default function RestaurantDetailsScreen() {
           <View
             style={[
               styles.statusBadge,
-              restaurant.isOpen
-                ? styles.openBadge
-                : styles.closedBadge,
+              restaurant.isOpen ? styles.openBadge : styles.closedBadge,
             ]}
           >
             <Text style={styles.statusText}>
-              {restaurant.isOpen
-                ? "OPEN NOW"
-                : "CLOSED"}
+              {restaurant.isOpen ? "OPEN NOW" : "CLOSED"}
             </Text>
           </View>
         </View>
@@ -221,7 +215,10 @@ export default function RestaurantDetailsScreen() {
         {menuItems.map((item) => (
           <View
             key={item.id}
-            style={[styles.menuCard, !item.isAvailable && styles.menuCardUnavailable]}
+            style={[
+              styles.menuCard,
+              !item.isAvailable && styles.menuCardUnavailable,
+            ]}
           >
             <Image
               source={getMenuItemImage(item.name, restaurant.name)}
@@ -231,7 +228,10 @@ export default function RestaurantDetailsScreen() {
 
             <View style={styles.menuItemContent}>
               <Text
-                style={[styles.menuItemName, !item.isAvailable && styles.unavailableText]}
+                style={[
+                  styles.menuItemName,
+                  !item.isAvailable && styles.unavailableText,
+                ]}
               >
                 {item.name}
               </Text>
@@ -240,41 +240,22 @@ export default function RestaurantDetailsScreen() {
               </Text>
               <Text style={styles.price}>R{Number(item.price).toFixed(2)}</Text>
               {!item.isAvailable && (
-                <Text style={styles.unavailableLabel}>Currently unavailable</Text>
+                <Text style={styles.unavailableLabel}>
+                  Currently unavailable
+                </Text>
+              )}
+              {item.isAvailable && (
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => handleAddItem(item)}
+                >
+                  <Text style={styles.addButtonText}>Add to cart</Text>
+                </Pressable>
               )}
             </View>
-
-            {item.isAvailable && (
-              <Pressable
-                style={styles.addButton}
-                onPress={() => handleAddToCart(item)}
-                disabled={addingItemId === item.id}
-              >
-                {addingItemId === item.id ? (
-                  <ActivityIndicator color={FoodColors.onDark} size="small" />
-                ) : (
-                  <Text style={styles.addButtonText}>+</Text>
-                )}
-              </Pressable>
-            )}
           </View>
         ))}
       </ScrollView>
-
-      {cartItemCount > 0 && (
-        <Pressable
-          style={styles.viewCartButton}
-          onPress={() => router.push("/cart")}
-        >
-          <View>
-            <Text style={styles.viewCartLabel}>View cart</Text>
-            <Text style={styles.viewCartCount}>
-              {cartItemCount} {cartItemCount === 1 ? "item" : "items"}
-            </Text>
-          </View>
-          <Text style={styles.viewCartTotal}>R{cartTotal.toFixed(2)}</Text>
-        </Pressable>
-      )}
     </View>
   );
 }
@@ -317,29 +298,12 @@ const styles = StyleSheet.create({
     color: FoodColors.ink,
   },
 
-  cartButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: FoodColors.peach,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cartIcon: {
-    fontSize: 19,
-  },
-
   scrollView: {
     flex: 1,
   },
 
   scrollContent: {
     paddingBottom: 40,
-  },
-
-  scrollContentWithCart: {
-    paddingBottom: 112,
   },
 
   hero: {
@@ -512,57 +476,17 @@ const styles = StyleSheet.create({
   },
 
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    alignSelf: "flex-start",
+    marginTop: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 7,
     backgroundColor: FoodColors.tomato,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   addButtonText: {
     color: FoodColors.onDark,
-    fontSize: 26,
-    fontWeight: "500",
-    lineHeight: 28,
-  },
-
-  viewCartButton: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    bottom: 18,
-    minHeight: 62,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 14,
-    backgroundColor: FoodColors.tomato,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-
-  viewCartLabel: {
-    color: FoodColors.onDark,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-
-  viewCartCount: {
-    color: FoodColors.onDark,
     fontSize: 12,
-    marginTop: 2,
-    opacity: 0.9,
-  },
-
-  viewCartTotal: {
-    color: FoodColors.onDark,
-    fontSize: 17,
     fontWeight: "800",
   },
 
@@ -571,6 +495,7 @@ const styles = StyleSheet.create({
     backgroundColor: FoodColors.surface,
     borderRadius: 14,
     padding: 30,
+
     alignItems: "center",
   },
 

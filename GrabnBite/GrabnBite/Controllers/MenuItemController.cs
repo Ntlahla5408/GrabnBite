@@ -1,16 +1,13 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class MenuItemController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -20,47 +17,66 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
-
+        // =========================================================
         // CREATE
-        [HttpPost]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // =========================================================
+        [HttpPost("restaurant/{restaurantId}")]
         public async Task<IActionResult> CreateMenuItem(
+            int restaurantId,
             CreateMenuItemDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Menu item name is required.");
+            }
+
+            if (dto.Price < 0)
+            {
+                return BadRequest("Price cannot be negative.");
+            }
+
+            if (dto.MenuCategoryId <= 0)
+            {
+                return BadRequest("A valid menu category is required.");
+            }
 
             var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.UserId == userId);
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
 
             if (restaurant == null)
             {
-                return NotFound("No restaurant is associated with this account.");
+                return NotFound("Restaurant not found.");
+            }
+
+            if (!restaurant.IsApproved)
+            {
+                return BadRequest(
+                    "This restaurant has not been approved yet.");
             }
 
             var categoryExists = await _context.MenuCategories
                 .AnyAsync(c =>
                     c.MenuCategoryId == dto.MenuCategoryId &&
-                    c.RestaurantId == restaurant.RestaurantId);
+                    c.RestaurantId == restaurantId);
 
             if (!categoryExists)
             {
                 return BadRequest(
-                    "The menu category does not belong to your restaurant.");
+                    "The menu category does not belong to this restaurant.");
             }
 
             var menuItem = new MenuItem
             {
-                Name = dto.Name,
-                Description = dto.Description,
+                Name = dto.Name.Trim(),
+                Description = dto.Description?.Trim(),
                 Price = dto.Price,
                 IsAvailable = dto.IsAvailable,
-                RestaurantId = restaurant.RestaurantId,
+                RestaurantId = restaurantId,
                 MenuCategoryId = dto.MenuCategoryId
             };
 
@@ -85,9 +101,10 @@ namespace GrabnBite.Controllers
                 response);
         }
 
+        // =========================================================
         // READ - Get all menu items
+        // =========================================================
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetMenuItems()
         {
             var menuItems = await _context.MenuItems
@@ -107,9 +124,10 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // READ - Get one menu item
+        // =========================================================
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetMenuItem(int id)
         {
             var menuItem = await _context.MenuItems
@@ -134,11 +152,25 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // READ - Get menu items for a restaurant
+        // =========================================================
         [HttpGet("restaurant/{restaurantId}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetRestaurantMenu(int restaurantId)
         {
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
+
+            var restaurantExists = await _context.Restaurants
+                .AnyAsync(r => r.RestaurantId == restaurantId);
+
+            if (!restaurantExists)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
             var menuItems = await _context.MenuItems
                 .Where(m => m.RestaurantId == restaurantId)
                 .ToListAsync();
@@ -157,28 +189,48 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // UPDATE
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // =========================================================
+        [HttpPut("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> UpdateMenuItem(
+            int restaurantId,
             int id,
             UpdateMenuItemDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("A valid menu item id is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Menu item name is required.");
+            }
+
+            if (dto.Price < 0)
+            {
+                return BadRequest("Price cannot be negative.");
+            }
 
             var menuItem = await _context.MenuItems
-                .Include(m => m.Restaurant)
                 .FirstOrDefaultAsync(m =>
                     m.MenuItemId == id &&
-                    m.Restaurant.UserId == userId);
+                    m.RestaurantId == restaurantId);
 
             if (menuItem == null)
             {
-                return NotFound("Menu item not found.");
+                return NotFound(
+                    "Menu item not found for this restaurant.");
             }
 
-            menuItem.Name = dto.Name;
-            menuItem.Description = dto.Description;
+            menuItem.Name = dto.Name.Trim();
+            menuItem.Description = dto.Description?.Trim();
             menuItem.Price = dto.Price;
             menuItem.IsAvailable = dto.IsAvailable;
 
@@ -198,22 +250,33 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // DELETE
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
-        public async Task<IActionResult> DeleteMenuItem(int id)
+        // =========================================================
+        [HttpDelete("restaurant/{restaurantId}/{id}")]
+        public async Task<IActionResult> DeleteMenuItem(
+            int restaurantId,
+            int id)
         {
-            var userId = GetCurrentUserId();
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest("A valid menu item id is required.");
+            }
 
             var menuItem = await _context.MenuItems
-                .Include(m => m.Restaurant)
                 .FirstOrDefaultAsync(m =>
                     m.MenuItemId == id &&
-                    m.Restaurant.UserId == userId);
+                    m.RestaurantId == restaurantId);
 
             if (menuItem == null)
             {
-                return NotFound("Menu item not found.");
+                return NotFound(
+                    "Menu item not found for this restaurant.");
             }
 
             _context.MenuItems.Remove(menuItem);

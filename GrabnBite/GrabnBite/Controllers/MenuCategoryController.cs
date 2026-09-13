@@ -1,16 +1,13 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class MenuCategoryController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -19,47 +16,45 @@ namespace GrabnBite.Controllers
         {
             _context = context;
         }
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
 
-        // CREATE
-        [HttpPost]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // ============================================================
+        // CREATE CATEGORY
+        // ============================================================
+
+        [HttpPost("restaurant/{restaurantId}")]
         public async Task<IActionResult> CreateCategory(
-    CreateMenuCategoryDto dto)
+            int restaurantId,
+            CreateMenuCategoryDto dto)
         {
-            var userId = GetCurrentUserId();
-            var isAdmin = User.IsInRole("Admin");
-
-            Restaurant? restaurant;
-
-            if (isAdmin)
+            if (restaurantId <= 0)
             {
-                return BadRequest(
-                    "Admins should create or manage categories through an assigned restaurant.");
+                return BadRequest("A valid restaurantId is required.");
             }
 
-            restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.UserId == userId);
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Category name is required.");
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r =>
+                    r.RestaurantId == restaurantId);
 
             if (restaurant == null)
             {
-                return NotFound("No restaurant is associated with this account.");
+                return NotFound("Restaurant not found.");
             }
 
             if (!restaurant.IsApproved)
             {
-                return BadRequest("Your restaurant has not been approved yet.");
+                return BadRequest(
+                    "This restaurant has not been approved yet.");
             }
 
             var category = new MenuCategory
             {
-                Name = dto.Name,
-                Description = dto.Description,
+                Name = dto.Name.Trim(),
+                Description = dto.Description?.Trim(),
                 RestaurantId = restaurant.RestaurantId
             };
 
@@ -81,32 +76,39 @@ namespace GrabnBite.Controllers
                 response);
         }
 
-        // READ - Get all categories
+        // ============================================================
+        // GET ALL CATEGORIES
+        // ============================================================
+
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetCategories()
         {
             var categories = await _context.MenuCategories
                 .ToListAsync();
 
-            var response = categories.Select(c => new MenuCategoryResponseDto
-            {
-                MenuCategoryId = c.MenuCategoryId,
-                Name = c.Name,
-                Description = c.Description,
-                RestaurantId = c.RestaurantId
-            }).ToList();
+            var response = categories
+                .Select(c => new MenuCategoryResponseDto
+                {
+                    MenuCategoryId = c.MenuCategoryId,
+                    Name = c.Name,
+                    Description = c.Description,
+                    RestaurantId = c.RestaurantId
+                })
+                .ToList();
 
             return Ok(response);
         }
 
-        // READ - Get one category
+        // ============================================================
+        // GET ONE CATEGORY
+        // ============================================================
+
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetCategory(int id)
         {
             var category = await _context.MenuCategories
-                .FirstOrDefaultAsync(c => c.MenuCategoryId == id);
+                .FirstOrDefaultAsync(c =>
+                    c.MenuCategoryId == id);
 
             if (category == null)
             {
@@ -124,28 +126,39 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
-        // UPDATE
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // ============================================================
+        // UPDATE CATEGORY
+        // ============================================================
+
+        [HttpPut("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> UpdateCategory(
+            int restaurantId,
             int id,
             UpdateMenuCategoryDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Category name is required.");
+            }
 
             var category = await _context.MenuCategories
-                .Include(c => c.Restaurant)
                 .FirstOrDefaultAsync(c =>
                     c.MenuCategoryId == id &&
-                    c.Restaurant.UserId == userId);
+                    c.RestaurantId == restaurantId);
 
             if (category == null)
             {
-                return NotFound("Menu category not found.");
+                return NotFound(
+                    "Menu category not found for this restaurant.");
             }
 
-            category.Name = dto.Name;
-            category.Description = dto.Description;
+            category.Name = dto.Name.Trim();
+            category.Description = dto.Description?.Trim();
 
             await _context.SaveChangesAsync();
 
@@ -160,22 +173,29 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
-        // DELETE
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
-        public async Task<IActionResult> DeleteCategory(int id)
+        // ============================================================
+        // DELETE CATEGORY
+        // ============================================================
+
+        [HttpDelete("restaurant/{restaurantId}/{id}")]
+        public async Task<IActionResult> DeleteCategory(
+            int restaurantId,
+            int id)
         {
-            var userId = GetCurrentUserId();
+            if (restaurantId <= 0)
+            {
+                return BadRequest("A valid restaurantId is required.");
+            }
 
             var category = await _context.MenuCategories
-                .Include(c => c.Restaurant)
                 .FirstOrDefaultAsync(c =>
                     c.MenuCategoryId == id &&
-                    c.Restaurant.UserId == userId);
+                    c.RestaurantId == restaurantId);
 
             if (category == null)
             {
-                return NotFound("Menu category not found.");
+                return NotFound(
+                    "Menu category not found for this restaurant.");
             }
 
             _context.MenuCategories.Remove(category);

@@ -1,10 +1,8 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Restaurant;
 using GrabnBite.Models.Entities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -19,38 +17,65 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private int GetCurrentUserId()
-        {
-            return int.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-        }
-
+        // =========================================================
         // CREATE
-        [HttpPost]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // =========================================================
+        [HttpPost("user/{userId}")]
         public async Task<IActionResult> CreateRestaurant(
-     CreateRestaurantDto dto)
+            int userId,
+            CreateRestaurantDto dto)
         {
-            var userId = GetCurrentUserId();
+            if (userId <= 0)
+            {
+                return BadRequest("A valid userId is required.");
+            }
 
-            // Prevent one restaurant account from creating multiple restaurants
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Restaurant name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            {
+                return BadRequest("Phone number is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                return BadRequest("Address is required.");
+            }
+
+            var userExists = await _context.Users
+                .AnyAsync(u => u.UserId == userId);
+
+            if (!userExists)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Prevent one user account from creating multiple restaurants
             var existingRestaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r => r.UserId == userId);
 
             if (existingRestaurant != null)
             {
-                return BadRequest("This account already has a restaurant.");
+                return BadRequest(
+                    "This account already has a restaurant.");
             }
 
             var restaurant = new Restaurant
             {
-                Name = dto.Name,
-                Description = dto.Description,
-                PhoneNumber = dto.PhoneNumber,
-                Email = dto.Email,
-                Address = dto.Address,
-                ImageUrl = dto.ImageUrl,
+                Name = dto.Name.Trim(),
+                Description = dto.Description?.Trim(),
+                PhoneNumber = dto.PhoneNumber.Trim(),
+                Email = dto.Email.Trim(),
+                Address = dto.Address.Trim(),
+                ImageUrl = dto.ImageUrl?.Trim(),
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
 
@@ -87,9 +112,10 @@ namespace GrabnBite.Controllers
                 response);
         }
 
+        // =========================================================
         // READ - Get all restaurants
+        // =========================================================
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetRestaurants()
         {
             var restaurants = await _context.Restaurants
@@ -114,11 +140,17 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // READ - Get one restaurant
+        // =========================================================
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetRestaurant(int id)
         {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
             var restaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r => r.RestaurantId == id);
 
@@ -146,39 +178,63 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // UPDATE
-        [HttpPut("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
+        // =========================================================
+        [HttpPut("user/{userId}/{id}")]
         public async Task<IActionResult> UpdateRestaurant(
+            int userId,
             int id,
             UpdateRestaurantDto dto)
         {
-            var userId = GetCurrentUserId();
-
-            var isAdmin = User.IsInRole("Admin");
-
-            var restaurantQuery = _context.Restaurants
-                .Where(r => r.RestaurantId == id);
-
-            if (!isAdmin)
+            if (userId <= 0)
             {
-                restaurantQuery = restaurantQuery
-                    .Where(r => r.UserId == userId);
+                return BadRequest("A valid userId is required.");
             }
 
-            var restaurant = await restaurantQuery.FirstOrDefaultAsync();
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Restaurant name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            {
+                return BadRequest("Phone number is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                return BadRequest("Address is required.");
+            }
+
+            // The restaurant must belong to this user
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r =>
+                    r.RestaurantId == id &&
+                    r.UserId == userId);
 
             if (restaurant == null)
             {
-                return NotFound("Restaurant not found.");
+                return NotFound(
+                    "Restaurant not found for this user.");
             }
 
-            restaurant.Name = dto.Name;
-            restaurant.Description = dto.Description;
-            restaurant.PhoneNumber = dto.PhoneNumber;
-            restaurant.Email = dto.Email;
-            restaurant.Address = dto.Address;
-            restaurant.ImageUrl = dto.ImageUrl;
+            restaurant.Name = dto.Name.Trim();
+            restaurant.Description = dto.Description?.Trim();
+            restaurant.PhoneNumber = dto.PhoneNumber.Trim();
+            restaurant.Email = dto.Email.Trim();
+            restaurant.Address = dto.Address.Trim();
+            restaurant.ImageUrl = dto.ImageUrl?.Trim();
             restaurant.Latitude = dto.Latitude;
             restaurant.Longitude = dto.Longitude;
             restaurant.IsOpen = dto.IsOpen;
@@ -204,28 +260,34 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+        // =========================================================
         // DELETE
-        [HttpDelete("{id}")]
-        [Authorize(Roles = "Restaurant,Admin")]
-        public async Task<IActionResult> DeleteRestaurant(int id)
+        // =========================================================
+        [HttpDelete("user/{userId}/{id}")]
+        public async Task<IActionResult> DeleteRestaurant(
+            int userId,
+            int id)
         {
-            var userId = GetCurrentUserId();
-            var isAdmin = User.IsInRole("Admin");
-
-            var restaurantQuery = _context.Restaurants
-                .Where(r => r.RestaurantId == id);
-
-            if (!isAdmin)
+            if (userId <= 0)
             {
-                restaurantQuery = restaurantQuery
-                    .Where(r => r.UserId == userId);
+                return BadRequest("A valid userId is required.");
             }
 
-            var restaurant = await restaurantQuery.FirstOrDefaultAsync();
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            // The restaurant must belong to this user
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r =>
+                    r.RestaurantId == id &&
+                    r.UserId == userId);
 
             if (restaurant == null)
             {
-                return NotFound("Restaurant not found.");
+                return NotFound(
+                    "Restaurant not found for this user.");
             }
 
             _context.Restaurants.Remove(restaurant);

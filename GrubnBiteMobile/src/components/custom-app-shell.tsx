@@ -1,23 +1,30 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Slot, router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import {
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useColorScheme,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FoodColors } from "@/constants/theme";
+import { useCart } from "@/context/CartContext";
 
 const navigationItems = [
   { label: "Home", path: "/", icon: "home-outline", activeIcon: "home" },
+  {
+    label: "Cart",
+    path: "/cart",
+    icon: "bag-handle-outline",
+    activeIcon: "bag-handle",
+  },
   {
     label: "Orders",
     path: "/orders",
     icon: "receipt-outline",
     activeIcon: "receipt",
-  },
-  {
-    label: "Cart",
-    path: "/cart",
-    icon: "bag-outline",
-    activeIcon: "bag",
   },
   {
     label: "Account",
@@ -30,6 +37,8 @@ const navigationItems = [
 const hiddenNavigationPrefixes = [
   "/login",
   "/register",
+  "/checkout",
+  "/payment",
   "/admin",
   "/driver",
   "/restaurant-dashboard",
@@ -48,6 +57,7 @@ function isActivePath(pathname: string, path: string) {
 
 export default function CustomAppShell() {
   const pathname = usePathname();
+  const { carts } = useCart();
   const insets = useSafeAreaInsets();
   const hideNavigation = isNavigationHidden(pathname);
   const scheme = useColorScheme();
@@ -84,10 +94,18 @@ export default function CustomAppShell() {
         <View
           style={[
             styles.navWrap,
-            { backgroundColor: palette.wrap, paddingBottom: Math.max(insets.bottom, 10) },
+            {
+              backgroundColor: palette.wrap,
+              paddingBottom: Math.max(insets.bottom, 10),
+            },
           ]}
         >
-          <View style={[styles.navBar, { backgroundColor: palette.nav, borderColor: palette.border }]}> 
+          <View
+            style={[
+              styles.navBar,
+              { backgroundColor: palette.nav, borderColor: palette.border },
+            ]}
+          >
             {navigationItems.map((item) => {
               const active = isActivePath(pathname, item.path);
               const iconName = active ? item.activeIcon : item.icon;
@@ -104,14 +122,41 @@ export default function CustomAppShell() {
                     pressed && styles.navItemPressed,
                   ]}
                 >
-                  <View style={[styles.iconBubble, active && styles.activeBubble, active && { backgroundColor: palette.activeBubble }]}> 
+                  <View
+                    style={[
+                      styles.iconBubble,
+                      active && styles.activeBubble,
+                      active && { backgroundColor: palette.activeBubble },
+                    ]}
+                  >
                     <Ionicons
                       name={iconName as keyof typeof Ionicons.glyphMap}
                       size={21}
                       color={active ? palette.active : palette.muted}
                     />
+                    {item === navigationItems[1] && carts.length > 0 && (
+                      <View style={styles.cartBadge}>
+                        <Text style={styles.cartBadgeText}>
+                          {carts.reduce(
+                            (count, cart) =>
+                              count +
+                              cart.items.reduce(
+                                (itemCount, item) => itemCount + item.quantity,
+                                0,
+                              ),
+                            0,
+                          )}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <Text style={[styles.navLabel, active && styles.activeLabel, { color: active ? palette.active : palette.muted }]}>
+                  <Text
+                    style={[
+                      styles.navLabel,
+                      active && styles.activeLabel,
+                      { color: active ? palette.active : palette.muted },
+                    ]}
+                  >
                     {item.label}
                   </Text>
                 </Pressable>
@@ -168,6 +213,23 @@ const styles = StyleSheet.create({
   },
   activeBubble: {
     backgroundColor: FoodColors.peach,
+  },
+  cartBadge: {
+    position: "absolute",
+    right: -6,
+    top: -5,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 3,
+    borderRadius: 9,
+    backgroundColor: FoodColors.tomato,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartBadgeText: {
+    color: FoodColors.onDark,
+    fontSize: 9,
+    fontWeight: "900",
   },
   navLabel: {
     fontSize: 10,

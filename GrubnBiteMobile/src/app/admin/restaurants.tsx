@@ -11,6 +11,7 @@ import {
     View,
 } from "react-native";
 
+import LogoutButton from "@/components/LogoutButton";
 import {
     createRestaurant,
     deleteRestaurant,
@@ -35,6 +36,7 @@ export default function AdminRestaurants() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [busyRestaurantId, setBusyRestaurantId] = useState<number | null>(null);
 
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -82,6 +84,7 @@ export default function AdminRestaurants() {
 
     try {
       setSaving(true);
+      const wasEditing = editingId !== null;
 
       if (editingId !== null) {
         await updateRestaurant(editingId, {
@@ -111,7 +114,7 @@ export default function AdminRestaurants() {
 
       Alert.alert(
         "Success",
-        editingId !== null
+        wasEditing
           ? "Restaurant updated successfully."
           : "Restaurant created successfully.",
       );
@@ -120,9 +123,7 @@ export default function AdminRestaurants() {
 
       Alert.alert(
         "Error",
-        error instanceof Error
-          ? error.message
-          : "Unable to save restaurant.",
+        error instanceof Error ? error.message : "Unable to save restaurant.",
       );
     } finally {
       setSaving(false);
@@ -151,10 +152,18 @@ export default function AdminRestaurants() {
           style: "destructive",
           onPress: async () => {
             try {
+              setBusyRestaurantId(restaurant.id);
               await deleteRestaurant(restaurant.id);
               await loadRestaurants();
             } catch (error) {
-              Alert.alert("Error", "Unable to delete restaurant.");
+              Alert.alert(
+                "Error",
+                error instanceof Error
+                  ? error.message
+                  : "Unable to delete restaurant.",
+              );
+            } finally {
+              setBusyRestaurantId(null);
             }
           },
         },
@@ -164,6 +173,7 @@ export default function AdminRestaurants() {
 
   const toggleRestaurant = async (restaurant: Restaurant) => {
     try {
+      setBusyRestaurantId(restaurant.id);
       await updateRestaurant(restaurant.id, {
         name: restaurant.name,
         description: restaurant.description,
@@ -177,16 +187,27 @@ export default function AdminRestaurants() {
 
       await loadRestaurants();
     } catch (error) {
-      Alert.alert("Error", "Unable to change restaurant status.");
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Unable to change restaurant status.",
+      );
+    } finally {
+      setBusyRestaurantId(null);
     }
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Admin</Text>
-        </Pressable>
+        <View style={styles.headerTopRow}>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.back}>‹ Admin</Text>
+          </Pressable>
+
+          <LogoutButton />
+        </View>
 
         <Text style={styles.headerTitle}>Restaurants</Text>
       </View>
@@ -299,6 +320,7 @@ export default function AdminRestaurants() {
             <View style={styles.actions}>
               <Pressable
                 style={styles.secondaryButton}
+                disabled={busyRestaurantId !== null}
                 onPress={() => startEditing(restaurant)}
               >
                 <Text style={styles.secondaryText}>Edit</Text>
@@ -306,18 +328,28 @@ export default function AdminRestaurants() {
 
               <Pressable
                 style={styles.secondaryButton}
+                disabled={busyRestaurantId === restaurant.id}
                 onPress={() => toggleRestaurant(restaurant)}
               >
-                <Text style={styles.secondaryText}>
-                  {restaurant.isOpen ? "Close" : "Open"}
-                </Text>
+                {busyRestaurantId === restaurant.id ? (
+                  <ActivityIndicator color={COLORS.navy} />
+                ) : (
+                  <Text style={styles.secondaryText}>
+                    {restaurant.isOpen ? "Close" : "Open"}
+                  </Text>
+                )}
               </Pressable>
 
               <Pressable
                 style={styles.deleteButton}
+                disabled={busyRestaurantId === restaurant.id}
                 onPress={() => removeRestaurant(restaurant)}
               >
-                <Text style={styles.deleteText}>Delete</Text>
+                {busyRestaurantId === restaurant.id ? (
+                  <ActivityIndicator color={COLORS.red} />
+                ) : (
+                  <Text style={styles.deleteText}>Delete</Text>
+                )}
               </Pressable>
             </View>
           </View>
@@ -366,6 +398,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
     padding: 20,
     paddingTop: 24,
+  },
+
+  headerTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
   back: {

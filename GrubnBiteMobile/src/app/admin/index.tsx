@@ -3,19 +3,18 @@ import RoleGuard from "@/components/RoleGuard";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import {
-    adminTest,
-    getMenuCategories,
-    getMenuItems,
-    getRestaurants,
+  getMenuCategories,
+  getMenuItems,
+  getRestaurants,
 } from "@/services/adminService";
 
 const COLORS = {
@@ -33,7 +32,6 @@ const COLORS = {
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
-  const [authorized, setAuthorized] = useState(false);
 
   const [restaurantCount, setRestaurantCount] = useState(0);
   const [categoryCount, setCategoryCount] = useState(0);
@@ -50,10 +48,6 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
 
-      await adminTest();
-
-      setAuthorized(true);
-
       const [restaurants, categories, menuItems] = await Promise.all([
         getRestaurants(),
         getMenuCategories(),
@@ -66,7 +60,6 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error(err);
 
-      setAuthorized(false);
       setError(
         err instanceof Error
           ? err.message
@@ -85,30 +78,6 @@ export default function AdminDashboard() {
         </View>
         <ActivityIndicator size="large" color={COLORS.blue} />
         <Text style={styles.loadingText}>Loading admin dashboard...</Text>
-      </View>
-    );
-  }
-
-  if (!authorized) {
-    return (
-      <View style={styles.center}>
-        <View style={styles.exitRow}>
-          <LogoutButton />
-        </View>
-        <Text style={styles.errorTitle}>Admin access required</Text>
-
-        <Text style={styles.errorText}>
-          Your account does not currently have access to the admin area.
-        </Text>
-
-        {error ? <Text style={styles.errorDetails}>{error}</Text> : null}
-
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => router.replace("/")}
-        >
-          <Text style={styles.primaryButtonText}>Back to Home</Text>
-        </Pressable>
       </View>
     );
   }
@@ -285,7 +254,9 @@ const styles = StyleSheet.create({
   },
 
   headerActions: {
-    alignItems: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 
   statsRow: {

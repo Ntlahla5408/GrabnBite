@@ -1,4 +1,5 @@
 import { apiRequest } from "./api";
+import { getCurrentUser } from "./sessionService";
 
 export interface Restaurant {
   id: number;
@@ -98,7 +99,12 @@ export const getRestaurants = async (): Promise<Restaurant[]> => {
 export const createRestaurant = async (
   data: CreateRestaurantRequest,
 ): Promise<Restaurant> => {
-  return await apiRequest<Restaurant>("/api/Restaurant", {
+  const userId = getCurrentUser()?.userId;
+  if (!userId) {
+    throw new Error("Your session could not be identified.");
+  }
+
+  return await apiRequest<Restaurant>(`/api/Restaurant/user/${userId}`, {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -108,14 +114,24 @@ export const updateRestaurant = async (
   id: number,
   data: UpdateRestaurantRequest,
 ): Promise<Restaurant> => {
-  return await apiRequest<Restaurant>(`/api/Restaurant/${id}`, {
+  const userId = getCurrentUser()?.userId;
+  if (!userId) {
+    throw new Error("Your session could not be identified.");
+  }
+
+  return await apiRequest<Restaurant>(`/api/Restaurant/user/${userId}/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 };
 
 export const deleteRestaurant = async (id: number): Promise<void> => {
-  await apiRequest<void>(`/api/Restaurant/${id}`, {
+  const userId = getCurrentUser()?.userId;
+  if (!userId) {
+    throw new Error("Your session could not be identified.");
+  }
+
+  await apiRequest<void>(`/api/Restaurant/user/${userId}/${id}`, {
     method: "DELETE",
   });
 };
@@ -203,15 +219,57 @@ export const adminTest = async (): Promise<unknown> => {
 };
 
 export const getUsers = async (): Promise<AdminUser[]> => {
-  return await apiRequest<AdminUser[]>("/api/User");
+  const endpoints = ["/api/User", "/api/Users", "/api/Admin/users"];
+
+  let lastError: unknown;
+
+  for (const endpoint of endpoints) {
+    try {
+      return await apiRequest<AdminUser[]>(endpoint);
+    } catch (error) {
+      lastError = error;
+      if (
+        !(error instanceof Error && "status" in error && error.status === 404)
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("The API does not expose a user-management endpoint.");
 };
 
 export const updateUserRole = async (
   userId: number,
   data: UpdateUserRoleRequest,
 ): Promise<AdminUser> => {
-  return await apiRequest<AdminUser>(`/api/User/${userId}/role`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  const endpoints = [
+    `/api/User/${userId}/role`,
+    `/api/Users/${userId}/role`,
+    `/api/Admin/users/${userId}/role`,
+  ];
+
+  let lastError: unknown;
+
+  for (const endpoint of endpoints) {
+    try {
+      return await apiRequest<AdminUser>(endpoint, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      lastError = error;
+      if (
+        !(error instanceof Error && "status" in error && error.status === 404)
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("The API does not expose a role-management endpoint.");
 };

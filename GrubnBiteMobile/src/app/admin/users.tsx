@@ -1,22 +1,46 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
-import { AdminUser, getUsers, updateUserRole } from "@/services/adminService";
+import {
+  AdminUser,
+  deleteUser,
+  getUsers,
+  updateUserRole,
+  updateUserStatus,
+} from "@/services/adminService";
 
 const roles = ["customer", "restaurant", "driver", "admin"];
+
+const confirmAction = (
+  title: string,
+  message: string,
+  actionLabel: string,
+): Promise<boolean> => {
+  if (Platform.OS === "web") {
+    return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert(title, message, [
+      { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+      { text: actionLabel, style: "destructive", onPress: () => resolve(true) },
+    ]);
+  });
+};
 
 export default function AdminUsersScreen() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -65,6 +89,69 @@ export default function AdminUsersScreen() {
     }
   };
 
+  const toggleUserStatus = async (user: AdminUser) => {
+    const userId = user.userId ?? user.id;
+    const nextIsActive = !user.isActive;
+
+    const confirmed = await confirmAction(
+      nextIsActive ? "Enable user" : "Disable user",
+      nextIsActive
+        ? `Allow ${user.firstName} to use the system again?`
+        : `Prevent ${user.firstName} from signing in?`,
+      nextIsActive ? "Enable" : "Disable",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSavingUserId(userId);
+      const updated = await updateUserStatus(userId, {
+        isActive: nextIsActive,
+      });
+      setUsers((current) =>
+        current.map((item) =>
+          (item.userId ?? item.id) === userId ? updated : item,
+        ),
+      );
+      Alert.alert("Success", nextIsActive ? "User enabled." : "User disabled.");
+    } catch (err) {
+      Alert.alert(
+        "Could not update user status",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
+  const removeUser = async (user: AdminUser) => {
+    const userId = user.userId ?? user.id;
+
+    const confirmed = await confirmAction(
+      "Delete user",
+      `Permanently delete ${user.firstName} ${user.lastName}?`,
+      "Delete",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSavingUserId(userId);
+      await deleteUser(userId);
+      setUsers((current) =>
+        current.filter((item) => (item.userId ?? item.id) !== userId),
+      );
+      Alert.alert("Success", "User deleted.");
+    } catch (err) {
+      Alert.alert(
+        "Could not delete user",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const query = search.trim().toLowerCase();
     if (!query) return true;
@@ -79,6 +166,9 @@ export default function AdminUsersScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerCopy}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <Text style={styles.back}>‹ Admin</Text>
+            </Pressable>
             <Text style={styles.eyebrow}>ADMINISTRATION</Text>
             <Text style={styles.title}>User Management</Text>
             <Text style={styles.subtitle}>
@@ -140,6 +230,14 @@ export default function AdminUsersScreen() {
                           {user.firstName} {user.lastName}
                         </Text>
                         <Text style={styles.email}>{user.email}</Text>
+                        <Text
+                          style={[
+                            styles.status,
+                            user.isActive ? styles.active : styles.inactive,
+                          ]}
+                        >
+                          {user.isActive ? "ACTIVE" : "DISABLED"}
+                        </Text>
                       </View>
                       {saving ? <ActivityIndicator color="#FF704B" /> : null}
                     </View>
@@ -171,6 +269,25 @@ export default function AdminUsersScreen() {
                         );
                       })}
                     </View>
+
+                    <View style={styles.accountActions}>
+                      <Pressable
+                        style={styles.statusButton}
+                        disabled={saving}
+                        onPress={() => toggleUserStatus(user)}
+                      >
+                        <Text style={styles.statusButtonText}>
+                          {user.isActive ? "Disable User" : "Enable User"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.deleteButton}
+                        disabled={saving}
+                        onPress={() => removeUser(user)}
+                      >
+                        <Text style={styles.deleteText}>Delete</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 );
               })
@@ -192,6 +309,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerCopy: { flex: 1, paddingRight: 12 },
+  backButton: { alignSelf: "flex-start", marginBottom: 12 },
+  back: { color: "#F4EEE7", fontSize: 14, fontWeight: "800" },
   eyebrow: {
     color: "#FF704B",
     fontSize: 11,
@@ -241,6 +360,9 @@ const styles = StyleSheet.create({
   userCopy: { flex: 1, marginLeft: 12 },
   userName: { color: "#1B1F22", fontSize: 16, fontWeight: "800" },
   email: { color: "#6E6A66", fontSize: 12, marginTop: 3 },
+  status: { fontSize: 10, fontWeight: "900", marginTop: 5 },
+  active: { color: "#2E9B59" },
+  inactive: { color: "#C84A32" },
   roleLabel: {
     color: "#9B9189",
     fontSize: 10,
@@ -264,6 +386,27 @@ const styles = StyleSheet.create({
   },
   roleText: { color: "#6E6A66", fontSize: 12, fontWeight: "700" },
   roleTextSelected: { color: "#C84A32" },
+  accountActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 16,
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: "#FFF0EA",
+  },
+  statusButtonText: { color: "#C84A32", fontSize: 12, fontWeight: "800" },
+  deleteButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: "#FDEBE7",
+  },
+  deleteText: { color: "#A93627", fontSize: 12, fontWeight: "800" },
   errorBox: {
     padding: 16,
     borderRadius: 12,

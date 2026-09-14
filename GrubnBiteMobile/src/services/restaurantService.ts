@@ -138,7 +138,9 @@ const normalizeRestaurant = (restaurant: RestaurantResponse): Restaurant => ({
 export const getRestaurants = async (): Promise<Restaurant[]> => {
   try {
     const data = await apiRequest<RestaurantResponse[]>("/api/Restaurant");
-    const restaurants = data.map(normalizeRestaurant);
+    const restaurants = data
+      .map(normalizeRestaurant)
+      .filter((restaurant) => restaurant.isOpen);
 
     if (restaurants.length === 0) {
       return fallbackRestaurants;

@@ -1,23 +1,22 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import LogoutButton from "@/components/LogoutButton";
 import {
-    createRestaurant,
-    deleteRestaurant,
-    getRestaurants,
-    updateRestaurant,
-    type Restaurant,
+  createRestaurant,
+  getRestaurants,
+  updateRestaurantAsAdmin,
+  type Restaurant,
 } from "@/services/adminService";
 
 const COLORS = {
@@ -87,7 +86,7 @@ export default function AdminRestaurants() {
       const wasEditing = editingId !== null;
 
       if (editingId !== null) {
-        await updateRestaurant(editingId, {
+        await updateRestaurantAsAdmin(editingId, {
           name: name.trim(),
           description: description.trim(),
           phoneNumber: phoneNumber.trim(),
@@ -141,40 +140,10 @@ export default function AdminRestaurants() {
     setLongitude(String(restaurant.longitude ?? ""));
   };
 
-  const removeRestaurant = (restaurant: Restaurant) => {
-    Alert.alert(
-      "Delete restaurant",
-      `Are you sure you want to delete ${restaurant.name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setBusyRestaurantId(restaurant.id);
-              await deleteRestaurant(restaurant.id);
-              await loadRestaurants();
-            } catch (error) {
-              Alert.alert(
-                "Error",
-                error instanceof Error
-                  ? error.message
-                  : "Unable to delete restaurant.",
-              );
-            } finally {
-              setBusyRestaurantId(null);
-            }
-          },
-        },
-      ],
-    );
-  };
-
   const toggleRestaurant = async (restaurant: Restaurant) => {
     try {
       setBusyRestaurantId(restaurant.id);
-      await updateRestaurant(restaurant.id, {
+      await updateRestaurantAsAdmin(restaurant.id, {
         name: restaurant.name,
         description: restaurant.description,
         phoneNumber: restaurant.phoneNumber,
@@ -186,6 +155,12 @@ export default function AdminRestaurants() {
       });
 
       await loadRestaurants();
+      Alert.alert(
+        "Success",
+        restaurant.isOpen
+          ? "Restaurant closed successfully."
+          : "Restaurant opened successfully.",
+      );
     } catch (error) {
       Alert.alert(
         "Error",
@@ -340,17 +315,6 @@ export default function AdminRestaurants() {
                 )}
               </Pressable>
 
-              <Pressable
-                style={styles.deleteButton}
-                disabled={busyRestaurantId === restaurant.id}
-                onPress={() => removeRestaurant(restaurant)}
-              >
-                {busyRestaurantId === restaurant.id ? (
-                  <ActivityIndicator color={COLORS.red} />
-                ) : (
-                  <Text style={styles.deleteText}>Delete</Text>
-                )}
-              </Pressable>
             </View>
           </View>
         ))

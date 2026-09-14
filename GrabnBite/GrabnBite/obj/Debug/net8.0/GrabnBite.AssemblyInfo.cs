@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GrabnBite")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6f4ce144d24bd4d661674c9c4be432c7304c94ca")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e1c6ed3fffcb7f84867f2075c775bf9a87257713")]
 [assembly: System.Reflection.AssemblyProductAttribute("GrabnBite")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GrabnBite")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

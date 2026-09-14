@@ -12,30 +12,25 @@ import {
 } from "react-native";
 
 import {
-  getMenuCategories,
-  getMenuItems,
   getRestaurants,
 } from "@/services/adminService";
 
 const COLORS = {
-  navy: "#071B2C",
-  blue: "#2C7A9E",
-  lightBlue: "#EAF5F9",
-  white: "#FFFFFF",
-  background: "#F5F7F9",
-  text: "#17212B",
-  muted: "#6B7280",
-  border: "#E1E7EB",
-  green: "#228B55",
-  red: "#C83C3C",
+  ink: "#101214",
+  tomato: "#FF704B",
+  lightTomato: "#FFE1D5",
+  cream: "#FFFDF9",
+  text: "#1E2024",
+  muted: "#6E6A66",
+  border: "#E8DED5",
+  green: "#2F8F5B",
+  red: "#C84A32",
 };
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [restaurantCount, setRestaurantCount] = useState(0);
-  const [categoryCount, setCategoryCount] = useState(0);
-  const [menuItemCount, setMenuItemCount] = useState(0);
 
   const [error, setError] = useState("");
 
@@ -48,15 +43,9 @@ export default function AdminDashboard() {
       setLoading(true);
       setError("");
 
-      const [restaurants, categories, menuItems] = await Promise.all([
-        getRestaurants(),
-        getMenuCategories(),
-        getMenuItems(),
-      ]);
+      const restaurants = await getRestaurants();
 
       setRestaurantCount(restaurants.length);
-      setCategoryCount(categories.length);
-      setMenuItemCount(menuItems.length);
     } catch (err) {
       console.error(err);
 
@@ -76,7 +65,7 @@ export default function AdminDashboard() {
         <View style={styles.exitRow}>
           <LogoutButton />
         </View>
-        <ActivityIndicator size="large" color={COLORS.blue} />
+        <ActivityIndicator size="large" color={COLORS.tomato} />
         <Text style={styles.loadingText}>Loading admin dashboard...</Text>
       </View>
     );
@@ -92,22 +81,12 @@ export default function AdminDashboard() {
           </View>
 
           <View style={styles.headerActions}>
-            <Pressable
-              style={styles.homeButton}
-              onPress={() => router.replace("/")}
-            >
-              <Text style={styles.homeButtonText}>Home</Text>
-            </Pressable>
             <LogoutButton />
           </View>
         </View>
 
         <View style={styles.statsRow}>
           <StatCard title="Restaurants" value={restaurantCount} icon="🍽️" />
-
-          <StatCard title="Categories" value={categoryCount} icon="📂" />
-
-          <StatCard title="Menu Items" value={menuItemCount} icon="🍽️" />
         </View>
 
         <Text style={styles.sectionTitle}>Management</Text>
@@ -124,20 +103,6 @@ export default function AdminDashboard() {
           description="Add, edit, open, close and remove restaurants."
           icon="🍽️"
           onPress={() => router.push("/admin/restaurants")}
-        />
-
-        <AdminAction
-          title="Menu Management"
-          description="Manage menu categories and menu items."
-          icon="📋"
-          onPress={() => router.push("/admin/menu")}
-        />
-
-        <AdminAction
-          title="Orders"
-          description="View restaurant orders where supported by the backend."
-          icon="📦"
-          onPress={() => router.push("/admin/orders")}
         />
 
         <AdminAction
@@ -199,7 +164,7 @@ function AdminAction({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cream,
   },
 
   center: {
@@ -207,7 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cream,
   },
 
   exitRow: {
@@ -222,7 +187,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.ink,
     padding: 24,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -232,25 +197,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: COLORS.white,
+    color: COLORS.cream,
   },
 
   subtitle: {
     marginTop: 6,
-    color: "#D9E6ED",
+    color: "#F4EEE7",
     fontSize: 14,
-  },
-
-  homeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: COLORS.white,
-  },
-
-  homeButtonText: {
-    color: COLORS.navy,
-    fontWeight: "700",
   },
 
   headerActions: {
@@ -267,7 +220,7 @@ const styles = StyleSheet.create({
 
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -282,7 +235,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 28,
     fontWeight: "800",
-    color: COLORS.navy,
+    color: COLORS.ink,
   },
 
   statTitle: {
@@ -294,13 +247,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: COLORS.navy,
+    color: COLORS.ink,
     marginHorizontal: 20,
     marginBottom: 12,
   },
 
   actionCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cream,
     marginHorizontal: 20,
     marginBottom: 12,
     padding: 18,
@@ -315,7 +268,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: COLORS.lightBlue,
+    backgroundColor: COLORS.lightTomato,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -343,7 +296,7 @@ const styles = StyleSheet.create({
 
   arrow: {
     fontSize: 28,
-    color: COLORS.blue,
+    color: COLORS.tomato,
     marginLeft: 10,
   },
 
@@ -370,14 +323,14 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     marginTop: 24,
-    backgroundColor: COLORS.blue,
+    backgroundColor: COLORS.tomato,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
   },
 
   primaryButtonText: {
-    color: COLORS.white,
+    color: COLORS.cream,
     fontWeight: "800",
   },
 });

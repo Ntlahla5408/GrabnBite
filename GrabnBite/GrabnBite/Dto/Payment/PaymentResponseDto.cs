@@ -16,6 +16,10 @@
 
         public string? TransactionReference { get; set; }
 
+        public string? YocoCheckoutId { get; set; }
+
+        public string? RedirectUrl { get; set; }
+
         public DateTime PaymentDate { get; set; }
     }
 }

@@ -157,6 +157,158 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
+        // CREATE YOCO PAYMENT
+        // POST: /api/Payment/yoco/{orderId}
+        // ============================================================
+
+        [HttpPost("yoco/{orderId}")]
+        public async Task<IActionResult> CreateYocoPayment(int orderId)
+        {
+            // --------------------------------------------------------
+            // Validate order ID
+            // --------------------------------------------------------
+
+            if (orderId <= 0)
+            {
+                return BadRequest("Invalid order ID.");
+            }
+
+            // --------------------------------------------------------
+            // Find order
+            // --------------------------------------------------------
+
+            var order = await _context.Orders
+                .Include(o => o.Payment)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+
+            if (order == null)
+            {
+                return NotFound("Order not found.");
+            }
+
+            // --------------------------------------------------------
+            // Don't allow payment for cancelled orders
+            // --------------------------------------------------------
+
+            if (order.Status == "CANCELLED")
+            {
+                return BadRequest(
+                    "A cancelled order cannot be paid.");
+            }
+
+            // --------------------------------------------------------
+            // Validate order amount
+            // --------------------------------------------------------
+
+            if (order.TotalAmount <= 0)
+            {
+                return BadRequest(
+                    "Order amount must be greater than zero.");
+            }
+
+            // --------------------------------------------------------
+            // Prevent duplicate payment
+            // --------------------------------------------------------
+
+            if (order.Payment != null)
+            {
+                return BadRequest(
+                    "A payment already exists for this order.");
+            }
+
+            // --------------------------------------------------------
+            // Create payment record
+            // --------------------------------------------------------
+
+            var payment = new Payment
+            {
+                OrderId = order.OrderId,
+
+                // Always use the amount stored on the order.
+                Amount = order.TotalAmount,
+
+                PaymentStatus = "INITIATED",
+
+                PaymentMethod = "YOCO",
+
+                PaymentReference =
+                    $"GNB-YOCO-{Guid.NewGuid():N}"
+                        .Substring(0, 18)
+                        .ToUpper(),
+
+                PaymentDate = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+
+            await _context.SaveChangesAsync();
+
+            // --------------------------------------------------------
+            // Create Yoco checkout
+            // --------------------------------------------------------
+
+            var successUrl =
+                $"https://localhost:7127/api/Payment/yoco/success?orderId={order.OrderId}";
+
+            var cancelUrl =
+                $"https://localhost:7127/api/Payment/yoco/cancel?orderId={order.OrderId}";
+
+            try
+            {
+                var checkout =
+                    await _yocoPaymentService.CreateCheckoutAsync(
+                        payment.Amount,
+                        "ZAR",
+                        successUrl,
+                        cancelUrl);
+
+                // ----------------------------------------------------
+                // Save Yoco checkout ID
+                // ----------------------------------------------------
+
+                payment.YocoCheckoutId = checkout.Id;
+
+                await _context.SaveChangesAsync();
+
+                // ----------------------------------------------------
+                // Return checkout information
+                // ----------------------------------------------------
+
+                return Ok(new PaymentResponseDto
+                {
+                    PaymentId = payment.PaymentId,
+                    OrderId = payment.OrderId,
+                    Amount = payment.Amount,
+                    PaymentStatus = payment.PaymentStatus,
+                    PaymentMethod = payment.PaymentMethod,
+                    PaymentReference = payment.PaymentReference,
+                    TransactionReference = payment.TransactionReference,
+                    PaymentDate = payment.PaymentDate,
+                    YocoCheckoutId = payment.YocoCheckoutId,
+                    RedirectUrl = checkout.RedirectUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                // ----------------------------------------------------
+                // Yoco checkout failed
+                // ----------------------------------------------------
+
+                payment.PaymentStatus = "FAILED";
+
+                await _context.SaveChangesAsync();
+
+                return StatusCode(
+                    StatusCodes.Status502BadGateway,
+                    new
+                    {
+                        message = "Unable to create Yoco checkout.",
+                        error = ex.Message
+                    });
+            }
+        }
+
+        // ============================================================
         // GET PAYMENT
         // GET: /api/Payment/{userId}/{orderId}
         // ============================================================
@@ -368,6 +520,36 @@ namespace GrabnBite.Controllers
                 paymentId = payment.PaymentId,
                 orderId = payment.OrderId,
                 paymentStatus = payment.PaymentStatus
+            });
+        }
+        // ============================================================
+        // YOCO SUCCESS REDIRECT
+        // GET: /api/Payment/yoco/success
+        // ============================================================
+
+        [HttpGet("yoco/success")]
+        public IActionResult YocoSuccess(int orderId)
+        {
+            return Ok(new
+            {
+                message = "Yoco payment page completed.",
+                orderId = orderId,
+                note = "Payment confirmation will be implemented with the Yoco webhook."
+            });
+        }
+
+        // ============================================================
+        // YOCO CANCEL REDIRECT
+        // GET: /api/Payment/yoco/cancel
+        // ============================================================
+
+        [HttpGet("yoco/cancel")]
+        public IActionResult YocoCancel(int orderId)
+        {
+            return Ok(new
+            {
+                message = "Yoco payment was cancelled.",
+                orderId = orderId
             });
         }
     }

@@ -71,6 +71,10 @@ namespace GrabnBite.Services
 
             var json = JsonSerializer.Serialize(requestBody);
 
+            Console.WriteLine("========== YOCO REQUEST ==========");
+            Console.WriteLine(json);
+            Console.WriteLine("==================================");
+
             using var content = new StringContent(
                 json,
                 Encoding.UTF8,

@@ -14,6 +14,8 @@
 
         public string? TransactionReference { get; set; }
 
+        public string? YocoCheckoutId { get; set; }
+
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
 
         public int OrderId { get; set; }

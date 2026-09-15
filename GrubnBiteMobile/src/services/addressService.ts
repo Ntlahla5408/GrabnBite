@@ -93,7 +93,11 @@ export const createAddress = async (
     `/api/Addresses/${userId}`,
     {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        latitude: data.latitude ?? 0,
+        longitude: data.longitude ?? 0,
+      }),
     },
   );
   return normalizeAddress(address);
@@ -108,7 +112,11 @@ export const updateAddress = async (
     `/api/Addresses/${userId}/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        latitude: data.latitude ?? 0,
+        longitude: data.longitude ?? 0,
+      }),
     },
   );
   return normalizeAddress(address);

@@ -5,8 +5,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
 using GrabnBite.Data;
 using GrabnBite.Hubs;
+using GrabnBite.Configuration;
+using GrabnBite.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
+builder.Services.AddHttpClient<YocoPaymentService>();
 
 builder.Services.AddCors(options =>
 {

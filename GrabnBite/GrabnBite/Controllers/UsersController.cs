@@ -158,6 +158,100 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
+        // UPDATE USER ROLE
+        // =========================================================
+        [HttpPut("{userId}/role")]
+        public async Task<IActionResult> UpdateUserRole(
+            int userId,
+            UpdateUserRoleDto dto)
+        {
+            if (userId <= 0)
+            {
+                return BadRequest("A valid userId is required.");
+            }
+
+            var role = dto.Role?.Trim().ToLowerInvariant() switch
+            {
+                "customer" => "Customer",
+                "restaurant" => "Restaurant",
+                "driver" => "Driver",
+                "admin" => "Admin",
+                _ => null
+            };
+
+            if (role == null)
+            {
+                return BadRequest(
+                    "Role must be customer, restaurant, driver, or admin.");
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            user.Role = role;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new UserResponseDto
+            {
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
+        }
+
+        // =========================================================
+        // UPDATE USER ACTIVE STATE
+        // =========================================================
+        [HttpPut("{userId}/status")]
+        public async Task<IActionResult> UpdateUserStatus(
+            int userId,
+            UpdateUserStatusDto dto)
+        {
+            if (userId <= 0)
+            {
+                return BadRequest("A valid userId is required.");
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            user.IsActive = dto.IsActive;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new UserResponseDto
+            {
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
+        }
+
+        // =========================================================
         // DELETE USER
         // =========================================================
         [HttpDelete("{userId}")]

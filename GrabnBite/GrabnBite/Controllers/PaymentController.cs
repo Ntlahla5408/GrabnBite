@@ -3,6 +3,7 @@ using GrabnBite.DTOs.Payment;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GrabnBite.Services;
 
 namespace GrabnBite.Controllers
 {
@@ -11,10 +12,12 @@ namespace GrabnBite.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly YocoPaymentService _yocoPaymentService;
 
-        public PaymentController(AppDbContext context)
+        public PaymentController(AppDbContext context, YocoPaymentService yocoPaymentService)
         {
             _context = context;
+            _yocoPaymentService = yocoPaymentService;
         }
 
         // ============================================================

@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { ApiError, apiRequest } from "./api";
 import { getCurrentUser } from "./sessionService";
 
 export interface Restaurant {
@@ -12,6 +12,33 @@ export interface Restaurant {
   longitude: number;
   isOpen: boolean;
 }
+
+interface RestaurantResponse {
+  restaurantId?: number;
+  id?: number;
+  name: string;
+  description?: string;
+  phoneNumber?: string;
+  email?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  isOpen?: boolean;
+}
+
+const normalizeRestaurant = (
+  restaurant: RestaurantResponse,
+): Restaurant => ({
+  id: restaurant.restaurantId ?? restaurant.id ?? 0,
+  name: restaurant.name,
+  description: restaurant.description ?? "",
+  phoneNumber: restaurant.phoneNumber ?? "",
+  email: restaurant.email ?? "",
+  address: restaurant.address ?? "",
+  latitude: restaurant.latitude ?? 0,
+  longitude: restaurant.longitude ?? 0,
+  isOpen: restaurant.isOpen ?? false,
+});
 
 export interface CreateRestaurantRequest {
   name: string;
@@ -82,10 +109,15 @@ export interface AdminUser {
   lastName: string;
   email: string;
   role: string;
+  isActive: boolean;
 }
 
 export interface UpdateUserRoleRequest {
   role: string;
+}
+
+export interface UpdateUserStatusRequest {
+  isActive: boolean;
 }
 
 // -----------------------------
@@ -93,7 +125,8 @@ export interface UpdateUserRoleRequest {
 // -----------------------------
 
 export const getRestaurants = async (): Promise<Restaurant[]> => {
-  return await apiRequest<Restaurant[]>("/api/Restaurant");
+  const restaurants = await apiRequest<RestaurantResponse[]>("/api/Restaurant");
+  return restaurants.map(normalizeRestaurant);
 };
 
 export const createRestaurant = async (
@@ -104,10 +137,14 @@ export const createRestaurant = async (
     throw new Error("Your session could not be identified.");
   }
 
-  return await apiRequest<Restaurant>(`/api/Restaurant/user/${userId}`, {
+  const restaurant = await apiRequest<RestaurantResponse>(
+    `/api/Restaurant/user/${userId}`,
+    {
     method: "POST",
     body: JSON.stringify(data),
-  });
+    },
+  );
+  return normalizeRestaurant(restaurant);
 };
 
 export const updateRestaurant = async (
@@ -119,10 +156,44 @@ export const updateRestaurant = async (
     throw new Error("Your session could not be identified.");
   }
 
-  return await apiRequest<Restaurant>(`/api/Restaurant/user/${userId}/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  const restaurant = await apiRequest<RestaurantResponse>(
+    `/api/Restaurant/user/${userId}/${id}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    },
+  );
+  return normalizeRestaurant(restaurant);
+};
+
+export const updateRestaurantAsAdmin = async (
+  id: number,
+  data: UpdateRestaurantRequest,
+): Promise<Restaurant> => {
+  try {
+    const restaurant = await apiRequest<RestaurantResponse>(
+      `/api/Restaurant/admin/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+    );
+    return normalizeRestaurant(restaurant);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new Error(
+        "The admin restaurant API is unavailable. Restart the backend API and try again.",
+      );
+    }
+
+    if (error instanceof ApiError && error.status === 401) {
+      throw new Error(
+        "Your admin session has expired. Please sign in again and retry.",
+      );
+    }
+
+    throw error;
+  }
 };
 
 export const deleteRestaurant = async (id: number): Promise<void> => {
@@ -225,7 +296,12 @@ export const getUsers = async (): Promise<AdminUser[]> => {
 
   for (const endpoint of endpoints) {
     try {
-      return await apiRequest<AdminUser[]>(endpoint);
+      const users = await apiRequest<AdminUser[]>(endpoint);
+      return users.map((user) => ({
+        ...user,
+        id: user.userId ?? user.id,
+        isActive: user.isActive ?? true,
+      }));
     } catch (error) {
       lastError = error;
       if (
@@ -245,31 +321,26 @@ export const updateUserRole = async (
   userId: number,
   data: UpdateUserRoleRequest,
 ): Promise<AdminUser> => {
-  const endpoints = [
-    `/api/User/${userId}/role`,
-    `/api/Users/${userId}/role`,
-    `/api/Admin/users/${userId}/role`,
-  ];
+  const user = await apiRequest<AdminUser>(`/api/Users/${userId}/role`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+  return { ...user, id: user.userId ?? user.id, isActive: user.isActive ?? true };
+};
 
-  let lastError: unknown;
+export const updateUserStatus = async (
+  userId: number,
+  data: UpdateUserStatusRequest,
+): Promise<AdminUser> => {
+  const user = await apiRequest<AdminUser>(`/api/Users/${userId}/status`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+  return { ...user, id: user.userId ?? user.id, isActive: user.isActive ?? true };
+};
 
-  for (const endpoint of endpoints) {
-    try {
-      return await apiRequest<AdminUser>(endpoint, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
-    } catch (error) {
-      lastError = error;
-      if (
-        !(error instanceof Error && "status" in error && error.status === 404)
-      ) {
-        throw error;
-      }
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error("The API does not expose a role-management endpoint.");
+export const deleteUser = async (userId: number): Promise<void> => {
+  await apiRequest<void>(`/api/Users/${userId}`, {
+    method: "DELETE",
+  });
 };

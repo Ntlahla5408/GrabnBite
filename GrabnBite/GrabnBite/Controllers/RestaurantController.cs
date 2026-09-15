@@ -261,6 +261,76 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
+        // ADMIN UPDATE
+        // =========================================================
+        [HttpPut("admin/{id}")]
+        public async Task<IActionResult> UpdateRestaurantAsAdmin(
+            int id,
+            UpdateRestaurantDto dto)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                return BadRequest("Restaurant name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+            {
+                return BadRequest("Phone number is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Address))
+            {
+                return BadRequest("Address is required.");
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            restaurant.Name = dto.Name.Trim();
+            restaurant.Description = dto.Description?.Trim();
+            restaurant.PhoneNumber = dto.PhoneNumber.Trim();
+            restaurant.Email = dto.Email.Trim();
+            restaurant.Address = dto.Address.Trim();
+            restaurant.ImageUrl = dto.ImageUrl?.Trim();
+            restaurant.Latitude = dto.Latitude;
+            restaurant.Longitude = dto.Longitude;
+            restaurant.IsOpen = dto.IsOpen;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new RestaurantResponseDto
+            {
+                RestaurantId = restaurant.RestaurantId,
+                Name = restaurant.Name,
+                Description = restaurant.Description,
+                PhoneNumber = restaurant.PhoneNumber,
+                Email = restaurant.Email,
+                Address = restaurant.Address,
+                ImageUrl = restaurant.ImageUrl,
+                Latitude = restaurant.Latitude,
+                Longitude = restaurant.Longitude,
+                IsOpen = restaurant.IsOpen,
+                IsApproved = restaurant.IsApproved,
+                CreatedAt = restaurant.CreatedAt
+            });
+        }
+
+        // =========================================================
         // DELETE
         // =========================================================
         [HttpDelete("user/{userId}/{id}")]

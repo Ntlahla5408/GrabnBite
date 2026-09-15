@@ -84,6 +84,11 @@ namespace GrabnBite.Controllers
                 return Unauthorized("Invalid credentials.");
             }
 
+            if (!user.IsActive)
+            {
+                return Unauthorized("This account has been disabled.");
+            }
+
             // Verify password
             var passwordIsValid = BCrypt.Net.BCrypt.Verify(
                 loginDto.Password,

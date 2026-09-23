@@ -144,7 +144,7 @@ export default function RestaurantOrders() {
   }
 
   return (
-    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+    <RoleGuard allowedRoles={["restaurant"]}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>

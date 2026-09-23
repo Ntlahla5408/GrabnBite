@@ -1,12 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
@@ -17,7 +11,7 @@ export default function AccountScreen() {
   const user = getCurrentUser();
 
   return (
-    <RoleGuard allowedRoles={["customer", "user"]}>
+    <RoleGuard allowedRoles={["customer"]}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.avatar}>

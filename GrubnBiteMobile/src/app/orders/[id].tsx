@@ -139,7 +139,7 @@ export default function OrderDetailsScreen() {
     !currentStatus.toLowerCase().includes("deliver");
 
   return (
-    <RoleGuard allowedRoles={["customer", "user"]}>
+    <RoleGuard allowedRoles={["customer"]}>
       <ScrollView
         style={styles.container}
         refreshControl={

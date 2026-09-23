@@ -1,12 +1,14 @@
 import { Platform } from "react-native";
 
-import { getToken } from "./sessionService";
+import { getToken, logout } from "./sessionService";
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
 const API_URL = (
   configuredApiUrl ||
-  (Platform.OS === "android" ? "http://10.0.2.2:5277" : "http://localhost:5277")
+  (Platform.OS === "android"
+    ? "https://localhost:7127"
+    : "https://localhost:7127")
 ).replace(/\/$/, "");
 
 export const getApiUrl = (): string => API_URL;
@@ -57,6 +59,10 @@ export const apiRequest = async <T>(
 
   if (!response.ok) {
     const errorText = await response.text();
+
+    if (response.status === 401) {
+      await logout();
+    }
 
     throw new ApiError(
       errorText || `Request failed with status ${response.status}`,

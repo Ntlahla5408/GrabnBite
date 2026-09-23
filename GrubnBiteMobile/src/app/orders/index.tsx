@@ -77,7 +77,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <RoleGuard allowedRoles={["customer", "user"]}>
+    <RoleGuard allowedRoles={["customer"]}>
       <ScrollView
         style={styles.container}
         refreshControl={

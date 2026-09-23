@@ -1,18 +1,18 @@
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from "react";
 
 import {
-  addCartItem,
-  getCarts,
-  removeCartItem,
-  updateCartItem,
-  type Cart,
+    addCartItem,
+    getCarts,
+    removeCartItem,
+    updateCartItem,
+    type Cart,
 } from "@/services/cartService";
 import { getCurrentUser } from "@/services/sessionService";
 
@@ -40,15 +40,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 
   const refreshCart = useCallback(async () => {
-    const userId = getCurrentUser()?.userId;
-    if (!userId) {
+    if (!getCurrentUser()) {
       setCarts([]);
       setLoading(false);
       return;
     }
 
     try {
-      setCarts(await getCarts(userId));
+      setCarts(await getCarts());
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -60,9 +59,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const mutate = useCallback(
-    async (action: (userId: number) => Promise<void>) => {
-      const userId = getCurrentUser()?.userId;
-      if (!userId) {
+    async (action: () => Promise<void>) => {
+      if (!getCurrentUser()) {
         throw new Error("Please sign in before using the cart.");
       }
 
@@ -77,8 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const userId = getCurrentUser()?.userId;
-    if (!userId) {
+    if (!getCurrentUser()) {
       return;
     }
 
@@ -87,7 +84,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     try {
       for (const item of snapshot.items) {
-        await addCartItem(userId, item.menuItemId, item.quantity);
+        await addCartItem(item.menuItemId, item.quantity);
       }
 
       await refreshCart();
@@ -111,12 +108,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       restorePendingCheckout,
       clearPendingCheckout: () => setPendingCheckoutState(null),
       refreshCart: refreshCartForConsumer,
-      addItem: (menuItemId) =>
-        mutate((userId) => addCartItem(userId, menuItemId)),
+      addItem: (menuItemId) => mutate(() => addCartItem(menuItemId)),
       setItemQuantity: (cartItemId, quantity) =>
-        mutate((userId) => updateCartItem(userId, cartItemId, quantity)),
-      removeItem: (cartItemId) =>
-        mutate((userId) => removeCartItem(userId, cartItemId)),
+        mutate(() => updateCartItem(cartItemId, quantity)),
+      removeItem: (cartItemId) => mutate(() => removeCartItem(cartItemId)),
     }),
     [
       carts,

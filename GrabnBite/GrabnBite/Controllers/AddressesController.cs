@@ -1,13 +1,16 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.Dto.AddressDto;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Customer")]
     public class AddressesController : ControllerBase
     {
         private readonly AppDbContext dbContext;
@@ -17,21 +20,37 @@ namespace GrabnBite.Controllers
             this.dbContext = dbContext;
         }
 
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                return userId;
+            }
+
+            return null;
+        }
+
         // ============================================================
         // GET ALL ADDRESSES
-        // GET: api/Addresses/{userId}
+        // GET: api/Addresses
         // ============================================================
 
-        [HttpGet("{userId:int}")]
-        public async Task<IActionResult> GetAddresses(int userId)
+        [HttpGet]
+        public async Task<IActionResult> GetAddresses()
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             var addresses = await dbContext.Addresses
-                .Where(a => a.UserId == userId)
+                .AsNoTracking()
+                .Where(a => a.UserId == userId.Value)
                 .Select(a => new AddressResponseDto
                 {
                     AddressId = a.AddressId,
@@ -51,17 +70,17 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // GET ONE ADDRESS
-        // GET: api/Addresses/{userId}/{id}
+        // GET: api/Addresses/{id}
         // ============================================================
 
-        [HttpGet("{userId:int}/{id:int}")]
-        public async Task<IActionResult> GetAddress(
-            int userId,
-            int id)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetAddress(int id)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (id <= 0)
@@ -70,9 +89,10 @@ namespace GrabnBite.Controllers
             }
 
             var address = await dbContext.Addresses
+                .AsNoTracking()
                 .Where(a =>
                     a.AddressId == id &&
-                    a.UserId == userId)
+                    a.UserId == userId.Value)
                 .Select(a => new AddressResponseDto
                 {
                     AddressId = a.AddressId,
@@ -97,17 +117,18 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // CREATE ADDRESS
-        // POST: api/Addresses/{userId}
+        // POST: api/Addresses
         // ============================================================
 
-        [HttpPost("{userId:int}")]
+        [HttpPost]
         public async Task<IActionResult> CreateAddress(
-            int userId,
-            CreateAddressDto dto)
+            [FromBody] CreateAddressDto dto)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (dto == null)
@@ -115,66 +136,40 @@ namespace GrabnBite.Controllers
                 return BadRequest("Address data is required.");
             }
 
-            // --------------------------------------------------------
-            // Basic validation
-            // --------------------------------------------------------
-
             if (string.IsNullOrWhiteSpace(dto.StreetAddress))
-            {
                 return BadRequest("Street address is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.City))
-            {
                 return BadRequest("City is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.Province))
-            {
                 return BadRequest("Province is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.PostalCode))
-            {
                 return BadRequest("Postal code is required.");
-            }
+
+            var hasExistingAddress = await dbContext.Addresses
+                .AnyAsync(a => a.UserId == userId.Value);
 
             var address = new Address
             {
-                Label = dto.Label,
-                StreetAddress = dto.StreetAddress,
-                City = dto.City,
-                Province = dto.Province,
-                PostalCode = dto.PostalCode,
+                Label = dto.Label?.Trim() ?? string.Empty,
+                StreetAddress = dto.StreetAddress.Trim(),
+                City = dto.City.Trim(),
+                Province = dto.Province.Trim(),
+                PostalCode = dto.PostalCode.Trim(),
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
-                UserId = userId,
-                IsDefault = dto.IsDefault
+                UserId = userId.Value,
+                IsDefault = dto.IsDefault || !hasExistingAddress
             };
-
-            // --------------------------------------------------------
-            // If this is the first address, make it default.
-            // --------------------------------------------------------
-
-            var hasExistingAddress = await dbContext.Addresses
-                .AnyAsync(a => a.UserId == userId);
-
-            if (!hasExistingAddress)
-            {
-                address.IsDefault = true;
-            }
-
-            // --------------------------------------------------------
-            // If this address is default, remove default from
-            // existing addresses.
-            // --------------------------------------------------------
 
             if (address.IsDefault)
             {
                 var existingDefaultAddresses =
                     await dbContext.Addresses
                         .Where(a =>
-                            a.UserId == userId &&
+                            a.UserId == userId.Value &&
                             a.IsDefault)
                         .ToListAsync();
 
@@ -190,11 +185,7 @@ namespace GrabnBite.Controllers
 
             return CreatedAtAction(
                 nameof(GetAddress),
-                new
-                {
-                    userId = userId,
-                    id = address.AddressId
-                },
+                new { id = address.AddressId },
                 new AddressResponseDto
                 {
                     AddressId = address.AddressId,
@@ -212,18 +203,19 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // UPDATE ADDRESS
-        // PUT: api/Addresses/{userId}/{id}
+        // PUT: api/Addresses/{id}
         // ============================================================
 
-        [HttpPut("{userId:int}/{id:int}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateAddress(
-            int userId,
             int id,
-            UpdateAddressDto dto)
+            [FromBody] UpdateAddressDto dto)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (id <= 0)
@@ -239,42 +231,30 @@ namespace GrabnBite.Controllers
             var address = await dbContext.Addresses
                 .FirstOrDefaultAsync(a =>
                     a.AddressId == id &&
-                    a.UserId == userId);
+                    a.UserId == userId.Value);
 
             if (address == null)
             {
                 return NotFound("Address not found.");
             }
 
-            // --------------------------------------------------------
-            // Validation
-            // --------------------------------------------------------
-
             if (string.IsNullOrWhiteSpace(dto.StreetAddress))
-            {
                 return BadRequest("Street address is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.City))
-            {
                 return BadRequest("City is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.Province))
-            {
                 return BadRequest("Province is required.");
-            }
 
             if (string.IsNullOrWhiteSpace(dto.PostalCode))
-            {
                 return BadRequest("Postal code is required.");
-            }
 
-            address.Label = dto.Label;
-            address.StreetAddress = dto.StreetAddress;
-            address.City = dto.City;
-            address.Province = dto.Province;
-            address.PostalCode = dto.PostalCode;
+            address.Label = dto.Label?.Trim() ?? string.Empty;
+            address.StreetAddress = dto.StreetAddress.Trim();
+            address.City = dto.City.Trim();
+            address.Province = dto.Province.Trim();
+            address.PostalCode = dto.PostalCode.Trim();
             address.Latitude = dto.Latitude;
             address.Longitude = dto.Longitude;
 
@@ -296,17 +276,17 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // DELETE ADDRESS
-        // DELETE: api/Addresses/{userId}/{id}
+        // DELETE: api/Addresses/{id}
         // ============================================================
 
-        [HttpDelete("{userId:int}/{id:int}")]
-        public async Task<IActionResult> DeleteAddress(
-            int userId,
-            int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteAddress(int id)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (id <= 0)
@@ -317,7 +297,7 @@ namespace GrabnBite.Controllers
             var address = await dbContext.Addresses
                 .FirstOrDefaultAsync(a =>
                     a.AddressId == id &&
-                    a.UserId == userId);
+                    a.UserId == userId.Value);
 
             if (address == null)
             {
@@ -333,17 +313,17 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // SET DEFAULT ADDRESS
-        // PATCH: api/Addresses/{userId}/{id}/default
+        // PATCH: api/Addresses/{id}/default
         // ============================================================
 
-        [HttpPatch("{userId:int}/{id:int}/default")]
-        public async Task<IActionResult> SetDefaultAddress(
-            int userId,
-            int id)
+        [HttpPatch("{id:int}/default")]
+        public async Task<IActionResult> SetDefaultAddress(int id)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (id <= 0)
@@ -354,7 +334,7 @@ namespace GrabnBite.Controllers
             var address = await dbContext.Addresses
                 .FirstOrDefaultAsync(a =>
                     a.AddressId == id &&
-                    a.UserId == userId);
+                    a.UserId == userId.Value);
 
             if (address == null)
             {
@@ -364,7 +344,7 @@ namespace GrabnBite.Controllers
             var currentDefaultAddresses =
                 await dbContext.Addresses
                     .Where(a =>
-                        a.UserId == userId &&
+                        a.UserId == userId.Value &&
                         a.IsDefault)
                     .ToListAsync();
 

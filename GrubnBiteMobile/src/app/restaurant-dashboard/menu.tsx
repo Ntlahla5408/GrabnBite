@@ -270,7 +270,7 @@ export default function RestaurantMenu() {
   }
 
   return (
-    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+    <RoleGuard allowedRoles={["restaurant"]}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>

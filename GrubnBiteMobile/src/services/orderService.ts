@@ -1,5 +1,4 @@
 import { apiRequest } from "./api";
-import { getCurrentUser } from "./sessionService";
 
 export interface OrderItem {
   id?: number;
@@ -92,14 +91,6 @@ interface OrderResponse {
   }>;
 }
 
-const getUserId = (): number => {
-  const userId = getCurrentUser()?.userId;
-  if (!userId) {
-    throw new Error("Please sign in to view your orders.");
-  }
-  return userId;
-};
-
 const normalizeOrder = (response: OrderResponse): Order => ({
   id: Number(response.orderId ?? response.id ?? 0),
   restaurantId: response.restaurantId,
@@ -128,25 +119,18 @@ const normalizeOrder = (response: OrderResponse): Order => ({
 });
 
 export const getMyOrders = async (): Promise<Order[]> => {
-  const userId = getUserId();
-  const response = await apiRequest<OrderResponse[]>(
-    `/api/Order/${userId}/my-orders`,
-  );
+  const response = await apiRequest<OrderResponse[]>("/api/Order/my-orders");
   return response.map(normalizeOrder);
 };
 
 export const getOrder = async (id: number): Promise<Order> => {
-  const userId = getUserId();
-  const response = await apiRequest<OrderResponse>(
-    `/api/Order/${userId}/${id}`,
-  );
+  const response = await apiRequest<OrderResponse>(`/api/Order/${id}`);
   return normalizeOrder(response);
 };
 
 export const getOrderStatusHistory = async (
   id: number,
 ): Promise<OrderStatusHistory[]> => {
-  const userId = getUserId();
   const response = await apiRequest<
     Array<{
       orderStatusHistoryId?: number;
@@ -155,7 +139,7 @@ export const getOrderStatusHistory = async (
       changedAt?: string;
       timestamp?: string;
     }>
-  >(`/api/Order/${userId}/${id}/status-history`);
+  >(`/api/Order/${id}/status-history`);
 
   return response.map((item) => ({
     id: item.orderStatusHistoryId ?? item.id,

@@ -1,8 +1,10 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -18,8 +20,23 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
-        // CREATE
+        // HELPER - Get logged-in user ID from JWT
         // =========================================================
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
+        }
+
+        // =========================================================
+        // CREATE
+        // Restaurant can create for own restaurant
+        // Admin can create for any restaurant
+        // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpPost("restaurant/{restaurantId}")]
         public async Task<IActionResult> CreateMenuItem(
             int restaurantId,
@@ -45,12 +62,26 @@ namespace GrabnBite.Controllers
                 return BadRequest("A valid menu category is required.");
             }
 
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
             var restaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
 
             if (restaurant == null)
             {
                 return NotFound("Restaurant not found.");
+            }
+
+            // Restaurant users can only manage their own restaurant.
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
             }
 
             if (!restaurant.IsApproved)
@@ -103,7 +134,9 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // READ - Get all menu items
+        // Public
         // =========================================================
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetMenuItems()
         {
@@ -126,7 +159,9 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // READ - Get one menu item
+        // Public
         // =========================================================
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMenuItem(int id)
         {
@@ -154,7 +189,9 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // READ - Get menu items for a restaurant
+        // Public
         // =========================================================
+        [AllowAnonymous]
         [HttpGet("restaurant/{restaurantId}")]
         public async Task<IActionResult> GetRestaurantMenu(int restaurantId)
         {
@@ -191,7 +228,10 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // UPDATE
+        // Restaurant can update own restaurant
+        // Admin can update any restaurant
         // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpPut("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> UpdateMenuItem(
             int restaurantId,
@@ -216,6 +256,28 @@ namespace GrabnBite.Controllers
             if (dto.Price < 0)
             {
                 return BadRequest("Price cannot be negative.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            // Restaurant users can only update their own restaurant.
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
             }
 
             var menuItem = await _context.MenuItems
@@ -252,7 +314,10 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // DELETE
+        // Restaurant can delete own restaurant's item
+        // Admin can delete any restaurant's item
         // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpDelete("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> DeleteMenuItem(
             int restaurantId,
@@ -266,6 +331,28 @@ namespace GrabnBite.Controllers
             if (id <= 0)
             {
                 return BadRequest("A valid menu item id is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            // Restaurant users can only delete from their own restaurant.
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
             }
 
             var menuItem = await _context.MenuItems

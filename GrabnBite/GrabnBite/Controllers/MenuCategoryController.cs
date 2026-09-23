@@ -3,24 +3,38 @@ using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class MenuCategoryController : ControllerBase
+    [Authorize(Roles = "Customer")]
+    public class OrderController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        public MenuCategoryController(AppDbContext context)
+        public OrderController(AppDbContext context)
         {
             _context = context;
         }
 
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
+        }
+
+    // endpoints...
+
         // ============================================================
         // CREATE CATEGORY
         // ============================================================
-
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpPost("restaurant/{restaurantId}")]
         public async Task<IActionResult> CreateCategory(
             int restaurantId,

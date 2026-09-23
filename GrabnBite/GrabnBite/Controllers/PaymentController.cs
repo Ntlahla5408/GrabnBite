@@ -1,9 +1,11 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Payment;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using GrabnBite.Services;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -14,44 +16,49 @@ namespace GrabnBite.Controllers
         private readonly AppDbContext _context;
         private readonly YocoPaymentService _yocoPaymentService;
 
-        public PaymentController(AppDbContext context, YocoPaymentService yocoPaymentService)
+        public PaymentController(
+            AppDbContext context,
+            YocoPaymentService yocoPaymentService)
         {
             _context = context;
             _yocoPaymentService = yocoPaymentService;
         }
 
         // ============================================================
-        // CREATE PAYMENT
-        // POST: /api/Payment/{userId}/{orderId}
+        // HELPER - Get logged-in user ID from JWT
         // ============================================================
 
-        [HttpPost("{userId}/{orderId}")]
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
+        }
+
+        // ============================================================
+        // CREATE PAYMENT
+        // POST: /api/Payment/{orderId}
+        // ============================================================
+
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{orderId}")]
         public async Task<IActionResult> CreatePayment(
-            int userId,
             int orderId,
             CreatePaymentDto dto)
         {
-            // --------------------------------------------------------
-            // Validate user ID
-            // --------------------------------------------------------
-
-            if (userId <= 0)
-            {
-                return BadRequest("Invalid user ID.");
-            }
-
-            // --------------------------------------------------------
-            // Validate order ID
-            // --------------------------------------------------------
-
             if (orderId <= 0)
             {
                 return BadRequest("Invalid order ID.");
             }
 
-            // --------------------------------------------------------
-            // Validate payment method
-            // --------------------------------------------------------
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
 
             if (dto == null || string.IsNullOrWhiteSpace(dto.PaymentMethod))
             {
@@ -74,25 +81,18 @@ namespace GrabnBite.Controllers
             }
 
             // --------------------------------------------------------
-            // Find order
+            // Find order belonging to logged-in customer
             // --------------------------------------------------------
 
             var order = await _context.Orders
                 .Include(o => o.Payment)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+                .FirstOrDefaultAsync(o =>
+                    o.OrderId == orderId &&
+                    o.UserId == userId.Value);
 
             if (order == null)
             {
                 return NotFound("Order not found.");
-            }
-
-            // --------------------------------------------------------
-            // Ensure order belongs to supplied user
-            // --------------------------------------------------------
-
-            if (order.UserId != userId)
-            {
-                return Forbid();
             }
 
             // --------------------------------------------------------
@@ -103,6 +103,16 @@ namespace GrabnBite.Controllers
             {
                 return BadRequest(
                     "A cancelled order cannot be paid.");
+            }
+
+            // --------------------------------------------------------
+            // Validate order amount
+            // --------------------------------------------------------
+
+            if (order.TotalAmount <= 0)
+            {
+                return BadRequest(
+                    "Order amount must be greater than zero.");
             }
 
             // --------------------------------------------------------
@@ -123,8 +133,7 @@ namespace GrabnBite.Controllers
             {
                 OrderId = order.OrderId,
 
-                // Always use amount from the order.
-                // Never trust an amount from the frontend.
+                // NEVER trust payment amount from frontend.
                 Amount = order.TotalAmount,
 
                 PaymentStatus = "PENDING",
@@ -161,25 +170,31 @@ namespace GrabnBite.Controllers
         // POST: /api/Payment/yoco/{orderId}
         // ============================================================
 
+        [Authorize(Roles = "Customer")]
         [HttpPost("yoco/{orderId}")]
         public async Task<IActionResult> CreateYocoPayment(int orderId)
         {
-            // --------------------------------------------------------
-            // Validate order ID
-            // --------------------------------------------------------
-
             if (orderId <= 0)
             {
                 return BadRequest("Invalid order ID.");
             }
 
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             // --------------------------------------------------------
-            // Find order
+            // Find order belonging to logged-in customer
             // --------------------------------------------------------
 
             var order = await _context.Orders
                 .Include(o => o.Payment)
-                .FirstOrDefaultAsync(o => o.OrderId == orderId);
+                .FirstOrDefaultAsync(o =>
+                    o.OrderId == orderId &&
+                    o.UserId == userId.Value);
 
             if (order == null)
             {
@@ -224,7 +239,7 @@ namespace GrabnBite.Controllers
             {
                 OrderId = order.OrderId,
 
-                // Always use the amount stored on the order.
+                // Always use amount stored on order.
                 Amount = order.TotalAmount,
 
                 PaymentStatus = "INITIATED",
@@ -290,10 +305,6 @@ namespace GrabnBite.Controllers
             }
             catch (Exception ex)
             {
-                // ----------------------------------------------------
-                // Yoco checkout failed
-                // ----------------------------------------------------
-
                 payment.PaymentStatus = "FAILED";
 
                 await _context.SaveChangesAsync();
@@ -310,42 +321,35 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // GET PAYMENT
-        // GET: /api/Payment/{userId}/{orderId}
+        // GET: /api/Payment/{orderId}
         // ============================================================
 
-        [HttpGet("{userId}/{orderId}")]
-        public async Task<IActionResult> GetPayment(
-            int userId,
-            int orderId)
+        [Authorize(Roles = "Customer")]
+        [HttpGet("{orderId}")]
+        public async Task<IActionResult> GetPayment(int orderId)
         {
-            if (userId <= 0)
-            {
-                return BadRequest("Invalid user ID.");
-            }
-
             if (orderId <= 0)
             {
                 return BadRequest("Invalid order ID.");
             }
 
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             var payment = await _context.Payments
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p =>
-                    p.OrderId == orderId);
+                    p.OrderId == orderId &&
+                    p.Order.UserId == userId.Value);
 
             if (payment == null)
             {
                 return NotFound(
                     "No payment exists for this order.");
-            }
-
-            // --------------------------------------------------------
-            // Ensure payment belongs to user's order
-            // --------------------------------------------------------
-
-            if (payment.Order.UserId != userId)
-            {
-                return Forbid();
             }
 
             return Ok(new PaymentResponseDto
@@ -357,54 +361,46 @@ namespace GrabnBite.Controllers
                 PaymentMethod = payment.PaymentMethod,
                 PaymentReference = payment.PaymentReference,
                 TransactionReference = payment.TransactionReference,
-                PaymentDate = payment.PaymentDate
+                PaymentDate = payment.PaymentDate,
+                YocoCheckoutId = payment.YocoCheckoutId
             });
         }
 
         // ============================================================
         // MOCK PAYMENT SUCCESS
-        // POST:
-        // /api/Payment/{userId}/{orderId}/simulate-success
+        // DEVELOPMENT / TESTING ONLY
+        //
+        // POST: /api/Payment/{orderId}/simulate-success
         // ============================================================
 
-        [HttpPost("{userId}/{orderId}/simulate-success")]
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{orderId}/simulate-success")]
         public async Task<IActionResult> SimulatePaymentSuccess(
-            int userId,
             int orderId)
         {
-            if (userId <= 0)
-            {
-                return BadRequest("Invalid user ID.");
-            }
-
             if (orderId <= 0)
             {
                 return BadRequest("Invalid order ID.");
             }
 
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             var payment = await _context.Payments
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p =>
-                    p.OrderId == orderId);
+                    p.OrderId == orderId &&
+                    p.Order.UserId == userId.Value);
 
             if (payment == null)
             {
                 return NotFound(
                     "No payment exists for this order.");
             }
-
-            // --------------------------------------------------------
-            // Ensure payment belongs to user's order
-            // --------------------------------------------------------
-
-            if (payment.Order.UserId != userId)
-            {
-                return Forbid();
-            }
-
-            // --------------------------------------------------------
-            // Prevent duplicate payment completion
-            // --------------------------------------------------------
 
             if (payment.PaymentStatus == "PAID")
             {
@@ -418,10 +414,6 @@ namespace GrabnBite.Controllers
                     "Only pending payments can be completed.");
             }
 
-            // --------------------------------------------------------
-            // Simulate gateway transaction reference
-            // --------------------------------------------------------
-
             payment.TransactionReference =
                 $"MOCK-{Guid.NewGuid():N}"
                     .Substring(0, 18)
@@ -429,13 +421,8 @@ namespace GrabnBite.Controllers
 
             payment.PaymentStatus = "PAID";
 
-            // --------------------------------------------------------
-            // Payment succeeded.
-            //
-            // Order stays PENDING because the restaurant still
-            // needs to accept the order.
-            // --------------------------------------------------------
-
+            // Order remains PENDING.
+            // Restaurant still needs to accept the order.
             payment.Order.Status = "PENDING";
 
             await _context.SaveChangesAsync();
@@ -455,48 +442,39 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // MOCK PAYMENT FAILURE
-        // POST:
-        // /api/Payment/{userId}/{orderId}/simulate-failure
+        // DEVELOPMENT / TESTING ONLY
+        //
+        // POST: /api/Payment/{orderId}/simulate-failure
         // ============================================================
 
-        [HttpPost("{userId}/{orderId}/simulate-failure")]
+        [Authorize(Roles = "Customer")]
+        [HttpPost("{orderId}/simulate-failure")]
         public async Task<IActionResult> SimulatePaymentFailure(
-            int userId,
             int orderId)
         {
-            if (userId <= 0)
-            {
-                return BadRequest("Invalid user ID.");
-            }
-
             if (orderId <= 0)
             {
                 return BadRequest("Invalid order ID.");
             }
 
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
             var payment = await _context.Payments
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p =>
-                    p.OrderId == orderId);
+                    p.OrderId == orderId &&
+                    p.Order.UserId == userId.Value);
 
             if (payment == null)
             {
                 return NotFound(
                     "No payment exists for this order.");
             }
-
-            // --------------------------------------------------------
-            // Ensure payment belongs to user's order
-            // --------------------------------------------------------
-
-            if (payment.Order.UserId != userId)
-            {
-                return Forbid();
-            }
-
-            // --------------------------------------------------------
-            // Prevent changing completed payment
-            // --------------------------------------------------------
 
             if (payment.PaymentStatus == "PAID")
             {
@@ -522,11 +500,13 @@ namespace GrabnBite.Controllers
                 paymentStatus = payment.PaymentStatus
             });
         }
+
         // ============================================================
         // YOCO SUCCESS REDIRECT
         // GET: /api/Payment/yoco/success
         // ============================================================
 
+        [AllowAnonymous]
         [HttpGet("yoco/success")]
         public IActionResult YocoSuccess(int orderId)
         {
@@ -543,6 +523,7 @@ namespace GrabnBite.Controllers
         // GET: /api/Payment/yoco/cancel
         // ============================================================
 
+        [AllowAnonymous]
         [HttpGet("yoco/cancel")]
         public IActionResult YocoCancel(int orderId)
         {

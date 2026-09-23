@@ -1,12 +1,12 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import RoleGuard from "@/components/RoleGuard";
@@ -143,7 +143,7 @@ export default function TrackingScreen() {
   const status = order.status ?? "Unknown";
 
   return (
-    <RoleGuard allowedRoles={["customer", "user"]}>
+    <RoleGuard allowedRoles={["customer"]}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()}>

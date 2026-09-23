@@ -2,20 +2,23 @@
 using GrabnBite.DTOs.Order;
 using GrabnBite.Hubs;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrderController : ControllerBase
+    [Authorize(Roles = "Customer")]
+    public class OrdersController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<TrackingHub> _hubContext;
 
-        public OrderController(
+        public OrdersController(
             AppDbContext context,
             IHubContext<TrackingHub> hubContext)
         {
@@ -24,24 +27,42 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
+        // HELPER - Get logged-in user ID from JWT
+        // ============================================================
+
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
+        }
+
+        // ============================================================
         // GET ONE ORDER
         // ============================================================
 
-        [HttpGet("{userId}/{id}")]
-        public async Task<IActionResult> GetOrder(
-            int userId,
-            int id)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetOrder(int id)
         {
-            if (userId <= 0)
+            if (id <= 0)
             {
-                return BadRequest("A valid userId is required.");
+                return BadRequest("A valid order id is required.");
+            }
+
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
             }
 
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == id &&
-                    o.UserId == userId);
+                    o.UserId == userId.Value);
 
             if (order == null)
             {
@@ -55,16 +76,18 @@ namespace GrabnBite.Controllers
         // GET CUSTOMER'S ORDERS
         // ============================================================
 
-        [HttpGet("{userId}/my-orders")]
-        public async Task<IActionResult> GetMyOrders(int userId)
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrders()
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("A valid userId is required.");
+                return Unauthorized();
             }
 
             var orders = await _context.Orders
-                .Where(o => o.UserId == userId)
+                .Where(o => o.UserId == userId.Value)
                 .Include(o => o.OrderItems)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
@@ -80,20 +103,26 @@ namespace GrabnBite.Controllers
         // CANCEL ORDER
         // ============================================================
 
-        [HttpDelete("{userId}/{id}")]
-        public async Task<IActionResult> CancelOrder(
-            int userId,
-            int id)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> CancelOrder(int id)
         {
-            if (userId <= 0)
+            if (id <= 0)
             {
-                return BadRequest("A valid userId is required.");
+                return BadRequest("A valid order id is required.");
+            }
+
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
             }
 
             var order = await _context.Orders
+                .Include(o => o.StatusHistory)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == id &&
-                    o.UserId == userId);
+                    o.UserId == userId.Value);
 
             if (order == null)
             {
@@ -111,10 +140,19 @@ namespace GrabnBite.Controllers
             order.StatusHistory.Add(new OrderStatusHistory
             {
                 Status = "CANCELLED",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+                OrderId = order.OrderId
             });
 
             await _context.SaveChangesAsync();
+
+            // Notify connected clients about the order status change.
+            await _hubContext.Clients
+                .User(userId.Value.ToString())
+                .SendAsync(
+                    "OrderStatusUpdated",
+                    order.OrderId,
+                    order.Status);
 
             return Ok(new
             {
@@ -128,20 +166,25 @@ namespace GrabnBite.Controllers
         // GET ORDER STATUS HISTORY
         // ============================================================
 
-        [HttpGet("{userId}/{id}/status-history")]
-        public async Task<IActionResult> GetOrderStatusHistory(
-            int userId,
-            int id)
+        [HttpGet("{id}/status-history")]
+        public async Task<IActionResult> GetOrderStatusHistory(int id)
         {
-            if (userId <= 0)
+            if (id <= 0)
             {
-                return BadRequest("A valid userId is required.");
+                return BadRequest("A valid order id is required.");
+            }
+
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
             }
 
             var orderExists = await _context.Orders
                 .AnyAsync(o =>
                     o.OrderId == id &&
-                    o.UserId == userId);
+                    o.UserId == userId.Value);
 
             if (!orderExists)
             {

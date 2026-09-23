@@ -41,36 +41,26 @@ export async function restoreSession(): Promise<void> {
     if (Platform.OS === "web") {
       memoryToken = window.localStorage.getItem(TOKEN_KEY);
 
-      const storedUser =
-        window.localStorage.getItem(USER_KEY);
+      const storedUser = window.localStorage.getItem(USER_KEY);
 
       if (storedUser) {
         memoryUser = JSON.parse(storedUser) as CurrentUser;
       }
 
-      console.log(
-        "SESSION: Restored:",
-        !!memoryToken,
-        memoryUser,
-      );
+      console.log("SESSION: Restored:", !!memoryToken, memoryUser);
 
       return;
     }
 
     memoryToken = await SecureStore.getItemAsync(TOKEN_KEY);
 
-    const storedUser =
-      await SecureStore.getItemAsync(USER_KEY);
+    const storedUser = await SecureStore.getItemAsync(USER_KEY);
 
     if (storedUser) {
       memoryUser = JSON.parse(storedUser) as CurrentUser;
     }
 
-    console.log(
-      "SESSION: Restored:",
-      !!memoryToken,
-      memoryUser,
-    );
+    console.log("SESSION: Restored:", !!memoryToken, memoryUser);
   } catch (error) {
     console.error("SESSION: Restore failed:", error);
 
@@ -121,50 +111,27 @@ export function getUserRole(): string | null {
   return memoryUser?.role ?? null;
 }
 
-export function normalizeRole(
-  role?: string | null,
-): string {
+export function normalizeRole(role?: string | null): string {
   return (role ?? "").trim().toLowerCase();
 }
 
-export function isCustomer(
-  role?: string | null,
-): boolean {
-  const normalized = normalizeRole(role);
-
-  return (
-    normalized === "customer" ||
-    normalized === "user"
-  );
+export function isCustomer(role?: string | null): boolean {
+  return normalizeRole(role) === "customer";
 }
 
-export function isDriver(
-  role?: string | null,
-): boolean {
+export function isDriver(role?: string | null): boolean {
   return normalizeRole(role) === "driver";
 }
 
-export function isRestaurant(
-  role?: string | null,
-): boolean {
-  const normalized = normalizeRole(role);
-
-  return (
-    normalized === "restaurant" ||
-    normalized === "restaurantstaff" ||
-    normalized === "staff"
-  );
+export function isRestaurant(role?: string | null): boolean {
+  return normalizeRole(role) === "restaurant";
 }
 
-export function isAdmin(
-  role?: string | null,
-): boolean {
+export function isAdmin(role?: string | null): boolean {
   return normalizeRole(role) === "admin";
 }
 
-export function getRoleHome(
-  role?: string | null,
-): string {
+export function getRoleHome(role?: string | null): string {
   if (isAdmin(role)) {
     return "/admin";
   }

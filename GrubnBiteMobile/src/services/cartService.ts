@@ -1,5 +1,4 @@
 import { apiRequest } from "./api";
-import { getCurrentUser } from "./sessionService";
 
 export interface CartItem {
   cartItemId: number;
@@ -29,9 +28,9 @@ const normalizeCart = (cart: Cart): Cart => ({
   totalAmount: Number(cart.totalAmount ?? 0),
 });
 
-export const getCarts = async (userId: number): Promise<Cart[]> => {
+export const getCarts = async (): Promise<Cart[]> => {
   const response = await apiRequest<Cart[] | Cart | LegacyEmptyCartResponse>(
-    `/api/Cart/${userId}`,
+    "/api/Cart",
   );
 
   if (Array.isArray(response)) {
@@ -46,32 +45,27 @@ export const getCarts = async (userId: number): Promise<Cart[]> => {
 };
 
 export const addCartItem = async (
-  userId: number,
   menuItemId: number,
   quantity = 1,
 ): Promise<void> => {
-  await apiRequest(`/api/Cart/${userId}/items`, {
+  await apiRequest("/api/Cart/items", {
     method: "POST",
     body: JSON.stringify({ menuItemId, quantity }),
   });
 };
 
 export const updateCartItem = async (
-  userId: number,
   cartItemId: number,
   quantity: number,
 ): Promise<void> => {
-  await apiRequest(`/api/Cart/${userId}/items/${cartItemId}`, {
+  await apiRequest(`/api/Cart/items/${cartItemId}`, {
     method: "PUT",
     body: JSON.stringify({ quantity }),
   });
 };
 
-export const removeCartItem = async (
-  userId: number,
-  cartItemId: number,
-): Promise<void> => {
-  await apiRequest(`/api/Cart/${userId}/items/${cartItemId}`, {
+export const removeCartItem = async (cartItemId: number): Promise<void> => {
+  await apiRequest(`/api/Cart/items/${cartItemId}`, {
     method: "DELETE",
   });
 };
@@ -87,13 +81,7 @@ export const checkoutCart = async (
   totalAmount: number;
   status: string;
 }> => {
-  const userId = getCurrentUser()?.userId;
-
-  if (!userId) {
-    throw new Error("Please sign in before checking out.");
-  }
-
-  return await apiRequest(`/api/Checkout/${userId}`, {
+  return await apiRequest("/api/Checkout", {
     method: "POST",
     body: JSON.stringify({ cartId, deliveryAddressId }),
   });

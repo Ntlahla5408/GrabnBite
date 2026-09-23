@@ -1,19 +1,18 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
 import { FoodColors } from "@/constants/theme";
 import { useCart } from "@/context/CartContext";
 import { ApiError, apiRequest } from "../services/api";
-import { getCurrentUser } from "../services/sessionService";
 
 interface Payment {
   paymentId: number;
@@ -53,15 +52,13 @@ export default function PaymentScreen() {
   const orderIdValue = Array.isArray(orderId) ? orderId[0] : orderId;
 
   const numericOrderId = Number(orderIdValue);
-  const userId = getCurrentUser()?.userId;
-
   const isValidOrderId =
     typeof orderIdValue === "string" &&
     orderIdValue.trim() !== "" &&
     Number.isInteger(numericOrderId) &&
     numericOrderId > 0;
 
-  const isReadyForPayment = isValidOrderId && !!userId;
+  const isReadyForPayment = isValidOrderId;
 
   const [payment, setPayment] = useState<Payment | null>(null);
   const [selectedMethod, setSelectedMethod] = useState(CARD_METHOD);
@@ -79,9 +76,7 @@ export default function PaymentScreen() {
       setLoading(true);
       setLoadError("");
 
-      const data = await apiRequest<Payment>(
-        `/api/Payment/${userId}/${numericOrderId}`,
-      );
+      const data = await apiRequest<Payment>(`/api/Payment/${numericOrderId}`);
 
       setPayment(data);
 
@@ -106,7 +101,7 @@ export default function PaymentScreen() {
 
   useEffect(() => {
     loadPayment();
-  }, [numericOrderId, isReadyForPayment, userId]);
+  }, [numericOrderId, isReadyForPayment]);
 
   const createPayment = async () => {
     if (!isReadyForPayment) {
@@ -118,13 +113,17 @@ export default function PaymentScreen() {
       setProcessing(true);
 
       const data = await apiRequest<Payment>(
-        `/api/Payment/${userId}/${numericOrderId}`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            paymentMethod: selectedMethod,
-          }),
-        },
+        selectedMethod === CARD_METHOD
+          ? `/api/Payment/yoco/${numericOrderId}`
+          : `/api/Payment/${numericOrderId}`,
+        selectedMethod === CARD_METHOD
+          ? { method: "POST" }
+          : {
+              method: "POST",
+              body: JSON.stringify({
+                paymentMethod: selectedMethod,
+              }),
+            },
       );
 
       setPayment(data);
@@ -158,7 +157,7 @@ export default function PaymentScreen() {
       setProcessing(true);
 
       const data = await apiRequest<Payment>(
-        `/api/Payment/${userId}/${numericOrderId}/simulate-success`,
+        `/api/Payment/${numericOrderId}/simulate-success`,
         {
           method: "POST",
         },
@@ -206,27 +205,28 @@ export default function PaymentScreen() {
     try {
       setProcessing(true);
 
-      const data = await apiRequest<Payment>(
-        `/api/Payment/${userId}/${numericOrderId}/simulate-failure`,
+      const data = await apiRequest<{ paymentStatus: string }>(
+        `/api/Payment/${numericOrderId}/simulate-failure`,
         {
           method: "POST",
         },
       );
 
-      setPayment(data);
-
-      Alert.alert(
-        "Payment unsuccessful",
-        "The payment was unsuccessful. You can try again.",
+      setPayment((currentPayment) =>
+        currentPayment
+          ? { ...currentPayment, paymentStatus: data.paymentStatus }
+          : currentPayment,
       );
+
+      Alert.alert("Payment failed", "The payment was marked as failed.");
     } catch (error) {
       console.error("Payment failure simulation failed:", error);
 
       Alert.alert(
-        "Payment error",
+        "Payment failed",
         error instanceof Error
           ? error.message
-          : "We could not process the payment.",
+          : "We could not mark the payment as failed.",
       );
     } finally {
       setProcessing(false);

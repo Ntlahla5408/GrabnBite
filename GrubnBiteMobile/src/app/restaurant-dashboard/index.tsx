@@ -2,19 +2,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import LogoutButton from "@/components/LogoutButton";
 import RoleGuard from "@/components/RoleGuard";
 import {
-    getRestaurantsForUser,
-    Restaurant,
+  getRestaurantsForUser,
+  Restaurant,
 } from "@/services/restaurantService";
 import { getCurrentUser } from "@/services/sessionService";
 
@@ -109,7 +109,7 @@ export default function RestaurantDashboard() {
   }
 
   return (
-    <RoleGuard allowedRoles={["restaurant", "restaurantstaff", "staff"]}>
+    <RoleGuard allowedRoles={["restaurant"]}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerRow}>

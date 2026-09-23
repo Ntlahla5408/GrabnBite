@@ -1,5 +1,4 @@
 import { apiRequest } from "./api";
-import { getCurrentUser } from "./sessionService";
 
 export interface Address {
   id: number;
@@ -25,16 +24,6 @@ interface AddressResponse {
   longitude?: number | null;
   isDefault: boolean;
 }
-
-const getUserId = (): number => {
-  const userId = getCurrentUser()?.userId;
-
-  if (!userId) {
-    throw new Error("Please sign in before managing addresses.");
-  }
-
-  return userId;
-};
 
 const normalizeAddress = (address: AddressResponse): Address => ({
   id: Number(address.addressId ?? address.id ?? 0),
@@ -70,36 +59,26 @@ export interface UpdateAddressRequest {
 }
 
 export const getAddresses = async (): Promise<Address[]> => {
-  const userId = getUserId();
-  const addresses = await apiRequest<AddressResponse[]>(
-    `/api/Addresses/${userId}`,
-  );
+  const addresses = await apiRequest<AddressResponse[]>("/api/Addresses");
   return addresses.map(normalizeAddress);
 };
 
 export const getAddress = async (id: number): Promise<Address> => {
-  const userId = getUserId();
-  const address = await apiRequest<AddressResponse>(
-    `/api/Addresses/${userId}/${id}`,
-  );
+  const address = await apiRequest<AddressResponse>(`/api/Addresses/${id}`);
   return normalizeAddress(address);
 };
 
 export const createAddress = async (
   data: CreateAddressRequest,
 ): Promise<Address> => {
-  const userId = getUserId();
-  const address = await apiRequest<AddressResponse>(
-    `/api/Addresses/${userId}`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        ...data,
-        latitude: data.latitude ?? 0,
-        longitude: data.longitude ?? 0,
-      }),
-    },
-  );
+  const address = await apiRequest<AddressResponse>("/api/Addresses", {
+    method: "POST",
+    body: JSON.stringify({
+      ...data,
+      latitude: data.latitude ?? 0,
+      longitude: data.longitude ?? 0,
+    }),
+  });
   return normalizeAddress(address);
 };
 
@@ -107,32 +86,26 @@ export const updateAddress = async (
   id: number,
   data: UpdateAddressRequest,
 ): Promise<Address> => {
-  const userId = getUserId();
-  const address = await apiRequest<AddressResponse>(
-    `/api/Addresses/${userId}/${id}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        ...data,
-        latitude: data.latitude ?? 0,
-        longitude: data.longitude ?? 0,
-      }),
-    },
-  );
+  const address = await apiRequest<AddressResponse>(`/api/Addresses/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      ...data,
+      latitude: data.latitude ?? 0,
+      longitude: data.longitude ?? 0,
+    }),
+  });
   return normalizeAddress(address);
 };
 
 export const deleteAddress = async (id: number): Promise<void> => {
-  const userId = getUserId();
-  await apiRequest<void>(`/api/Addresses/${userId}/${id}`, {
+  await apiRequest<void>(`/api/Addresses/${id}`, {
     method: "DELETE",
   });
 };
 
 export const setDefaultAddress = async (id: number): Promise<Address> => {
-  const userId = getUserId();
   const address = await apiRequest<AddressResponse>(
-    `/api/Addresses/${userId}/${id}/default`,
+    `/api/Addresses/${id}/default`,
     {
       method: "PATCH",
     },

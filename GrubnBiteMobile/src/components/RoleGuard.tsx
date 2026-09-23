@@ -1,11 +1,12 @@
 import { router } from "expo-router";
-import React, { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import {
-  getCurrentUser,
-  getRoleHome,
-  normalizeRole,
+    getCurrentUser,
+    getRoleHome,
+    getToken,
+    normalizeRole,
 } from "@/services/sessionService";
 
 interface RoleGuardProps {
@@ -13,26 +14,21 @@ interface RoleGuardProps {
   children: ReactNode;
 }
 
-export default function RoleGuard({
-  allowedRoles,
-  children,
-}: RoleGuardProps) {
+export default function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
     const user = getCurrentUser();
 
-    if (!user) {
+    if (!user || !getToken()) {
       router.replace("/login" as any);
       return;
     }
 
     const userRole = normalizeRole(user.role);
 
-    const roleAllowed = allowedRoles
-      .map(normalizeRole)
-      .includes(userRole);
+    const roleAllowed = allowedRoles.map(normalizeRole).includes(userRole);
 
     if (!roleAllowed) {
       router.replace(getRoleHome(user.role) as any);

@@ -1,351 +1,371 @@
-using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Builder;
+ï»¿using BCrypt.Net;
 using GrabnBite.Models.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace GrabnBite.Data
 {
     public static class DbSeeder
     {
-        public static void Seed(this WebApplication app)
+        public static async Task SeedAsync(AppDbContext context)
         {
-            using var scope = app.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var context = services.GetRequiredService<AppDbContext>();
+            // ============================================================
+            // ROLES
+            // ============================================================
 
-            // Apply pending migrations (safe for dev/test)
-            context.Database.Migrate();
+            var roleNames = new[]
+            {
+                "Customer",
+                "Restaurant",
+                "Driver",
+                "Admin"
+            };
 
-            // --- Users ---
-            var customer = context.Users.FirstOrDefault(u => u.Email == "customer@example.com");
+            foreach (var roleName in roleNames)
+            {
+                if (!await context.Roles.AnyAsync(r => r.Name == roleName))
+                {
+                    context.Roles.Add(new Role
+                    {
+                        Name = roleName,
+                        Description = $"{roleName} role"
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            // ============================================================
+            // GET ROLES
+            // ============================================================
+
+            var customerRole = await context.Roles
+                .FirstAsync(r => r.Name == "Customer");
+
+            var restaurantRole = await context.Roles
+                .FirstAsync(r => r.Name == "Restaurant");
+
+            var driverRole = await context.Roles
+                .FirstAsync(r => r.Name == "Driver");
+
+            var adminRole = await context.Roles
+                .FirstAsync(r => r.Name == "Admin");
+
+            // ============================================================
+            // USERS
+            // ============================================================
+
+            var customer = await context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Email == "customer@grabnbite.com");
+
             if (customer == null)
             {
                 customer = new User
                 {
-                    FirstName = "Test",
+                    FirstName = "Ntlahla",
                     LastName = "Customer",
-                    Email = "customer@example.com",
-                    PhoneNumber = "+27123456789",
+                    Email = "customer@grabnbite.com",
+                    PhoneNumber = "0712345678",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
-                    Role = "Customer",
-                    IsActive = true
+                    RoleId = customerRole.RoleId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                context.Users.Add(customer);
+                await context.Users.AddAsync(customer);
             }
 
-            var restOwner = context.Users.FirstOrDefault(u => u.Email == "owner@burgerhouse.local");
-            if (restOwner == null)
+            var restaurantUser = await context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Email == "restaurant@grabnbite.com");
+
+            if (restaurantUser == null)
             {
-                restOwner = new User
+                restaurantUser = new User
                 {
-                    FirstName = "Owner",
+                    FirstName = "John",
                     LastName = "Restaurant",
-                    Email = "owner@burgerhouse.local",
-                    PhoneNumber = "+27109876543",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("OwnerPassword123!"),
-                    Role = "Restaurant",
-                    IsActive = true
+                    Email = "restaurant@grabnbite.com",
+                    PhoneNumber = "0723456789",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    RoleId = restaurantRole.RoleId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                context.Users.Add(restOwner);
+                await context.Users.AddAsync(restaurantUser);
             }
 
-            context.SaveChanges();
+            var driverUser = await context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Email == "driver@grabnbite.com");
 
-            // --- Address for customer ---
-            if (!context.Addresses.Any(a => a.UserId == customer.UserId && a.Label == "Home"))
+            if (driverUser == null)
             {
-                var address = new Address
+                driverUser = new User
                 {
-                    Label = "Home",
-                    StreetAddress = "123 Example Street",
-                    City = "Cape Town",
-                    Province = "Western Cape",
-                    PostalCode = "8000",
-                    Latitude = -33.9249,
-                    Longitude = 18.4241,
-                    IsDefault = true,
-                    UserId = customer.UserId
+                    FirstName = "David",
+                    LastName = "Driver",
+                    Email = "driver@grabnbite.com",
+                    PhoneNumber = "0734567890",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    RoleId = driverRole.RoleId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                context.Addresses.Add(address);
-                context.SaveChanges();
+                await context.Users.AddAsync(driverUser);
             }
 
-            // --- Restaurant (Burger House) ---
-            var restaurant = context.Restaurants.FirstOrDefault(r => r.Email == "burgerking.co.za");
+            var adminUser = await context.Users
+                .FirstOrDefaultAsync(x =>
+                    x.Email == "admin@grabnbite.com");
+
+            if (adminUser == null)
+            {
+                adminUser = new User
+                {
+                    FirstName = "Admin",
+                    LastName = "GrabnBite",
+                    Email = "admin@grabnbite.com",
+                    PhoneNumber = "0745678901",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password123!"),
+                    RoleId = adminRole.RoleId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await context.Users.AddAsync(adminUser);
+            }
+
+            await context.SaveChangesAsync();
+
+            // ============================================================
+            // RESTAURANT
+            // ============================================================
+
+            var restaurant = await context.Restaurants
+                .FirstOrDefaultAsync(x =>
+                    x.Email == "restaurant@grabnbite.com");
+
             if (restaurant == null)
             {
                 restaurant = new Restaurant
                 {
                     Name = "Burger King Walmer",
-                    Description = "Fast-food restaurant company",
-                    PhoneNumber = "+27112223333",
-                    Email = "burgerking.co.za",
-                    Address = "108 Heugh Rd, Walmer, Gqeberha, 6070",
-                    Latitude = 0m,
-                    Longitude = 0m,
+                    Description =
+                        "Fast food restaurant serving burgers, meals and drinks.",
+                    PhoneNumber = "0411234567",
+                    Email = "restaurant@grabnbite.com",
+                    Address = "Main Road, Walmer, Gqeberha",
+                    Latitude = -33.9847m,
+                    Longitude = 25.5950m,
                     IsOpen = true,
                     IsApproved = true,
-                    UserId = restOwner.UserId
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = restaurantUser.UserId,
+                    ImageUrl = null
                 };
 
-                context.Restaurants.Add(restaurant);
-                context.SaveChanges();
+                await context.Restaurants.AddAsync(restaurant);
+                await context.SaveChangesAsync();
             }
 
-            // --- Restaurant (Pizza House) ---
-            var restaurant1 = context.Restaurants.FirstOrDefault(r => r.Email == "debonairspizza.co.za");
-            if (restaurant1 == null)
+            // ============================================================
+            // DRIVER
+            // ============================================================
+
+            if (!await context.Drivers
+                .AnyAsync(x => x.UserId == driverUser.UserId))
             {
-                restaurant1 = new Restaurant
+                var driver = new Driver
                 {
-                    Name = "Debonairs Pizza Summerstrand Village",
-                    Description = "Test pizzas and pies",
-                    PhoneNumber = "0415831490",
-                    Email = "debonairspizza.co.za",   
-                    Address = "Shop 8, 8th Ave, Summerstrand, Gqeberha, 6001",
-                    Latitude = 0m,
-                    Longitude = 0m,
-                    IsOpen = true,
+                    VehicleType = "Motorcycle",
+                    VehicleRegistration = "CA 123-456",
+                    IsOnline = true,
                     IsApproved = true,
-                    UserId = restOwner.UserId
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = driverUser.UserId
                 };
 
-                context.Restaurants.Add(restaurant1);
-                context.SaveChanges();
+                await context.Drivers.AddAsync(driver);
+                await context.SaveChangesAsync();
             }
 
-            // --- Create separate owners for additional restaurants (one-to-one relationship) ---
-            var sushiOwner = context.Users.FirstOrDefault(u => u.Email == "owner@sushi.local");
-            if (sushiOwner == null)
+            // ============================================================
+            // CUSTOMER ADDRESS
+            // ============================================================
+
+            if (!await context.Addresses
+                .AnyAsync(x => x.UserId == customer.UserId))
             {
-                sushiOwner = new User
+                var address = new Address
                 {
-                    FirstName = "Sushi",
-                    LastName = "Owner",
-                    Email = "owner@sushi.local",
-                    PhoneNumber = "+27110001111",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("SushiOwner123!"),
-                    Role = "Restaurant",
-                    IsActive = true
-                };
-                context.Users.Add(sushiOwner);
-            }
-
-            var tacoOwner = context.Users.FirstOrDefault(u => u.Email == "owner@taco.local");
-            if (tacoOwner == null)
-            {
-                tacoOwner = new User
-                {
-                    FirstName = "Taco",
-                    LastName = "Owner",
-                    Email = "owner@taco.local",
-                    PhoneNumber = "+27110002222",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("TacoOwner123!"),
-                    Role = "Restaurant",
-                    IsActive = true
-                };
-                context.Users.Add(tacoOwner);
-            }
-
-            context.SaveChanges();
-
-            // --- New: KFC Summerstrand Village ---
-            var restaurant2 = context.Restaurants.FirstOrDefault(r => r.Email == "kfcsummerstrandvillage@kfc.co.za");
-            if (restaurant2 == null)
-            {
-                restaurant2 = new Restaurant
-                {
-                    Name = "KFC Summerstrand Village",
-                    Description = "Fast food restaurant",
-                    PhoneNumber = "0418800344",
-                    Email = "kfcsummerstrandvillage@kfc.co.za",
-                    Address = "8th Ave &, Marine Dr, Summerstrand, Gqeberha, 6001",
-                    Latitude = 0m,
-                    Longitude = 0m,
-                    IsOpen = true,
-                    IsApproved = true,
-                    UserId = sushiOwner.UserId
+                    Label = "Home",
+                    StreetAddress = "10 Main Street",
+                    City = "Gqeberha",
+                    Province = "Eastern Cape",
+                    PostalCode = "6070",
+                    Latitude = -33.9608,
+                    Longitude = 25.6022,
+                    IsDefault = true,
+                    UserId = customer.UserId
                 };
 
-                context.Restaurants.Add(restaurant2);
-                context.SaveChanges();
+                await context.Addresses.AddAsync(address);
+                await context.SaveChangesAsync();
             }
 
-            // --- New: McDonald’s Walmer ---
-            var restaurant3 = context.Restaurants.FirstOrDefault(r => r.Email == "mcdonaldswalmer@co.za");
-            if (restaurant3 == null)
-            {
-                restaurant3 = new Restaurant
-                {
-                    Name = "McDonald’s Walmer",
-                    Description = "Classic, long-running fast-food chain known for its burgers & fries",
-                    PhoneNumber = "+27112226666",
-                    Email = "mcdonaldswalmer@co.za",
-                    Address = "59 Heugh Rd, Walmer, Gqeberha, 6065",
-                    Latitude = 0m,
-                    Longitude = 0m,
-                    IsOpen = true,
-                    IsApproved = true,
-                    UserId = tacoOwner.UserId
-                };
+            // ============================================================
+            // MENU CATEGORIES
+            // ============================================================
 
-                context.Restaurants.Add(restaurant3);
-                context.SaveChanges();
-            }
+            var burgersCategory = await context.MenuCategories
+                .FirstOrDefaultAsync(x =>
+                    x.RestaurantId == restaurant.RestaurantId &&
+                    x.Name == "Burgers");
 
-            // --- Menu Category for Burger House ---
-            var burgersCategory = context.MenuCategories.FirstOrDefault(mc =>
-                mc.RestaurantId == restaurant.RestaurantId && mc.Name == "Burgers");
             if (burgersCategory == null)
             {
                 burgersCategory = new MenuCategory
                 {
                     Name = "Burgers",
-                    Description = "Beef and vegetarian burgers",
+                    Description = "Classic and signature burgers.",
                     RestaurantId = restaurant.RestaurantId
                 };
 
-                context.MenuCategories.Add(burgersCategory);
-                context.SaveChanges();
+                await context.MenuCategories.AddAsync(burgersCategory);
+                await context.SaveChangesAsync();
             }
 
-            // --- Menu Category for Sushi Corner ---
-            var sushiCategory = context.MenuCategories.FirstOrDefault(mc =>
-                mc.RestaurantId == restaurant2.RestaurantId && mc.Name == "Sushi");
-            if (sushiCategory == null)
+            var mealsCategory = await context.MenuCategories
+                .FirstOrDefaultAsync(x =>
+                    x.RestaurantId == restaurant.RestaurantId &&
+                    x.Name == "Meals");
+
+            if (mealsCategory == null)
             {
-                sushiCategory = new MenuCategory
+                mealsCategory = new MenuCategory
                 {
-                    Name = "Sushi",
-                    Description = "Nigiri, maki and specialty rolls",
-                    RestaurantId = restaurant2.RestaurantId
+                    Name = "Meals",
+                    Description = "Complete meals with sides and drinks.",
+                    RestaurantId = restaurant.RestaurantId
                 };
 
-                context.MenuCategories.Add(sushiCategory);
-                context.SaveChanges();
+                await context.MenuCategories.AddAsync(mealsCategory);
+                await context.SaveChangesAsync();
             }
 
-            // --- Menu Category for Taco Town ---
-            var tacosCategory = context.MenuCategories.FirstOrDefault(mc =>
-                mc.RestaurantId == restaurant3.RestaurantId && mc.Name == "Tacos");
-            if (tacosCategory == null)
+            var drinksCategory = await context.MenuCategories
+                .FirstOrDefaultAsync(x =>
+                    x.RestaurantId == restaurant.RestaurantId &&
+                    x.Name == "Drinks");
+
+            if (drinksCategory == null)
             {
-                tacosCategory = new MenuCategory
+                drinksCategory = new MenuCategory
                 {
-                    Name = "Tacos",
-                    Description = "Assorted tacos and combos",
-                    RestaurantId = restaurant3.RestaurantId
+                    Name = "Drinks",
+                    Description = "Cold drinks and refreshments.",
+                    RestaurantId = restaurant.RestaurantId
                 };
 
-                context.MenuCategories.Add(tacosCategory);
-                context.SaveChanges();
+                await context.MenuCategories.AddAsync(drinksCategory);
+                await context.SaveChangesAsync();
             }
 
-            // --- Menu Items for Burger House ---
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant.RestaurantId && mi.Name == "Classic Beef Burger"))
+            // ============================================================
+            // MENU ITEMS
+            // ============================================================
+
+            if (!await context.MenuItems
+                .AnyAsync(x => x.RestaurantId == restaurant.RestaurantId))
             {
-                var item1 = new MenuItem
+                var menuItems = new List<MenuItem>
                 {
-                    Name = "Classic Beef Burger",
-                    Description = "Beef patty, lettuce, tomato, special sauce",
-                    Price = 59.99m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant.RestaurantId,
-                    MenuCategoryId = burgersCategory.MenuCategoryId
+                    new MenuItem
+                    {
+                        Name = "Classic Beef Burger",
+                        Description =
+                            "Beef patty with lettuce, tomato and sauce.",
+                        Price = 59.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = burgersCategory.MenuCategoryId
+                    },
+
+                    new MenuItem
+                    {
+                        Name = "Chicken Burger",
+                        Description =
+                            "Crispy chicken burger with lettuce and mayo.",
+                        Price = 64.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = burgersCategory.MenuCategoryId
+                    },
+
+                    new MenuItem
+                    {
+                        Name = "Whopper Meal",
+                        Description =
+                            "Whopper burger served with chips and a drink.",
+                        Price = 89.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = mealsCategory.MenuCategoryId
+                    },
+
+                    new MenuItem
+                    {
+                        Name = "Chicken Meal",
+                        Description =
+                            "Chicken burger served with chips and a drink.",
+                        Price = 84.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = mealsCategory.MenuCategoryId
+                    },
+
+                    new MenuItem
+                    {
+                        Name = "Coca-Cola",
+                        Description = "500ml Coca-Cola.",
+                        Price = 19.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = drinksCategory.MenuCategoryId
+                    },
+
+                    new MenuItem
+                    {
+                        Name = "Sprite",
+                        Description = "500ml Sprite.",
+                        Price = 19.99m,
+                        IsAvailable = true,
+                        RestaurantId = restaurant.RestaurantId,
+                        MenuCategoryId = drinksCategory.MenuCategoryId
+                    }
                 };
 
-                context.MenuItems.Add(item1);
+                await context.MenuItems.AddRangeAsync(menuItems);
+                await context.SaveChangesAsync();
             }
 
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant.RestaurantId && mi.Name == "Veggie Burger"))
-            {
-                var item2 = new MenuItem
-                {
-                    Name = "Veggie Burger",
-                    Description = "Plant-based patty, lettuce, tomato",
-                    Price = 49.50m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant.RestaurantId,
-                    MenuCategoryId = burgersCategory.MenuCategoryId
-                };
+            // ============================================================
+            // FINISHED
+            // ============================================================
 
-                context.MenuItems.Add(item2);
-            }
-
-            // --- Menu Items for Sushi Corner ---
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant2.RestaurantId && mi.Name == "Salmon Nigiri"))
-            {
-                var s1 = new MenuItem
-                {
-                    Name = "Salmon Nigiri",
-                    Description = "Fresh salmon over pressed sushi rice (2 pcs)",
-                    Price = 29.99m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant2.RestaurantId,
-                    MenuCategoryId = sushiCategory.MenuCategoryId
-                };
-
-                context.MenuItems.Add(s1);
-            }
-
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant2.RestaurantId && mi.Name == "California Roll"))
-            {
-                var s2 = new MenuItem
-                {
-                    Name = "California Roll",
-                    Description = "Crab, avocado, cucumber roll (8 pcs)",
-                    Price = 39.50m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant2.RestaurantId,
-                    MenuCategoryId = sushiCategory.MenuCategoryId
-                };
-
-                context.MenuItems.Add(s2);
-            }
-
-            // --- Menu Items for Taco Town ---
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant3.RestaurantId && mi.Name == "Chicken Taco"))
-            {
-                var t1 = new MenuItem
-                {
-                    Name = "Chicken Taco",
-                    Description = "Grilled chicken, pico de gallo, lime",
-                    Price = 24.99m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant3.RestaurantId,
-                    MenuCategoryId = tacosCategory.MenuCategoryId
-                };
-
-                context.MenuItems.Add(t1);
-            }
-
-            if (!context.MenuItems.Any(mi =>
-                mi.RestaurantId == restaurant3.RestaurantId && mi.Name == "Beef Taco"))
-            {
-                var t2 = new MenuItem
-                {
-                    Name = "Beef Taco",
-                    Description = "Spiced beef, onions, cilantro",
-                    Price = 26.50m,
-                    IsAvailable = true,
-                    RestaurantId = restaurant3.RestaurantId,
-                    MenuCategoryId = tacosCategory.MenuCategoryId
-                };
-
-                context.MenuItems.Add(t2);
-            }
-
-            context.SaveChanges();
+            Console.WriteLine("========================================");
+            Console.WriteLine("GrabnBite database seeding completed.");
+            Console.WriteLine("========================================");
+            Console.WriteLine("Test accounts:");
+            Console.WriteLine("Customer:   customer@grabnbite.com");
+            Console.WriteLine("Restaurant: restaurant@grabnbite.com");
+            Console.WriteLine("Driver:     driver@grabnbite.com");
+            Console.WriteLine("Admin:      admin@grabnbite.com");
+            Console.WriteLine("Password:   Password123!");
+            Console.WriteLine("========================================");
         }
     }
 }

@@ -14,7 +14,9 @@
 
         public string PasswordHash { get; set; } = string.Empty;
 
-        public string Role { get; set; } = "Customer";
+        public int RoleId { get; set; }
+
+        public Role Role { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;
 
@@ -33,7 +35,8 @@
 
         public Driver? Driver { get; set; }
 
-        // NEW: allow a user to own multiple restaurants
         public ICollection<Restaurant> Restaurants { get; set; } = new List<Restaurant>();
+
+        public ICollection<Cart> Carts { get; set; } = new List<Cart>();
     }
 }

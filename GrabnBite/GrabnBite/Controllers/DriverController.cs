@@ -1,8 +1,10 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Driver;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -12,27 +14,50 @@ namespace GrabnBite.Controllers
     {
         private readonly AppDbContext _context;
 
-        public DriverController(AppDbContext context)
+    public DriverController(AppDbContext context)
         {
             _context = context;
         }
 
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                return userId;
+            }
+
+            return null;
+        }
+
         // ============================================================
         // REGISTER DRIVER PROFILE
+        // Driver only
+        // POST: api/Driver
         // ============================================================
 
-        [HttpPost("{userId}")]
+        [Authorize(Roles = "Driver")]
+        [HttpPost]
         public async Task<IActionResult> CreateDriver(
-            int userId,
-            CreateDriverDto dto)
+            [FromBody] CreateDriverDto dto)
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("A valid userId is required.");
+                return Unauthorized();
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("Driver data is required.");
             }
 
             var existingDriver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId);
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId.Value);
 
             if (existingDriver != null)
             {
@@ -53,9 +78,10 @@ namespace GrabnBite.Controllers
 
             var driver = new Driver
             {
-                UserId = userId,
+                UserId = userId.Value,
                 VehicleType = dto.VehicleType.Trim(),
-                VehicleRegistration = dto.VehicleRegistration.Trim(),
+                VehicleRegistration =
+                    dto.VehicleRegistration.Trim(),
                 IsOnline = false,
                 IsApproved = false,
                 CreatedAt = DateTime.UtcNow
@@ -78,20 +104,25 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
-        // GET DRIVER PROFILE
+        // GET MY DRIVER PROFILE
+        // Driver only
+        // GET: api/Driver/me
         // ============================================================
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetDriverByUser(
-            int userId)
+        [Authorize(Roles = "Driver")]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyDriverProfile()
         {
-            if (userId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("A valid userId is required.");
+                return Unauthorized();
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId);
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId.Value);
 
             if (driver == null)
             {
@@ -113,19 +144,24 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // GO ONLINE
+        // Driver only
+        // PUT: api/Driver/online
         // ============================================================
 
-        [HttpPut("{driverId}/online")]
-        public async Task<IActionResult> GoOnline(
-            int driverId)
+        [Authorize(Roles = "Driver")]
+        [HttpPut("online")]
+        public async Task<IActionResult> GoOnline()
         {
-            if (driverId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("A valid driverId is required.");
+                return Unauthorized();
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.DriverId == driverId);
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId.Value);
 
             if (driver == null)
             {
@@ -153,19 +189,24 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // GO OFFLINE
+        // Driver only
+        // PUT: api/Driver/offline
         // ============================================================
 
-        [HttpPut("{driverId}/offline")]
-        public async Task<IActionResult> GoOffline(
-            int driverId)
+        [Authorize(Roles = "Driver")]
+        [HttpPut("offline")]
+        public async Task<IActionResult> GoOffline()
         {
-            if (driverId <= 0)
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
             {
-                return BadRequest("A valid driverId is required.");
+                return Unauthorized();
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.DriverId == driverId);
+                .FirstOrDefaultAsync(d =>
+                    d.UserId == userId.Value);
 
             if (driver == null)
             {
@@ -187,19 +228,24 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // APPROVE DRIVER
+        // Admin only
+        // PUT: api/Driver/{driverId}/approve
         // ============================================================
 
-        [HttpPut("{driverId}/approve")]
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{driverId:int}/approve")]
         public async Task<IActionResult> ApproveDriver(
             int driverId)
         {
             if (driverId <= 0)
             {
-                return BadRequest("A valid driverId is required.");
+                return BadRequest(
+                    "A valid driverId is required.");
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.DriverId == driverId);
+                .FirstOrDefaultAsync(d =>
+                    d.DriverId == driverId);
 
             if (driver == null)
             {
@@ -218,4 +264,5 @@ namespace GrabnBite.Controllers
             });
         }
     }
+
 }

@@ -12,6 +12,7 @@ namespace GrabnBite.Data
 
         // Tables
         public DbSet<User> Users { get; set; }
+        public DbSet<Role> Roles { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Restaurant> Restaurants { get; set; }
         public DbSet<MenuCategory> MenuCategories { get; set; }
@@ -30,13 +31,15 @@ namespace GrabnBite.Data
         public DbSet<Driver> Drivers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-
         {
             base.OnModelCreating(modelBuilder);
 
-            // =========================
+            // ============================================================
             // USER → ADDRESS
-            // =========================
+            // One User can have many Addresses
+            // ============================================================
+
+
 
             modelBuilder.Entity<Address>()
                 .HasOne(a => a.User)
@@ -44,10 +47,22 @@ namespace GrabnBite.Data
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // ============================================================
+            // ROLE → USER
+            // One Role can have many Users
+            // ============================================================
 
-            // =========================
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // ============================================================
             // USER → ORDER
-            // =========================
+            // One User can have many Orders
+            // ============================================================
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.User)
@@ -56,9 +71,9 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // USER → REVIEW
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.User)
@@ -67,9 +82,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // USER → NOTIFICATION
-            // =========================
+            // One User can have many Notifications
+            // ============================================================
 
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
@@ -78,10 +94,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // =========================
+            // ============================================================
             // USER → DRIVER
             // One User can have zero or one Driver
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<Driver>()
                 .HasOne(d => d.User)
@@ -89,10 +105,27 @@ namespace GrabnBite.Data
                 .HasForeignKey<Driver>(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Driver>()
+                .HasIndex(d => d.UserId)
+                .IsUnique();
 
-            // =========================
+
+            // ============================================================
+            // USER → RESTAURANT
+            // One User can own many Restaurants
+            // ============================================================
+
+            modelBuilder.Entity<Restaurant>()
+                .HasOne(r => r.User)
+                .WithMany(u => u.Restaurants)
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // ============================================================
             // RESTAURANT → MENU CATEGORY
-            // =========================
+            // One Restaurant can have many Categories
+            // ============================================================
 
             modelBuilder.Entity<MenuCategory>()
                 .HasOne(mc => mc.Restaurant)
@@ -101,9 +134,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // =========================
+            // ============================================================
             // RESTAURANT → MENU ITEM
-            // =========================
+            // One Restaurant can have many MenuItems
+            // ============================================================
 
             modelBuilder.Entity<MenuItem>()
                 .HasOne(mi => mi.Restaurant)
@@ -112,9 +146,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // MENU CATEGORY → MENU ITEM
-            // =========================
+            // One Category can have many MenuItems
+            // ============================================================
 
             modelBuilder.Entity<MenuItem>()
                 .HasOne(mi => mi.MenuCategory)
@@ -123,9 +158,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // =========================
+            // ============================================================
             // RESTAURANT → ORDER
-            // =========================
+            // One Restaurant can have many Orders
+            // ============================================================
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.Restaurant)
@@ -134,9 +170,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // ADDRESS → ORDER
-            // =========================
+            // One Address can be used by many Orders
+            // ============================================================
 
             modelBuilder.Entity<Order>()
                 .HasOne(o => o.DeliveryAddress)
@@ -145,9 +182,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // ORDER → ORDER ITEM
-            // =========================
+            // One Order has many OrderItems
+            // ============================================================
 
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
@@ -156,9 +194,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // =========================
+            // ============================================================
             // MENU ITEM → ORDER ITEM
-            // =========================
+            // One MenuItem can appear in many OrderItems
+            // ============================================================
 
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.MenuItem)
@@ -167,10 +206,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // ORDER → PAYMENT
             // One Order has zero or one Payment
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<Payment>()
                 .HasOne(p => p.Order)
@@ -178,11 +217,15 @@ namespace GrabnBite.Data
                 .HasForeignKey<Payment>(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Payment>()
+                .HasIndex(p => p.OrderId)
+                .IsUnique();
 
-            // =========================
+
+            // ============================================================
             // ORDER → DELIVERY
             // One Order has zero or one Delivery
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<Delivery>()
                 .HasOne(d => d.Order)
@@ -190,10 +233,16 @@ namespace GrabnBite.Data
                 .HasForeignKey<Delivery>(d => d.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Delivery>()
+                .HasIndex(d => d.OrderId)
+                .IsUnique();
 
-            // =========================
+
+            // ============================================================
             // DRIVER → DELIVERY
-            // =========================
+            // One Driver can have many Deliveries
+            // Driver is optional
+            // ============================================================
 
             modelBuilder.Entity<Delivery>()
                 .HasOne(d => d.Driver)
@@ -202,9 +251,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // RESTAURANT → REVIEW
-            // =========================
+            // One Restaurant can have many Reviews
+            // ============================================================
 
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.Restaurant)
@@ -213,10 +263,10 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // =========================
+            // ============================================================
             // ORDER → REVIEW
-            // One Order can have zero or one Review
-            // =========================
+            // One Order has zero or one Review
+            // ============================================================
 
             modelBuilder.Entity<Review>()
                 .HasOne(r => r.Order)
@@ -224,13 +274,81 @@ namespace GrabnBite.Data
                 .HasForeignKey<Review>(r => r.OrderId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Review>()
+                .HasIndex(r => r.OrderId)
+                .IsUnique();
 
-            // =========================
+
+            // ============================================================
+            // CART → USER
+            // One User can have many Carts
+            // ============================================================
+
+            modelBuilder.Entity<Cart>()
+                .HasOne(c => c.User)
+                .WithMany(u => u.Carts)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ============================================================
+            // CART → RESTAURANT
+            // One Restaurant can have many Carts
+            // ============================================================
+
+            modelBuilder.Entity<Cart>()
+                .HasOne(c => c.Restaurant)
+                .WithMany(r => r.Carts)
+                .HasForeignKey(c => c.RestaurantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // ============================================================
+            // USER + RESTAURANT → CART
+            // One active cart per User/Restaurant combination
+            // ============================================================
+
+            modelBuilder.Entity<Cart>()
+                .HasIndex(c => new
+                {
+                    c.UserId,
+                    c.RestaurantId
+                })
+                .IsUnique();
+
+
+            // ============================================================
+            // CART → CART ITEM
+            // ============================================================
+
+            modelBuilder.Entity<CartItem>()
+                .HasOne(ci => ci.Cart)
+                .WithMany(c => c.CartItems)
+                .HasForeignKey(ci => ci.CartId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            // ============================================================
+            // MENU ITEM → CART ITEM
+            // ============================================================
+
+            modelBuilder.Entity<CartItem>()
+                .HasOne(ci => ci.MenuItem)
+                .WithMany()
+                .HasForeignKey(ci => ci.MenuItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // ============================================================
             // DECIMAL PRECISION
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<MenuItem>()
                 .Property(mi => mi.Price)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<CartItem>()
+                .Property(ci => ci.UnitPrice)
                 .HasPrecision(10, 2);
 
             modelBuilder.Entity<Order>()
@@ -250,69 +368,36 @@ namespace GrabnBite.Data
                 .HasPrecision(10, 2);
 
 
-            // =========================
+            // ============================================================
             // USER EMAIL
-            // =========================
+            // ============================================================
 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
-            // =========================
-            // RESTURANT → USER
-            // Changed to one-to-many: a User can own many Restaurants
-            // =========================
-            modelBuilder.Entity<Restaurant>()
-                .HasOne(r => r.User)
-                .WithMany(u => u.Restaurants)
-                .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Cart>()
-    .HasOne(c => c.User)
-    .WithMany()
-    .HasForeignKey(c => c.UserId)
-    .OnDelete(DeleteBehavior.Cascade);
+            // ============================================================
+            // REVIEW RATING
+            // ============================================================
 
-            modelBuilder.Entity<Cart>()
-    .HasOne(c => c.Restaurant)
-    .WithMany()
-    .HasForeignKey(c => c.RestaurantId)
-    .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Review>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_Reviews_Rating",
+                    "\"Rating\" >= 1 AND \"Rating\" <= 5"
+                ));
 
-            modelBuilder.Entity<CartItem>()
-    .HasOne(ci => ci.Cart)
-    .WithMany(c => c.CartItems)
-    .HasForeignKey(ci => ci.CartId)
-    .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<CartItem>()
-    .HasOne(ci => ci.MenuItem)
-    .WithMany()
-    .HasForeignKey(ci => ci.MenuItemId)
-    .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<CartItem>()
-    .Property(ci => ci.UnitPrice)
-    .HasPrecision(10, 2);
-
-            modelBuilder.Entity<Cart>()
-    .HasIndex(c => new { c.UserId, c.RestaurantId })
-    .IsUnique();
-
-            modelBuilder.Entity<OrderItem>()
-                .Property(oi => oi.UnitPrice)
-                .HasPrecision(10, 2);
-
-            modelBuilder.Entity<OrderItem>()
-                .Property(oi => oi.Subtotal)
-                .HasPrecision(10, 2);
+            // ============================================================
+            // ORDER STATUS HISTORY
+            // ============================================================
 
             modelBuilder.Entity<OrderStatusHistory>()
-    .HasOne(h => h.Order)
-    .WithMany(o => o.StatusHistory)
-    .HasForeignKey(h => h.OrderId)
-    .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(h => h.Order)
+                .WithMany(o => o.StatusHistory)
+                .HasForeignKey(h => h.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

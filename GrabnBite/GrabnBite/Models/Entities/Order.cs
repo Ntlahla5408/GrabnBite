@@ -10,19 +10,25 @@
 
         public decimal TotalAmount { get; set; }
 
+        // Foreign Keys
         public int UserId { get; set; }
+
         public int RestaurantId { get; set; }
+
         public int DeliveryAddressId { get; set; }
 
+        // Relationships
         public User User { get; set; } = null!;
+
         public Restaurant Restaurant { get; set; } = null!;
+
         public Address DeliveryAddress { get; set; } = null!;
 
         public ICollection<OrderItem> OrderItems { get; set; }
             = new List<OrderItem>();
 
         public ICollection<OrderStatusHistory> StatusHistory { get; set; }
-    = new List<OrderStatusHistory>();
+            = new List<OrderStatusHistory>();
 
         public Payment? Payment { get; set; }
 

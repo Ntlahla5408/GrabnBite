@@ -64,7 +64,8 @@ builder.Services.AddSwaggerGen(c =>
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -92,6 +93,26 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    try
+    {
+        await db.Database.OpenConnectionAsync();
+        Console.WriteLine("DATABASE CONNECTION: True");
+        await db.Database.CloseConnectionAsync();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("DATABASE CONNECTION: False");
+        Console.WriteLine($"ERROR: {ex}");
+    }
+
+    //await DbSeeder.SeedAsync(db);
+}
+
 app.UseCors("MyPolicy");
 
 // Configure the HTTP request pipeline.
@@ -109,7 +130,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<TrackingHub>("/hubs/tracking");
-
-app.Seed();
 
 app.Run();

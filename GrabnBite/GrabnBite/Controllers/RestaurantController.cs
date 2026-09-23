@@ -1,8 +1,10 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Restaurant;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -18,18 +20,28 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
-        // CREATE
+        // HELPER - Get logged-in user ID from JWT
         // =========================================================
-        [HttpPost("user/{userId}")]
+
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
+        }
+
+        // =========================================================
+        // CREATE
+        // Restaurant only
+        // =========================================================
+
+        [Authorize(Roles = "Restaurant")]
+        [HttpPost]
         public async Task<IActionResult> CreateRestaurant(
-            int userId,
             CreateRestaurantDto dto)
         {
-            if (userId <= 0)
-            {
-                return BadRequest("A valid userId is required.");
-            }
-
             if (string.IsNullOrWhiteSpace(dto.Name))
             {
                 return BadRequest("Restaurant name is required.");
@@ -50,17 +62,16 @@ namespace GrabnBite.Controllers
                 return BadRequest("Address is required.");
             }
 
-            var userExists = await _context.Users
-                .AnyAsync(u => u.UserId == userId);
+            var userId = GetCurrentUserId();
 
-            if (!userExists)
+            if (userId == null)
             {
-                return NotFound("User not found.");
+                return Unauthorized();
             }
 
             // Prevent one user account from creating multiple restaurants
             var existingRestaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.UserId == userId);
+                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
 
             if (existingRestaurant != null)
             {
@@ -79,7 +90,8 @@ namespace GrabnBite.Controllers
                 Latitude = dto.Latitude,
                 Longitude = dto.Longitude,
 
-                UserId = userId,
+                // Taken from JWT, NOT from frontend
+                UserId = userId.Value,
 
                 IsOpen = false,
                 IsApproved = false,
@@ -114,87 +126,65 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // READ - Get all restaurants
+        // Public
         // =========================================================
+
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetRestaurants()
         {
             var restaurants = await _context.Restaurants
                 .ToListAsync();
 
-            var response = restaurants.Select(r => new RestaurantResponseDto
-            {
-                RestaurantId = r.RestaurantId,
-                Name = r.Name,
-                Description = r.Description,
-                PhoneNumber = r.PhoneNumber,
-                Email = r.Email,
-                Address = r.Address,
-                ImageUrl = r.ImageUrl,
-                Latitude = r.Latitude,
-                Longitude = r.Longitude,
-                IsOpen = r.IsOpen,
-                IsApproved = r.IsApproved,
-                CreatedAt = r.CreatedAt
-            }).ToList();
+            var response = restaurants
+                .Select(MapRestaurantToResponse)
+                .ToList();
 
             return Ok(response);
         }
 
         // =========================================================
         // READ - Get one restaurant
+        // Public
         // =========================================================
+
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRestaurant(int id)
         {
             if (id <= 0)
             {
-                return BadRequest("A valid restaurant id is required.");
+                return BadRequest(
+                    "A valid restaurant id is required.");
             }
 
             var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+                .FirstOrDefaultAsync(r =>
+                    r.RestaurantId == id);
 
             if (restaurant == null)
             {
                 return NotFound("Restaurant not found.");
             }
 
-            var response = new RestaurantResponseDto
-            {
-                RestaurantId = restaurant.RestaurantId,
-                Name = restaurant.Name,
-                Description = restaurant.Description,
-                PhoneNumber = restaurant.PhoneNumber,
-                Email = restaurant.Email,
-                Address = restaurant.Address,
-                ImageUrl = restaurant.ImageUrl,
-                Latitude = restaurant.Latitude,
-                Longitude = restaurant.Longitude,
-                IsOpen = restaurant.IsOpen,
-                IsApproved = restaurant.IsApproved,
-                CreatedAt = restaurant.CreatedAt
-            };
-
-            return Ok(response);
+            return Ok(MapRestaurantToResponse(restaurant));
         }
 
         // =========================================================
-        // UPDATE
+        // UPDATE OWN RESTAURANT
+        // Restaurant only
         // =========================================================
-        [HttpPut("user/{userId}/{id}")]
+
+        [Authorize(Roles = "Restaurant")]
+        [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRestaurant(
-            int userId,
             int id,
             UpdateRestaurantDto dto)
         {
-            if (userId <= 0)
-            {
-                return BadRequest("A valid userId is required.");
-            }
-
             if (id <= 0)
             {
-                return BadRequest("A valid restaurant id is required.");
+                return BadRequest(
+                    "A valid restaurant id is required.");
             }
 
             if (string.IsNullOrWhiteSpace(dto.Name))
@@ -217,11 +207,18 @@ namespace GrabnBite.Controllers
                 return BadRequest("Address is required.");
             }
 
-            // The restaurant must belong to this user
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            // Restaurant must belong to logged-in user
             var restaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
-                    r.UserId == userId);
+                    r.UserId == userId.Value);
 
             if (restaurant == null)
             {
@@ -239,30 +236,20 @@ namespace GrabnBite.Controllers
             restaurant.Longitude = dto.Longitude;
             restaurant.IsOpen = dto.IsOpen;
 
+            // IsApproved is intentionally NOT changed here.
+            // Only the admin should approve a restaurant.
+
             await _context.SaveChangesAsync();
 
-            var response = new RestaurantResponseDto
-            {
-                RestaurantId = restaurant.RestaurantId,
-                Name = restaurant.Name,
-                Description = restaurant.Description,
-                PhoneNumber = restaurant.PhoneNumber,
-                Email = restaurant.Email,
-                Address = restaurant.Address,
-                ImageUrl = restaurant.ImageUrl,
-                Latitude = restaurant.Latitude,
-                Longitude = restaurant.Longitude,
-                IsOpen = restaurant.IsOpen,
-                IsApproved = restaurant.IsApproved,
-                CreatedAt = restaurant.CreatedAt
-            };
-
-            return Ok(response);
+            return Ok(MapRestaurantToResponse(restaurant));
         }
 
         // =========================================================
         // ADMIN UPDATE
+        // Admin only
         // =========================================================
+
+        [Authorize(Roles = "Admin")]
         [HttpPut("admin/{id}")]
         public async Task<IActionResult> UpdateRestaurantAsAdmin(
             int id,
@@ -270,7 +257,8 @@ namespace GrabnBite.Controllers
         {
             if (id <= 0)
             {
-                return BadRequest("A valid restaurant id is required.");
+                return BadRequest(
+                    "A valid restaurant id is required.");
             }
 
             if (string.IsNullOrWhiteSpace(dto.Name))
@@ -294,7 +282,8 @@ namespace GrabnBite.Controllers
             }
 
             var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+                .FirstOrDefaultAsync(r =>
+                    r.RestaurantId == id);
 
             if (restaurant == null)
             {
@@ -313,46 +302,36 @@ namespace GrabnBite.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(new RestaurantResponseDto
-            {
-                RestaurantId = restaurant.RestaurantId,
-                Name = restaurant.Name,
-                Description = restaurant.Description,
-                PhoneNumber = restaurant.PhoneNumber,
-                Email = restaurant.Email,
-                Address = restaurant.Address,
-                ImageUrl = restaurant.ImageUrl,
-                Latitude = restaurant.Latitude,
-                Longitude = restaurant.Longitude,
-                IsOpen = restaurant.IsOpen,
-                IsApproved = restaurant.IsApproved,
-                CreatedAt = restaurant.CreatedAt
-            });
+            return Ok(MapRestaurantToResponse(restaurant));
         }
 
         // =========================================================
-        // DELETE
+        // DELETE OWN RESTAURANT
+        // Restaurant only
         // =========================================================
-        [HttpDelete("user/{userId}/{id}")]
-        public async Task<IActionResult> DeleteRestaurant(
-            int userId,
-            int id)
-        {
-            if (userId <= 0)
-            {
-                return BadRequest("A valid userId is required.");
-            }
 
+        [Authorize(Roles = "Restaurant")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteRestaurant(int id)
+        {
             if (id <= 0)
             {
-                return BadRequest("A valid restaurant id is required.");
+                return BadRequest(
+                    "A valid restaurant id is required.");
             }
 
-            // The restaurant must belong to this user
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            // Restaurant must belong to logged-in user
             var restaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
-                    r.UserId == userId);
+                    r.UserId == userId.Value);
 
             if (restaurant == null)
             {
@@ -368,6 +347,30 @@ namespace GrabnBite.Controllers
             {
                 message = "Restaurant deleted successfully."
             });
+        }
+
+        // =========================================================
+        // MAP RESTAURANT RESPONSE
+        // =========================================================
+
+        private RestaurantResponseDto MapRestaurantToResponse(
+            Restaurant restaurant)
+        {
+            return new RestaurantResponseDto
+            {
+                RestaurantId = restaurant.RestaurantId,
+                Name = restaurant.Name,
+                Description = restaurant.Description,
+                PhoneNumber = restaurant.PhoneNumber,
+                Email = restaurant.Email,
+                Address = restaurant.Address,
+                ImageUrl = restaurant.ImageUrl,
+                Latitude = restaurant.Latitude,
+                Longitude = restaurant.Longitude,
+                IsOpen = restaurant.IsOpen,
+                IsApproved = restaurant.IsApproved,
+                CreatedAt = restaurant.CreatedAt
+            };
         }
     }
 }

@@ -1,12 +1,15 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,11 +21,15 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // GET ALL USERS
+        // ADMIN ONLY
         // =========================================================
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsers()
         {
             var users = await _context.Users
+                .AsNoTracking()
+                .Include(u => u.Role)
                 .Select(u => new UserResponseDto
                 {
                     UserId = u.UserId,
@@ -30,7 +37,7 @@ namespace GrabnBite.Controllers
                     LastName = u.LastName,
                     Email = u.Email,
                     PhoneNumber = u.PhoneNumber,
-                    Role = u.Role,
+                    Role = u.Role.Name,
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt
@@ -42,6 +49,7 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // GET ONE USER
+        // ADMIN OR THE USER THEMSELVES
         // =========================================================
         [HttpGet("{userId}")]
         public async Task<IActionResult> GetUser(int userId)
@@ -51,7 +59,21 @@ namespace GrabnBite.Controllers
                 return BadRequest("A valid userId is required.");
             }
 
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            if (!User.IsInRole("Admin") && currentUserId.Value != userId)
+            {
+                return Forbid();
+            }
+
             var user = await _context.Users
+                .AsNoTracking()
+                .Include(u => u.Role)
                 .Where(u => u.UserId == userId)
                 .Select(u => new UserResponseDto
                 {
@@ -60,7 +82,7 @@ namespace GrabnBite.Controllers
                     LastName = u.LastName,
                     Email = u.Email,
                     PhoneNumber = u.PhoneNumber,
-                    Role = u.Role,
+                    Role = u.Role.Name,
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt
@@ -77,15 +99,33 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // UPDATE USER
+        // ADMIN OR THE USER THEMSELVES
         // =========================================================
         [HttpPut("{userId}")]
         public async Task<IActionResult> UpdateUser(
             int userId,
-            UpdateUserDto dto)
+            [FromBody] UpdateUserDto dto)
         {
             if (userId <= 0)
             {
                 return BadRequest("A valid userId is required.");
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("User data is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            if (!User.IsInRole("Admin") && currentUserId.Value != userId)
+            {
+                return Forbid();
             }
 
             if (string.IsNullOrWhiteSpace(dto.FirstName))
@@ -121,11 +161,12 @@ namespace GrabnBite.Controllers
                 return NotFound("User not found.");
             }
 
-            // Check whether another user already uses this email
+            var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+
             var emailExists = await _context.Users
                 .AnyAsync(u =>
                     u.UserId != userId &&
-                    u.Email.ToLower() == dto.Email.Trim().ToLower());
+                    u.Email.ToLower() == normalizedEmail);
 
             if (emailExists)
             {
@@ -141,48 +182,55 @@ namespace GrabnBite.Controllers
 
             await _context.SaveChangesAsync();
 
-            var response = new UserResponseDto
+            var roleName = await _context.Roles
+                .Where(r => r.RoleId == user.RoleId)
+                .Select(r => r.Name)
+                .FirstOrDefaultAsync();
+
+            return Ok(new UserResponseDto
             {
                 UserId = user.UserId,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
+                Role = roleName ?? "Unknown",
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
-            };
-
-            return Ok(response);
+            });
         }
 
         // =========================================================
         // UPDATE USER ROLE
+        // ADMIN ONLY
         // =========================================================
         [HttpPut("{userId}/role")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUserRole(
             int userId,
-            UpdateUserRoleDto dto)
+            [FromBody] UpdateUserRoleDto dto)
         {
             if (userId <= 0)
             {
                 return BadRequest("A valid userId is required.");
             }
 
-            var role = dto.Role?.Trim().ToLowerInvariant() switch
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Role))
             {
-                "customer" => "Customer",
-                "restaurant" => "Restaurant",
-                "driver" => "Driver",
-                "admin" => "Admin",
-                _ => null
-            };
+                return BadRequest("Role is required.");
+            }
+
+            var roleName = dto.Role.Trim();
+
+            var role = await _context.Roles
+                .FirstOrDefaultAsync(r =>
+                    r.Name.ToLower() == roleName.ToLower());
 
             if (role == null)
             {
                 return BadRequest(
-                    "Role must be customer, restaurant, driver, or admin.");
+                    "Role must be Customer, Restaurant, Driver, or Admin.");
             }
 
             var user = await _context.Users
@@ -193,7 +241,7 @@ namespace GrabnBite.Controllers
                 return NotFound("User not found.");
             }
 
-            user.Role = role;
+            user.RoleId = role.RoleId;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -205,7 +253,7 @@ namespace GrabnBite.Controllers
                 LastName = user.LastName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
+                Role = role.Name,
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -214,15 +262,22 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // UPDATE USER ACTIVE STATE
+        // ADMIN ONLY
         // =========================================================
         [HttpPut("{userId}/status")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUserStatus(
             int userId,
-            UpdateUserStatusDto dto)
+            [FromBody] UpdateUserStatusDto dto)
         {
             if (userId <= 0)
             {
                 return BadRequest("A valid userId is required.");
+            }
+
+            if (dto == null)
+            {
+                return BadRequest("Status data is required.");
             }
 
             var user = await _context.Users
@@ -235,7 +290,13 @@ namespace GrabnBite.Controllers
 
             user.IsActive = dto.IsActive;
             user.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
+
+            var roleName = await _context.Roles
+                .Where(r => r.RoleId == user.RoleId)
+                .Select(r => r.Name)
+                .FirstOrDefaultAsync();
 
             return Ok(new UserResponseDto
             {
@@ -244,7 +305,7 @@ namespace GrabnBite.Controllers
                 LastName = user.LastName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                Role = user.Role,
+                Role = roleName ?? "Unknown",
                 IsActive = user.IsActive,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -253,8 +314,10 @@ namespace GrabnBite.Controllers
 
         // =========================================================
         // DELETE USER
+        // ADMIN ONLY
         // =========================================================
         [HttpDelete("{userId}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(int userId)
         {
             if (userId <= 0)
@@ -278,6 +341,18 @@ namespace GrabnBite.Controllers
             {
                 message = "User deleted successfully."
             });
+        }
+
+        // =========================================================
+        // GET CURRENT USER ID FROM JWT
+        // =========================================================
+        private int? GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            return int.TryParse(claim, out var userId)
+                ? userId
+                : null;
         }
     }
 }

@@ -1,39 +1,53 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Checkout;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Customer")]
     public class CheckoutController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        public CheckoutController(AppDbContext context)
+    public CheckoutController(AppDbContext context)
         {
             _context = context;
         }
 
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(userIdClaim, out var userId))
+            {
+                return userId;
+            }
+
+            return null;
+        }
+
         // ============================================================
         // CHECKOUT CART
-        // POST: /api/Checkout/{userId}
+        // POST: /api/Checkout
+        // Customer only
         // ============================================================
 
-        [HttpPost("{userId:int}")]
+        [HttpPost]
         public async Task<IActionResult> Checkout(
-            int userId,
-            CreateCheckoutDto dto)
+            [FromBody] CreateCheckoutDto dto)
         {
-            // --------------------------------------------------------
-            // Validate user ID
-            // --------------------------------------------------------
+            var userId = GetCurrentUserId();
 
-            if (userId <= 0)
+            if (userId == null)
             {
-                return BadRequest("Invalid user ID.");
+                return Unauthorized();
             }
 
             if (dto == null)
@@ -52,7 +66,7 @@ namespace GrabnBite.Controllers
             }
 
             // --------------------------------------------------------
-            // Find customer's cart
+            // Find the authenticated customer's cart
             // --------------------------------------------------------
 
             var cart = await _context.Carts
@@ -61,16 +75,12 @@ namespace GrabnBite.Controllers
                 .Include(c => c.Restaurant)
                 .FirstOrDefaultAsync(c =>
                     c.CartId == dto.CartId &&
-                    c.UserId == userId);
+                    c.UserId == userId.Value);
 
             if (cart == null)
             {
                 return BadRequest("Cart not found.");
             }
-
-            // --------------------------------------------------------
-            // Check cart
-            // --------------------------------------------------------
 
             if (!cart.CartItems.Any())
             {
@@ -106,7 +116,7 @@ namespace GrabnBite.Controllers
             var address = await _context.Addresses
                 .FirstOrDefaultAsync(a =>
                     a.AddressId == dto.DeliveryAddressId &&
-                    a.UserId == userId);
+                    a.UserId == userId.Value);
 
             if (address == null)
             {
@@ -157,7 +167,7 @@ namespace GrabnBite.Controllers
 
             var order = new Order
             {
-                UserId = userId,
+                UserId = userId.Value,
                 RestaurantId = cart.RestaurantId,
                 DeliveryAddressId = dto.DeliveryAddressId,
                 Status = "PENDING",
@@ -165,7 +175,7 @@ namespace GrabnBite.Controllers
             };
 
             // --------------------------------------------------------
-            // Add initial order status history
+            // Add initial status history
             // --------------------------------------------------------
 
             order.StatusHistory.Add(new OrderStatusHistory
@@ -183,15 +193,9 @@ namespace GrabnBite.Controllers
                 var orderItem = new OrderItem
                 {
                     MenuItemId = cartItem.MenuItemId,
-
-                    // Historical snapshot of the item name
                     ItemName = cartItem.MenuItem.Name,
-
                     Quantity = cartItem.Quantity,
-
-                    // Use the price stored in the cart
                     UnitPrice = cartItem.UnitPrice,
-
                     Subtotal =
                         cartItem.UnitPrice * cartItem.Quantity
                 };
@@ -219,7 +223,7 @@ namespace GrabnBite.Controllers
             _context.Orders.Add(order);
 
             // --------------------------------------------------------
-            // Clear cart after creating order
+            // Clear the cart
             // --------------------------------------------------------
 
             _context.CartItems.RemoveRange(cart.CartItems);

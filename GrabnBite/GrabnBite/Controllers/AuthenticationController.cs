@@ -26,41 +26,93 @@ namespace GrabnBite.Controllers
             this.configuration = configuration;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterUserDto registerUser)
-        {
-            // Check whether the email is already registered
-            var existingUser = await dbContext.Users
-                .FirstOrDefaultAsync(u => u.Email == registerUser.Email);
+        // ============================================================
+        // REGISTER
+        // POST: api/Authentication/register
+        // Public endpoint
+        // ============================================================
 
-            if (existingUser != null)
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(
+            [FromBody] RegisterUserDto registerUser)
+        {
+            if (registerUser == null)
             {
-                return BadRequest("A user with this email already exists.");
+                return BadRequest("Registration data is required.");
             }
 
-            // Hash the password
+            if (string.IsNullOrWhiteSpace(registerUser.FirstName))
+            {
+                return BadRequest("First name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(registerUser.LastName))
+            {
+                return BadRequest("Last name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(registerUser.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(registerUser.Password))
+            {
+                return BadRequest("Password is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(registerUser.PhoneNumber))
+            {
+                return BadRequest("Phone number is required.");
+            }
+
+            var email = registerUser.Email.Trim().ToLowerInvariant();
+
+            // Check whether the email already exists
+            var existingUser = await dbContext.Users
+                .AnyAsync(u => u.Email.ToLower() == email);
+
+            if (existingUser)
+            {
+                return BadRequest(
+                    "A user with this email already exists.");
+            }
+
+            // Find the Customer role
+            var customerRole = await dbContext.Roles
+                .FirstOrDefaultAsync(r =>
+                    r.Name.ToLower() == "customer");
+
+            if (customerRole == null)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    "Customer role has not been configured.");
+            }
+
+            // Hash password
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(
                 registerUser.Password
             );
 
-            // Create the user
+            // Create user
             var user = new User
             {
-                FirstName = registerUser.FirstName,
-                LastName = registerUser.LastName,
-                Email = registerUser.Email,
-                PhoneNumber = registerUser.PhoneNumber,
+                FirstName = registerUser.FirstName.Trim(),
+                LastName = registerUser.LastName.Trim(),
+                Email = email,
+                PhoneNumber = registerUser.PhoneNumber.Trim(),
                 PasswordHash = passwordHash,
-                Role = "Customer"
+                RoleId = customerRole.RoleId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
             };
 
-            // Add user to database
             dbContext.Users.Add(user);
 
-            // Save changes
             await dbContext.SaveChangesAsync();
 
-            // Return successful response
             return Ok(new
             {
                 message = "User registered successfully.",
@@ -68,16 +120,43 @@ namespace GrabnBite.Controllers
                 firstName = user.FirstName,
                 lastName = user.LastName,
                 email = user.Email,
-                role = user.Role
+                role = customerRole.Name
             });
         }
 
+        // ============================================================
+        // LOGIN
+        // POST: api/Authentication/login
+        // Public endpoint
+        // ============================================================
+
+        [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginDto loginDto)
+        public async Task<IActionResult> Login(
+            [FromBody] LoginDto loginDto)
         {
-            // Find user by email
+            if (loginDto == null)
+            {
+                return BadRequest("Login data is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(loginDto.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(loginDto.Password))
+            {
+                return BadRequest("Password is required.");
+            }
+
+            var email = loginDto.Email.Trim().ToLowerInvariant();
+
+            // Include Role because JWT needs the role name
             var user = await dbContext.Users
-                .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u =>
+                    u.Email.ToLower() == email);
 
             if (user == null)
             {
@@ -86,10 +165,10 @@ namespace GrabnBite.Controllers
 
             if (!user.IsActive)
             {
-                return Unauthorized("This account has been disabled.");
+                return Unauthorized(
+                    "This account has been disabled.");
             }
 
-            // Verify password
             var passwordIsValid = BCrypt.Net.BCrypt.Verify(
                 loginDto.Password,
                 user.PasswordHash
@@ -100,7 +179,6 @@ namespace GrabnBite.Controllers
                 return Unauthorized("Invalid credentials.");
             }
 
-            // Generate JWT token
             var token = GenerateJwtToken(user);
 
             return Ok(new
@@ -110,16 +188,26 @@ namespace GrabnBite.Controllers
                 firstName = user.FirstName,
                 lastName = user.LastName,
                 email = user.Email,
-                role = user.Role
+                role = user.Role.Name
             });
         }
 
+        // ============================================================
+        // GENERATE JWT
+        // ============================================================
+
         private string GenerateJwtToken(User user)
         {
+            var keyValue = configuration["Jwt:Key"];
+
+            if (string.IsNullOrWhiteSpace(keyValue))
+            {
+                throw new InvalidOperationException(
+                    "Jwt:Key is not configured.");
+            }
+
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    configuration["Jwt:Key"]!
-                )
+                Encoding.UTF8.GetBytes(keyValue)
             );
 
             var credentials = new SigningCredentials(
@@ -151,7 +239,7 @@ namespace GrabnBite.Controllers
 
                 new Claim(
                     ClaimTypes.Role,
-                    user.Role
+                    user.Role.Name
                 )
             };
 
@@ -163,8 +251,15 @@ namespace GrabnBite.Controllers
                 signingCredentials: credentials
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return new JwtSecurityTokenHandler()
+                .WriteToken(token);
         }
+
+        // ============================================================
+        // AUTHORIZATION TEST
+        // GET: api/Authentication/test
+        // Any authenticated user
+        // ============================================================
 
         [Authorize]
         [HttpGet("test")]
@@ -172,6 +267,12 @@ namespace GrabnBite.Controllers
         {
             return Ok("You are authenticated.");
         }
+
+        // ============================================================
+        // ADMIN AUTHORIZATION TEST
+        // GET: api/Authentication/admin-test
+        // Admin only
+        // ============================================================
 
         [Authorize(Roles = "Admin")]
         [HttpGet("admin-test")]

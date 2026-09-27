@@ -1,3 +1,11 @@
 .vs/
 bin/
 obj/
+
+# React Native / Expo
+GrabnBiteMobile/node_modules/
+GrabnBiteMobile/.expo/
+
+# Expo / React Native generated files
+GrabnBiteMobile/.expo/
+GrabnBiteMobile/.cache/

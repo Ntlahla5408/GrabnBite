@@ -1,21 +1,20 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Customer")]
-    public class OrderController : ControllerBase
+    public class MenuCategoryController : ControllerBase
     {
         private readonly AppDbContext _context;
 
-        public OrderController(AppDbContext context)
+        public MenuCategoryController(AppDbContext context)
         {
             _context = context;
         }
@@ -29,12 +28,11 @@ namespace GrabnBite.Controllers
                 : null;
         }
 
-    // endpoints...
 
-        // ============================================================
-        // CREATE CATEGORY
-        // ============================================================
-        [Authorize(Roles = "Restaurant,Admin")]
+// ============================================================
+// CREATE CATEGORY
+// ============================================================
+[Authorize(Roles = "Restaurant,Admin")]
         [HttpPost("restaurant/{restaurantId}")]
         public async Task<IActionResult> CreateCategory(
             int restaurantId,
@@ -57,6 +55,19 @@ namespace GrabnBite.Controllers
             if (restaurant == null)
             {
                 return NotFound("Restaurant not found.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
             }
 
             if (!restaurant.IsApproved)
@@ -93,7 +104,7 @@ namespace GrabnBite.Controllers
         // ============================================================
         // GET ALL CATEGORIES
         // ============================================================
-
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetCategories()
         {
@@ -117,6 +128,7 @@ namespace GrabnBite.Controllers
         // GET ONE CATEGORY
         // ============================================================
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCategory(int id)
         {
@@ -143,7 +155,7 @@ namespace GrabnBite.Controllers
         // ============================================================
         // UPDATE CATEGORY
         // ============================================================
-
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpPut("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> UpdateCategory(
             int restaurantId,
@@ -191,6 +203,7 @@ namespace GrabnBite.Controllers
         // DELETE CATEGORY
         // ============================================================
 
+        [Authorize(Roles = "Restaurant,Admin")]
         [HttpDelete("restaurant/{restaurantId}/{id}")]
         public async Task<IActionResult> DeleteCategory(
             int restaurantId,

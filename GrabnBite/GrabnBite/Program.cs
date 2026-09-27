@@ -110,7 +110,7 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"ERROR: {ex}");
     }
 
-    //await DbSeeder.SeedAsync(db);
+    await DbSeeder.SeedAsync(db);
 }
 
 app.UseCors("MyPolicy");

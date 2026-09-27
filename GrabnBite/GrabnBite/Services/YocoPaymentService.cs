@@ -142,5 +142,57 @@ namespace GrabnBite.Services
 
             return checkout;
         }
+
+        public async Task<YocoCheckoutStatusDto> GetCheckoutStatusAsync(
+    string checkoutId)
+        {
+            if (string.IsNullOrWhiteSpace(_settings.SecretKey))
+            {
+                throw new InvalidOperationException(
+                    "Yoco SecretKey is not configured.");
+            }
+
+            if (string.IsNullOrWhiteSpace(checkoutId))
+            {
+                throw new ArgumentException(
+                    "Yoco checkout ID is required.",
+                    nameof(checkoutId));
+            }
+
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    _settings.SecretKey);
+
+            var response = await _httpClient.GetAsync(
+                $"{_settings.BaseUrl}/api/checkouts/{checkoutId}");
+
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException(
+                    $"Yoco checkout status request failed. " +
+                    $"Status: {(int)response.StatusCode}. " +
+                    $"Response: {responseBody}");
+            }
+
+            var checkout =
+                JsonSerializer.Deserialize<YocoCheckoutStatusDto>(
+                    responseBody,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+            if (checkout == null)
+            {
+                throw new InvalidOperationException(
+                    "Yoco returned an invalid checkout status response.");
+            }
+
+            return checkout;
+        }
     }
 }

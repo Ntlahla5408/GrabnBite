@@ -263,10 +263,10 @@ namespace GrabnBite.Controllers
             // --------------------------------------------------------
 
             var successUrl =
-                $"https://localhost:7127/api/Payment/yoco/success?orderId={order.OrderId}";
+     $"http://localhost:8081/payment-success?orderId={order.OrderId}";
 
             var cancelUrl =
-                $"https://localhost:7127/api/Payment/yoco/cancel?orderId={order.OrderId}";
+                $"http://localhost:8081/payment-cancelled?orderId={order.OrderId}";
 
             try
             {
@@ -532,6 +532,142 @@ namespace GrabnBite.Controllers
                 message = "Yoco payment was cancelled.",
                 orderId = orderId
             });
+        }
+
+        [Authorize(Roles = "Customer")]
+        [HttpPost("yoco/{orderId}/confirm")]
+        public async Task<IActionResult> ConfirmYocoPayment(int orderId)
+        {
+            if (orderId <= 0)
+                return BadRequest("Invalid order ID.");
+
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+                return Unauthorized();
+
+            var order = await _context.Orders
+                .Include(o => o.Payment)
+                .FirstOrDefaultAsync(o =>
+                    o.OrderId == orderId &&
+                    o.UserId == userId.Value);
+
+            if (order == null)
+                return NotFound("Order not found.");
+
+            if (order.Payment == null)
+                return NotFound("Payment not found for this order.");
+
+            var payment = order.Payment;
+
+            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                return BadRequest("Yoco checkout ID is missing.");
+
+            // Already confirmed
+            if (payment.PaymentStatus == "PAID")
+            {
+                return Ok(new
+                {
+                    message = "Payment has already been confirmed.",
+                    orderId = order.OrderId,
+                    paymentId = payment.PaymentId,
+                    paymentStatus = payment.PaymentStatus,
+                    orderStatus = order.Status
+                });
+            }
+
+            try
+            {
+                var checkout =
+                    await _yocoPaymentService.GetCheckoutStatusAsync(
+                        payment.YocoCheckoutId);
+
+                Console.WriteLine(
+                    $"YOCO CHECKOUT STATUS: {checkout.Status}");
+
+                if (string.Equals(
+                    checkout.Status,
+                    "completed",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "PAID";
+
+                    payment.TransactionReference =
+                        checkout.Id;
+
+                    order.Status = "PENDING";
+
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        message = "Payment confirmed successfully.",
+                        orderId = order.OrderId,
+                        paymentId = payment.PaymentId,
+                        paymentStatus = payment.PaymentStatus,
+                        orderStatus = order.Status,
+                        yocoCheckoutId = payment.YocoCheckoutId
+                    });
+                }
+
+                if (string.Equals(
+                    checkout.Status,
+                    "failed",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "FAILED";
+
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        message = "Yoco payment failed.",
+                        orderId = order.OrderId,
+                        paymentId = payment.PaymentId,
+                        paymentStatus = payment.PaymentStatus,
+                        orderStatus = order.Status
+                    });
+                }
+
+                if (string.Equals(
+                    checkout.Status,
+                    "cancelled",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "FAILED";
+
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        message = "Yoco payment was cancelled.",
+                        orderId = order.OrderId,
+                        paymentId = payment.PaymentId,
+                        paymentStatus = payment.PaymentStatus,
+                        orderStatus = order.Status
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Payment is still being processed.",
+                    orderId = order.OrderId,
+                    paymentId = payment.PaymentId,
+                    paymentStatus = payment.PaymentStatus,
+                    yocoStatus = checkout.Status,
+                    orderStatus = order.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status502BadGateway,
+                    new
+                    {
+                        message = "Unable to confirm Yoco payment.",
+                        error = ex.Message
+                    });
+            }
         }
     }
 }

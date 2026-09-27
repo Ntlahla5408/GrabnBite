@@ -186,6 +186,13 @@ namespace GrabnBite.Controllers
             }
 
             var delivery = await _context.Deliveries
+                .AsNoTracking()
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.Restaurant)
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.DeliveryAddress)
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.OrderItems)
                 .FirstOrDefaultAsync(d =>
                     d.DriverId == driver.DriverId &&
                     d.Status != "DELIVERED");
@@ -196,16 +203,41 @@ namespace GrabnBite.Controllers
                     "No active delivery assigned.");
             }
 
-            return Ok(new DeliveryResponseDto
+            return Ok(new
             {
-                DeliveryId = delivery.DeliveryId,
-                OrderId = delivery.OrderId,
-                DriverId = delivery.DriverId,
-                Status = delivery.Status,
-                PickedUpAt = delivery.PickedUpAt,
-                DeliveredAt = delivery.DeliveredAt,
-                DriverLatitude = delivery.DriverLatitude,
-                DriverLongitude = delivery.DriverLongitude
+                deliveryId = delivery.DeliveryId,
+                orderId = delivery.OrderId,
+                driverId = delivery.DriverId,
+
+                status = delivery.Status,
+
+                pickedUpAt = delivery.PickedUpAt,
+                deliveredAt = delivery.DeliveredAt,
+
+                driverLatitude = delivery.DriverLatitude,
+                driverLongitude = delivery.DriverLongitude,
+
+                restaurant = new
+                {
+                    restaurantId = delivery.Order.RestaurantId,
+                    name = delivery.Order.Restaurant.Name
+                },
+
+                totalAmount = delivery.Order.TotalAmount,
+
+                orderDate = delivery.Order.OrderDate,
+
+                deliveryAddress = delivery.Order.DeliveryAddress,
+
+                items = delivery.Order.OrderItems.Select(item => new
+                {
+                    orderItemId = item.OrderItemId,
+                    menuItemId = item.MenuItemId,
+                    menuItemName = item.ItemName,
+                    quantity = item.Quantity,
+                    unitPrice = item.UnitPrice,
+                    subtotal = item.Subtotal
+                })
             });
         }
 
@@ -529,6 +561,175 @@ namespace GrabnBite.Controllers
                 driverId = delivery.DriverId,
                 latitude = delivery.DriverLatitude,
                 longitude = delivery.DriverLongitude
+            });
+        }
+
+        // ============================================================
+        // GET AVAILABLE DELIVERIES
+        // ============================================================
+
+        [HttpGet("available")]
+        [Authorize(Roles = "Driver")]
+        public async Task<IActionResult> GetAvailableDeliveries()
+        {
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var driver = await _context.Drivers
+                .FirstOrDefaultAsync(d => d.UserId == userId.Value);
+
+            if (driver == null)
+            {
+                return NotFound("Driver profile not found.");
+            }
+
+            if (!driver.IsApproved)
+            {
+                return Forbid();
+            }
+
+            if (!driver.IsOnline)
+            {
+                return BadRequest(
+                    "You must be online to view available deliveries.");
+            }
+
+            var deliveries = await _context.Deliveries
+                .AsNoTracking()
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.Restaurant)
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.DeliveryAddress)
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.OrderItems)
+                .Where(d =>
+                    d.Status == "UNASSIGNED" &&
+                    d.DriverId == null)
+                .OrderBy(d => d.Order.OrderDate)
+                .Select(d => new
+                {
+                    deliveryId = d.DeliveryId,
+                    orderId = d.OrderId,
+                    status = d.Status,
+
+                    restaurantId = d.Order.RestaurantId,
+                    restaurantName = d.Order.Restaurant.Name,
+
+                    totalAmount = d.Order.TotalAmount,
+                    orderDate = d.Order.OrderDate,
+
+                    deliveryAddressId = d.Order.DeliveryAddressId,
+
+                    deliveryAddress = d.Order.DeliveryAddress,
+
+                    items = d.Order.OrderItems.Select(item => new
+                    {
+                        orderItemId = item.OrderItemId,
+                        menuItemId = item.MenuItemId,
+                        menuItemName = item.ItemName,
+                        quantity = item.Quantity,
+                        unitPrice = item.UnitPrice,
+                        subtotal = item.Subtotal
+                    })
+                })
+                .ToListAsync();
+
+            return Ok(deliveries);
+        }
+
+        // ============================================================
+        // ACCEPT DELIVERY
+        // ============================================================
+
+        [HttpPut("{deliveryId}/accept")]
+        [Authorize(Roles = "Driver")]
+        public async Task<IActionResult> AcceptDelivery(int deliveryId)
+        {
+            if (deliveryId <= 0)
+            {
+                return BadRequest(
+                    "A valid delivery id is required.");
+            }
+
+            var userId = User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
+
+            if (!int.TryParse(userId, out var parsedUserId))
+            {
+                return Unauthorized();
+            }
+
+            var driver = await _context.Drivers
+                .FirstOrDefaultAsync(d => d.UserId == parsedUserId);
+
+            if (driver == null)
+            {
+                return NotFound("Driver profile not found.");
+            }
+
+            if (!driver.IsApproved)
+            {
+                return BadRequest(
+                    "Your driver account has not been approved.");
+            }
+
+            if (!driver.IsOnline)
+            {
+                return BadRequest(
+                    "You must be online to accept deliveries.");
+            }
+
+            // Check whether driver already has an active delivery
+            var existingDelivery = await _context.Deliveries
+                .FirstOrDefaultAsync(d =>
+                    d.DriverId == driver.DriverId &&
+                    d.Status != "DELIVERED");
+
+            if (existingDelivery != null)
+            {
+                return BadRequest(
+                    "You already have an active delivery.");
+            }
+
+            var delivery = await _context.Deliveries
+                .Include(d => d.Order)
+                .FirstOrDefaultAsync(d =>
+                    d.DeliveryId == deliveryId);
+
+            if (delivery == null)
+            {
+                return NotFound("Delivery not found.");
+            }
+
+            if (delivery.Status != "UNASSIGNED")
+            {
+                return BadRequest(
+                    "This delivery has already been accepted.");
+            }
+
+            if (delivery.DriverId != null)
+            {
+                return BadRequest(
+                    "This delivery has already been assigned.");
+            }
+
+            // Assign delivery to current driver
+            delivery.DriverId = driver.DriverId;
+            delivery.Status = "ASSIGNED";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Delivery accepted successfully.",
+                deliveryId = delivery.DeliveryId,
+                orderId = delivery.OrderId,
+                driverId = driver.DriverId,
+                status = delivery.Status
             });
         }
     }

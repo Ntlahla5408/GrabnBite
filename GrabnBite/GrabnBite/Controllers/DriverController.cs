@@ -142,6 +142,27 @@ namespace GrabnBite.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public async Task<IActionResult> GetAllDrivers()
+        {
+            var drivers = await _context.Drivers
+                .AsNoTracking()
+                .Select(driver => new DriverResponseDto
+                {
+                    DriverId = driver.DriverId,
+                    UserId = driver.UserId,
+                    VehicleType = driver.VehicleType,
+                    VehicleRegistration = driver.VehicleRegistration,
+                    IsOnline = driver.IsOnline,
+                    IsApproved = driver.IsApproved,
+                    CreatedAt = driver.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(drivers);
+        }
+
         // ============================================================
         // GO ONLINE
         // Driver only

@@ -372,5 +372,45 @@ namespace GrabnBite.Controllers
                 CreatedAt = restaurant.CreatedAt
             };
         }
+
+        // =========================================================
+        // READ - Get logged-in restaurant
+        // Restaurant only
+        // =========================================================
+        [Authorize(Roles = "Restaurant")]
+        [HttpGet("my-restaurant")]
+        public async Task<IActionResult> GetMyRestaurant()
+        {
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
+
+            if (restaurant == null)
+            {
+                return NotFound("No restaurant profile found for this account.");
+            }
+
+            return Ok(new
+            {
+                restaurantId = restaurant.RestaurantId,
+                name = restaurant.Name,
+                description = restaurant.Description,
+                phoneNumber = restaurant.PhoneNumber,
+                email = restaurant.Email,
+                address = restaurant.Address,
+                imageUrl = restaurant.ImageUrl,
+                latitude = restaurant.Latitude,
+                longitude = restaurant.Longitude,
+                isOpen = restaurant.IsOpen,
+                isApproved = restaurant.IsApproved,
+                createdAt = restaurant.CreatedAt
+            });
+        }
     }
 }

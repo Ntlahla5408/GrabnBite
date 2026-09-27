@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { router } from "expo-router";
@@ -64,24 +62,20 @@ export default function AdminDashboard() {
   }
 
   async function handleLogout() {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/login");
         },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/login");
-          },
-        },
-      ],
-    );
+      },
+    ]);
   }
 
   const userCount = users.length;
@@ -90,13 +84,9 @@ export default function AdminDashboard() {
     (user) => user.role === "Restaurant",
   ).length;
 
-  const driverCount = users.filter(
-    (user) => user.role === "Driver",
-  ).length;
+  const driverCount = users.filter((user) => user.role === "Driver").length;
 
-  const customerCount = users.filter(
-    (user) => user.role === "Customer",
-  ).length;
+  const customerCount = users.filter((user) => user.role === "Customer").length;
 
   if (!user || user.role !== "Admin") {
     return null;
@@ -134,9 +124,7 @@ export default function AdminDashboard() {
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#F97316" />
 
-            <Text style={styles.loadingText}>
-              Loading dashboard...
-            </Text>
+            <Text style={styles.loadingText}>Loading dashboard...</Text>
           </View>
         )}
 
@@ -145,10 +133,7 @@ export default function AdminDashboard() {
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>{error}</Text>
 
-            <Pressable
-              style={styles.retryButton}
-              onPress={loadUsers}
-            >
+            <Pressable style={styles.retryButton} onPress={loadUsers}>
               <Text style={styles.retryText}>Try Again</Text>
             </Pressable>
           </View>
@@ -161,25 +146,13 @@ export default function AdminDashboard() {
               <Text style={styles.sectionTitle}>Overview</Text>
 
               <View style={styles.statsGrid}>
-                <StatCard
-                  title="Total Users"
-                  value={userCount}
-                />
+                <StatCard title="Total Users" value={userCount} />
 
-                <StatCard
-                  title="Customers"
-                  value={customerCount}
-                />
+                <StatCard title="Customers" value={customerCount} />
 
-                <StatCard
-                  title="Restaurants"
-                  value={restaurantCount}
-                />
+                <StatCard title="Restaurants" value={restaurantCount} />
 
-                <StatCard
-                  title="Drivers"
-                  value={driverCount}
-                />
+                <StatCard title="Drivers" value={driverCount} />
               </View>
             </View>
 
@@ -212,13 +185,7 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: number;
-}) {
+function StatCard({ title, value }: { title: string; value: number }) {
   return (
     <View style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
@@ -248,9 +215,7 @@ function DashboardButton({
       <View style={styles.dashboardButtonContent}>
         <Text style={styles.dashboardButtonTitle}>{title}</Text>
 
-        <Text style={styles.dashboardButtonSubtitle}>
-          {subtitle}
-        </Text>
+        <Text style={styles.dashboardButtonSubtitle}>{subtitle}</Text>
       </View>
 
       <Text style={styles.arrow}>›</Text>

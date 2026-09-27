@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 
+import CustomerBottomNav from "../components/CustomerBottomNav";
 import CategoryList from "../components/home/CategoryList";
 import HomeHeader from "../components/home/HomeHeader";
 import RestaurantCard from "../components/home/RestaurantCard";
@@ -149,6 +150,7 @@ export default function HomeScreen() {
             ))}
         </View>
       </ScrollView>
+      <CustomerBottomNav />
     </View>
   );
 }
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
 
   hero: {

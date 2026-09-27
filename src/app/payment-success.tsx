@@ -13,19 +13,13 @@ export default function PaymentSuccessScreen() {
       <View style={styles.card}>
         <Text style={styles.icon}>✓</Text>
 
-        <Text style={styles.title}>
-          Payment Successful
-        </Text>
+        <Text style={styles.title}>Payment Successful</Text>
 
         <Text style={styles.message}>
           Your payment was completed successfully.
         </Text>
 
-        {orderId ? (
-          <Text style={styles.order}>
-            Order #{orderId}
-          </Text>
-        ) : null}
+        {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
         <Pressable
           style={styles.button}
@@ -38,18 +32,14 @@ export default function PaymentSuccessScreen() {
             })
           }
         >
-          <Text style={styles.buttonText}>
-            Track My Order
-          </Text>
+          <Text style={styles.buttonText}>Track My Order</Text>
         </Pressable>
 
         <Pressable
           style={styles.secondaryButton}
           onPress={() => router.replace("/")}
         >
-          <Text style={styles.secondaryText}>
-            Back to Home
-          </Text>
+          <Text style={styles.secondaryText}>Back to Home</Text>
         </Pressable>
       </View>
     </View>

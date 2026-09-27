@@ -1,19 +1,20 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 
+import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
 import {
-  getCart,
-  removeCartItem,
-  updateCartItem,
+    getCart,
+    removeCartItem,
+    updateCartItem,
 } from "../services/cartService";
 import { Cart } from "../types/cart";
 
@@ -57,7 +58,7 @@ export default function CartScreen() {
   async function changeQuantity(
     cartItemId: number,
     currentQuantity: number,
-    newQuantity: number
+    newQuantity: number,
   ) {
     if (!token || newQuantity < 1) {
       return;
@@ -66,11 +67,7 @@ export default function CartScreen() {
     try {
       setUpdatingItemId(cartItemId);
 
-      await updateCartItem(
-        cartItemId,
-        newQuantity,
-        token
-      );
+      await updateCartItem(cartItemId, newQuantity, token);
 
       await loadCart();
     } catch (error) {
@@ -103,14 +100,9 @@ export default function CartScreen() {
   if (loading) {
     return (
       <View style={styles.centerScreen}>
-        <ActivityIndicator
-          size="large"
-          color="#F97316"
-        />
+        <ActivityIndicator size="large" color="#F97316" />
 
-        <Text style={styles.loadingText}>
-          Loading your cart...
-        </Text>
+        <Text style={styles.loadingText}>Loading your cart...</Text>
       </View>
     );
   }
@@ -120,19 +112,12 @@ export default function CartScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backButtonText}>
-              ‹
-            </Text>
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>‹</Text>
           </Pressable>
 
           <View>
-            <Text style={styles.headerTitle}>
-              Your Cart
-            </Text>
+            <Text style={styles.headerTitle}>Your Cart</Text>
 
             <Text style={styles.headerSubtitle}>
               Review your items before checkout
@@ -147,48 +132,34 @@ export default function CartScreen() {
       >
         {error !== "" && (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>
-              {error}
-            </Text>
+            <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
         {carts.length === 0 ? (
           <View style={styles.emptyCart}>
-            <Text style={styles.emptyCartIcon}>
-              🛒
-            </Text>
+            <Text style={styles.emptyCartIcon}>🛒</Text>
 
-            <Text style={styles.emptyCartTitle}>
-              Your cart is empty
-            </Text>
+            <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
 
             <Text style={styles.emptyCartText}>
-              Add some delicious food from a restaurant
-              to get started.
+              Add some delicious food from a restaurant to get started.
             </Text>
 
             <Pressable
               style={styles.browseButton}
               onPress={() => router.replace("/")}
             >
-              <Text style={styles.browseButtonText}>
-                Browse Restaurants
-              </Text>
+              <Text style={styles.browseButtonText}>Browse Restaurants</Text>
             </Pressable>
           </View>
         ) : (
           carts.map((cart) => (
-            <View
-              key={cart.cartId}
-              style={styles.restaurantSection}
-            >
+            <View key={cart.cartId} style={styles.restaurantSection}>
               {/* Restaurant heading */}
               <View style={styles.restaurantHeader}>
                 <View style={styles.restaurantIcon}>
-                  <Text style={styles.restaurantEmoji}>
-                    🍔
-                  </Text>
+                  <Text style={styles.restaurantEmoji}>🍔</Text>
                 </View>
 
                 <View style={styles.restaurantInfo}>
@@ -198,9 +169,7 @@ export default function CartScreen() {
 
                   <Text style={styles.itemCount}>
                     {cart.items.length}{" "}
-                    {cart.items.length === 1
-                      ? "item"
-                      : "items"}
+                    {cart.items.length === 1 ? "item" : "items"}
                   </Text>
                 </View>
               </View>
@@ -208,18 +177,12 @@ export default function CartScreen() {
               {/* Items */}
               <View style={styles.itemsContainer}>
                 {cart.items.map((item) => {
-                  const isUpdating =
-                    updatingItemId === item.cartItemId;
+                  const isUpdating = updatingItemId === item.cartItemId;
 
                   return (
-                    <View
-                      key={item.cartItemId}
-                      style={styles.cartItem}
-                    >
+                    <View key={item.cartItemId} style={styles.cartItem}>
                       <View style={styles.itemInfo}>
-                        <Text style={styles.itemName}>
-                          {item.menuItemName}
-                        </Text>
+                        <Text style={styles.itemName}>{item.menuItemName}</Text>
 
                         <Text style={styles.itemPrice}>
                           R{item.unitPrice.toFixed(2)}
@@ -230,44 +193,29 @@ export default function CartScreen() {
                         <View
                           style={[
                             styles.quantityControl,
-                            isUpdating &&
-                              styles.quantityControlDisabled,
+                            isUpdating && styles.quantityControlDisabled,
                           ]}
                         >
                           <Pressable
                             style={styles.quantityButton}
                             disabled={isUpdating}
                             onPress={() => {
-                              if (
-                                item.quantity === 1
-                              ) {
-                                handleRemoveItem(
-                                  item.cartItemId
-                                );
+                              if (item.quantity === 1) {
+                                handleRemoveItem(item.cartItemId);
                               } else {
                                 changeQuantity(
                                   item.cartItemId,
                                   item.quantity,
-                                  item.quantity - 1
+                                  item.quantity - 1,
                                 );
                               }
                             }}
                           >
-                            <Text
-                              style={
-                                styles.quantityButtonText
-                              }
-                            >
-                              −
-                            </Text>
+                            <Text style={styles.quantityButtonText}>−</Text>
                           </Pressable>
 
-                          <Text
-                            style={styles.quantityText}
-                          >
-                            {isUpdating
-                              ? "..."
-                              : item.quantity}
+                          <Text style={styles.quantityText}>
+                            {isUpdating ? "..." : item.quantity}
                           </Text>
 
                           <Pressable
@@ -277,17 +225,11 @@ export default function CartScreen() {
                               changeQuantity(
                                 item.cartItemId,
                                 item.quantity,
-                                item.quantity + 1
+                                item.quantity + 1,
                               )
                             }
                           >
-                            <Text
-                              style={
-                                styles.quantityButtonText
-                              }
-                            >
-                              +
-                            </Text>
+                            <Text style={styles.quantityButtonText}>+</Text>
                           </Pressable>
                         </View>
 
@@ -302,9 +244,7 @@ export default function CartScreen() {
 
               {/* Restaurant total */}
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>
-                  Restaurant subtotal
-                </Text>
+                <Text style={styles.totalLabel}>Restaurant subtotal</Text>
 
                 <Text style={styles.totalAmount}>
                   R{cart.totalAmount.toFixed(2)}
@@ -319,15 +259,12 @@ export default function CartScreen() {
                     pathname: "/checkout",
                     params: {
                       cartId: cart.cartId.toString(),
-                      restaurantId:
-                        cart.restaurantId.toString(),
+                      restaurantId: cart.restaurantId.toString(),
                     },
                   })
                 }
               >
-                <Text style={styles.checkoutButtonText}>
-                  Checkout
-                </Text>
+                <Text style={styles.checkoutButtonText}>Checkout</Text>
 
                 <Text style={styles.checkoutAmount}>
                   R{cart.totalAmount.toFixed(2)}
@@ -337,6 +274,7 @@ export default function CartScreen() {
           ))
         )}
       </ScrollView>
+      <CustomerBottomNav />
     </View>
   );
 }
@@ -410,7 +348,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 50,
+    paddingBottom: 120,
   },
 
   errorBox: {

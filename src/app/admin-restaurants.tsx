@@ -58,11 +58,7 @@ export default function AdminRestaurantsScreen() {
       setLoading(true);
       setError("");
 
-      const data = await apiRequest(
-        "/api/Restaurant",
-        {},
-        token
-      );
+      const data = await apiRequest("/api/Restaurant", {}, token);
 
       setRestaurants(data);
     } catch (err) {
@@ -114,9 +110,7 @@ export default function AdminRestaurantsScreen() {
         </Pressable>
 
         <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>
-            Restaurant Management
-          </Text>
+          <Text style={styles.headerTitle}>Restaurant Management</Text>
 
           <Text style={styles.headerSubtitle}>
             Manage GrabnBite restaurants
@@ -138,9 +132,7 @@ export default function AdminRestaurantsScreen() {
       >
         {/* SEARCH */}
         <View style={styles.searchContainer}>
-          <Text style={styles.sectionLabel}>
-            Search restaurants
-          </Text>
+          <Text style={styles.sectionLabel}>Search restaurants</Text>
 
           <TextInput
             style={styles.searchInput}
@@ -155,9 +147,7 @@ export default function AdminRestaurantsScreen() {
 
         {/* FILTER */}
         <View style={styles.filterSection}>
-          <Text style={styles.sectionLabel}>
-            Filter by approval
-          </Text>
+          <Text style={styles.sectionLabel}>Filter by approval</Text>
 
           <ScrollView
             horizontal
@@ -179,8 +169,7 @@ export default function AdminRestaurantsScreen() {
                   <Text
                     style={[
                       styles.filterButtonText,
-                      selected &&
-                        styles.filterButtonTextSelected,
+                      selected && styles.filterButtonTextSelected,
                     ]}
                   >
                     {filter}
@@ -196,9 +185,7 @@ export default function AdminRestaurantsScreen() {
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsText}>
               {filteredRestaurants.length}{" "}
-              {filteredRestaurants.length === 1
-                ? "restaurant"
-                : "restaurants"}{" "}
+              {filteredRestaurants.length === 1 ? "restaurant" : "restaurants"}{" "}
               found
             </Text>
           </View>
@@ -207,49 +194,33 @@ export default function AdminRestaurantsScreen() {
         {/* LOADING */}
         {loading && (
           <View style={styles.center}>
-            <ActivityIndicator
-              size="large"
-              color="#F97316"
-            />
+            <ActivityIndicator size="large" color="#F97316" />
 
-            <Text style={styles.loadingText}>
-              Loading restaurants...
-            </Text>
+            <Text style={styles.loadingText}>Loading restaurants...</Text>
           </View>
         )}
 
         {/* ERROR */}
         {!loading && error !== "" && (
           <View style={styles.errorCard}>
-            <Text style={styles.errorText}>
-              {error}
-            </Text>
+            <Text style={styles.errorText}>{error}</Text>
 
-            <Pressable
-              style={styles.retryButton}
-              onPress={loadRestaurants}
-            >
-              <Text style={styles.retryText}>
-                Try Again
-              </Text>
+            <Pressable style={styles.retryButton} onPress={loadRestaurants}>
+              <Text style={styles.retryText}>Try Again</Text>
             </Pressable>
           </View>
         )}
 
         {/* EMPTY */}
-        {!loading &&
-          error === "" &&
-          filteredRestaurants.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>
-                No restaurants found
-              </Text>
+        {!loading && error === "" && filteredRestaurants.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No restaurants found</Text>
 
-              <Text style={styles.emptyText}>
-                Try changing your search or approval filter.
-              </Text>
-            </View>
-          )}
+            <Text style={styles.emptyText}>
+              Try changing your search or approval filter.
+            </Text>
+          </View>
+        )}
 
         {/* RESTAURANTS */}
         {!loading &&
@@ -265,11 +236,7 @@ export default function AdminRestaurantsScreen() {
   );
 }
 
-function RestaurantCard({
-  restaurant,
-}: {
-  restaurant: Restaurant;
-}) {
+function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
   return (
     <Pressable
       style={styles.restaurantCard}
@@ -277,8 +244,7 @@ function RestaurantCard({
         router.push({
           pathname: "/admin-restaurant-edit",
           params: {
-            restaurantId:
-              restaurant.restaurantId.toString(),
+            restaurantId: restaurant.restaurantId.toString(),
           },
         })
       }
@@ -291,86 +257,58 @@ function RestaurantCard({
         </View>
 
         <View style={styles.restaurantMain}>
-          <Text style={styles.restaurantName}>
-            {restaurant.name}
-          </Text>
+          <Text style={styles.restaurantName}>{restaurant.name}</Text>
 
-          <Text style={styles.restaurantEmail}>
-            {restaurant.email}
-          </Text>
+          <Text style={styles.restaurantEmail}>{restaurant.email}</Text>
         </View>
 
         <View
           style={[
             styles.approvalBadge,
-            restaurant.isApproved
-              ? styles.approvedBadge
-              : styles.pendingBadge,
+            restaurant.isApproved ? styles.approvedBadge : styles.pendingBadge,
           ]}
         >
           <Text
             style={[
               styles.approvalText,
-              restaurant.isApproved
-                ? styles.approvedText
-                : styles.pendingText,
+              restaurant.isApproved ? styles.approvedText : styles.pendingText,
             ]}
           >
-            {restaurant.isApproved
-              ? "Approved"
-              : "Pending"}
+            {restaurant.isApproved ? "Approved" : "Pending"}
           </Text>
         </View>
       </View>
 
       <View style={styles.details}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>
-            Phone
-          </Text>
+          <Text style={styles.detailLabel}>Phone</Text>
+
+          <Text style={styles.detailValue}>{restaurant.phoneNumber}</Text>
+        </View>
+
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Status</Text>
 
           <Text style={styles.detailValue}>
-            {restaurant.phoneNumber}
+            {restaurant.isOpen ? "Open" : "Closed"}
           </Text>
         </View>
 
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>
-            Status
-          </Text>
+          <Text style={styles.detailLabel}>ID</Text>
 
-          <Text style={styles.detailValue}>
-            {restaurant.isOpen
-              ? "Open"
-              : "Closed"}
-          </Text>
-        </View>
-
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>
-            ID
-          </Text>
-
-          <Text style={styles.detailValue}>
-            {restaurant.restaurantId}
-          </Text>
+          <Text style={styles.detailValue}>{restaurant.restaurantId}</Text>
         </View>
       </View>
 
       <View style={styles.addressContainer}>
-        <Text style={styles.detailLabel}>
-          Address
-        </Text>
+        <Text style={styles.detailLabel}>Address</Text>
 
-        <Text style={styles.address}>
-          {restaurant.address}
-        </Text>
+        <Text style={styles.address}>{restaurant.address}</Text>
       </View>
 
       <View style={styles.editHint}>
-        <Text style={styles.editHintText}>
-          Tap to manage restaurant →
-        </Text>
+        <Text style={styles.editHintText}>Tap to manage restaurant →</Text>
       </View>
     </Pressable>
   );

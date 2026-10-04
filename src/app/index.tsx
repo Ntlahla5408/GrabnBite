@@ -78,10 +78,12 @@ export default function HomeScreen() {
         {/* Hero */}
         <View style={styles.hero}>
           <View style={styles.heroContent}>
+            <Text style={styles.eyebrow}>DELIVERING GREAT FOOD</Text>
+
             <Text style={styles.heroTitle}>What are you craving today?</Text>
 
             <Text style={styles.heroSubtitle}>
-              Discover great food from restaurants near you.
+              Find your favourite meals from restaurants near you.
             </Text>
 
             <SearchBar value={search} onChangeText={setSearch} />
@@ -91,8 +93,8 @@ export default function HomeScreen() {
         {/* Categories */}
         <View style={styles.section}>
           <SectionHeader
-            title="Browse by category"
-            subtitle="Find something you love"
+            title="Browse categories"
+            subtitle="Find something you're in the mood for"
           />
 
           <CategoryList />
@@ -109,7 +111,9 @@ export default function HomeScreen() {
             <View style={styles.center}>
               <ActivityIndicator size="large" color="#F97316" />
 
-              <Text style={styles.loadingText}>Loading restaurants...</Text>
+              <Text style={styles.loadingText}>
+                Finding restaurants near you...
+              </Text>
             </View>
           )}
 
@@ -120,36 +124,46 @@ export default function HomeScreen() {
           )}
 
           {!loading && error === "" && filteredRestaurants.length === 0 && (
-            <View style={styles.center}>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🍽️</Text>
+
               <Text style={styles.emptyTitle}>No restaurants found</Text>
 
               <Text style={styles.emptyText}>
-                Try searching for something else.
+                Try searching for another restaurant or type of food.
               </Text>
             </View>
           )}
 
-          {!loading &&
-            error === "" &&
-            filteredRestaurants.map((restaurant) => (
-              <RestaurantCard
-                key={restaurant.restaurantId}
-                name={restaurant.name}
-                cuisine={restaurant.description}
-                rating={restaurant.isOpen ? "Open now" : "Closed"}
-                deliveryTime="20–35 min"
-                onPress={() =>
-                  router.push({
-                    pathname: "/restaurant",
-                    params: {
-                      restaurantId: restaurant.restaurantId,
-                    },
-                  })
-                }
-              />
-            ))}
+          {!loading && error === "" && filteredRestaurants.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.restaurantList}
+            >
+              {filteredRestaurants.map((restaurant) => (
+                <RestaurantCard
+                  key={restaurant.restaurantId}
+                  name={restaurant.name}
+                  cuisine={restaurant.description}
+                  isOpen={restaurant.isOpen}
+                  imageUrl={restaurant.imageUrl}
+                  deliveryTime="20–35 min"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/restaurant",
+                      params: {
+                        restaurantId: restaurant.restaurantId,
+                      },
+                    })
+                  }
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
       </ScrollView>
+
       <CustomerBottomNav />
     </View>
   );
@@ -158,39 +172,48 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#071B2C",
   },
 
   scrollContent: {
-    paddingBottom: 110,
+    paddingBottom: 120,
   },
 
   hero: {
     backgroundColor: "#071B2C",
     paddingHorizontal: 20,
-    paddingVertical: 50,
+    paddingTop: 28,
+    paddingBottom: 34,
   },
 
   heroContent: {
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    alignItems: "center",
+  },
+
+  eyebrow: {
+    color: "#F97316",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 10,
   },
 
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 34,
+    fontSize: 30,
     fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 10,
+    lineHeight: 36,
+    marginBottom: 8,
   },
 
   heroSubtitle: {
-    color: "#CBD5E1",
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 28,
+    color: "#AFC0CC",
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 22,
+    maxWidth: 420,
   },
 
   section: {
@@ -198,36 +221,57 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     alignSelf: "center",
     paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingTop: 28,
   },
 
   center: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 35,
+    paddingVertical: 40,
   },
 
   loadingText: {
     marginTop: 12,
-    color: "#64748B",
-    fontSize: 14,
+    color: "#AFC0CC",
+    fontSize: 13,
   },
 
   errorText: {
-    color: "#DC2626",
-    fontSize: 15,
+    color: "#FCA5A5",
+    fontSize: 14,
     textAlign: "center",
   },
 
+  restaurantList: {
+    paddingBottom: 8,
+    paddingRight: 20,
+  },
+
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    backgroundColor: "#0D2638",
+    borderRadius: 18,
+  },
+
+  emptyIcon: {
+    fontSize: 42,
+    marginBottom: 10,
+  },
+
   emptyTitle: {
-    color: "#172033",
+    color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: "800",
     marginBottom: 6,
   },
 
   emptyText: {
-    color: "#64748B",
-    fontSize: 14,
+    color: "#AFC0CC",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
   },
 });

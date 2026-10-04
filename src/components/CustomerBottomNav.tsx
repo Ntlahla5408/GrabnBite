@@ -34,12 +34,22 @@ export default function CustomerBottomNav() {
           return (
             <Pressable
               key={tab.route}
-              style={styles.tab}
+              style={({ pressed }) => [
+                styles.tab,
+                pressed && styles.tabPressed,
+              ]}
               onPress={() => router.push(tab.route as any)}
             >
-              <Text style={[styles.icon, active && styles.activeIcon]}>
-                {tab.icon}
-              </Text>
+              <View
+                style={[
+                  styles.iconContainer,
+                  active && styles.activeIconContainer,
+                ]}
+              >
+                <Text style={[styles.icon, active && styles.activeIcon]}>
+                  {tab.icon}
+                </Text>
+              </View>
 
               <Text style={[styles.label, active && styles.activeLabel]}>
                 {tab.label}
@@ -60,31 +70,56 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
     backgroundColor: "#071B2C",
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
-    paddingBottom: 8,
+    borderTopColor: "#18384D",
   },
 
   nav: {
-    height: 68,
+    height: 64,
+    maxWidth: 600,
+    width: "100%",
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
+    backgroundColor: "#0D2638",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#18384D",
   },
 
   tab: {
     flex: 1,
-    height: 68,
+    height: 64,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
 
+  tabPressed: {
+    opacity: 0.7,
+  },
+
+  iconContainer: {
+    width: 36,
+    height: 30,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+
+  activeIconContainer: {
+    backgroundColor: "rgba(249, 115, 22, 0.12)",
+  },
+
   icon: {
-    fontSize: 22,
-    color: "#94A3B8",
-    marginBottom: 3,
+    fontSize: 20,
+    color: "#7F94A3",
   },
 
   activeIcon: {
@@ -92,9 +127,9 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: "#94A3B8",
+    color: "#7F94A3",
   },
 
   activeLabel: {
@@ -104,8 +139,8 @@ const styles = StyleSheet.create({
 
   activeIndicator: {
     position: "absolute",
-    bottom: 0,
-    width: 28,
+    bottom: 4,
+    width: 24,
     height: 3,
     borderRadius: 3,
     backgroundColor: "#F97316",

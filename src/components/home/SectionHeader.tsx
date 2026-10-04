@@ -21,14 +21,15 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "800",
-    color: "#071B2C",
   },
 
   subtitle: {
     marginTop: 4,
-    fontSize: 14,
-    color: "#64748B",
+    color: "#AFC0CC",
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -13,7 +13,7 @@ export default function SearchBar({ value, onChangeText }: SearchBarProps) {
       <TextInput
         style={styles.input}
         placeholder="Search for food or restaurants..."
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor="#7F94A3"
         value={value}
         onChangeText={onChangeText}
       />
@@ -26,25 +26,24 @@ const styles = StyleSheet.create({
     height: 54,
     width: "100%",
     maxWidth: 700,
-    alignSelf: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#0D2638",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#18384D",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
   },
 
   icon: {
-    fontSize: 28,
-    color: "#64748B",
+    fontSize: 26,
+    color: "#F97316",
     marginRight: 10,
   },
 
   input: {
     flex: 1,
     fontSize: 15,
-    color: "#172033",
+    color: "#FFFFFF",
   },
 });

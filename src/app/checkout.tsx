@@ -27,7 +27,7 @@ export default function CheckoutScreen() {
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
-    null
+    null,
   );
 
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,9 @@ export default function CheckoutScreen() {
   }, [token]);
 
   async function loadAddresses() {
-    if (!token) return;
+    if (!token) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -54,10 +56,8 @@ export default function CheckoutScreen() {
 
       setAddresses(result);
 
-      // Automatically select the default address
-      const defaultAddress = result.find(
-        (address) => address.isDefault
-      );
+      // Automatically select the default address.
+      const defaultAddress = result.find((address) => address.isDefault);
 
       if (defaultAddress) {
         setSelectedAddressId(defaultAddress.addressId);
@@ -97,7 +97,7 @@ export default function CheckoutScreen() {
           cartId,
           deliveryAddressId: selectedAddressId,
         },
-        token
+        token,
       );
 
       console.log("CHECKOUT RESULT:", result);
@@ -121,10 +121,9 @@ export default function CheckoutScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>
-          Loading checkout...
-        </Text>
+        <ActivityIndicator size="large" color="#F97316" />
+
+        <Text style={styles.loadingText}>Loading checkout...</Text>
       </View>
     );
   }
@@ -135,121 +134,153 @@ export default function CheckoutScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Back */}
         <Pressable
-          style={styles.backButton}
+          style={({ pressed }) => [
+            styles.backButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>‹</Text>
         </Pressable>
 
-        <Text style={styles.title}>Checkout</Text>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Checkout</Text>
 
-        <Text style={styles.subtitle}>
-          Choose where you want your order delivered.
-        </Text>
+          <Text style={styles.subtitle}>
+            Choose where you want your order delivered.
+          </Text>
+        </View>
 
-        <Text style={styles.sectionTitle}>
-          Delivery Address
-        </Text>
+        {/* Address Section */}
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+
+            <Text style={styles.sectionSubtitle}>
+              Select an address for this order
+            </Text>
+          </View>
+        </View>
 
         {addresses.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>
-              No delivery addresses
-            </Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>📍</Text>
+            </View>
+
+            <Text style={styles.emptyTitle}>No delivery addresses</Text>
 
             <Text style={styles.emptyText}>
-              You need to add a delivery address before placing
-              your order.
+              Add a delivery address before placing your order.
             </Text>
 
             <Pressable
-              style={styles.addAddressButton}
+              style={({ pressed }) => [
+                styles.addAddressButton,
+                pressed && styles.addAddressButtonPressed,
+              ]}
               onPress={() => router.push("/addresses")}
             >
-              <Text style={styles.addAddressText}>
-                Add Address
-              </Text>
+              <Text style={styles.addAddressButtonText}>+ Add Address</Text>
             </Pressable>
           </View>
         ) : (
-          addresses.map((address) => {
-            const selected =
-              selectedAddressId === address.addressId;
+          <>
+            {addresses.map((address) => {
+              const selected = selectedAddressId === address.addressId;
 
-            return (
-              <Pressable
-                key={address.addressId}
-                style={[
-                  styles.addressCard,
-                  selected && styles.selectedAddressCard,
-                ]}
-                onPress={() =>
-                  setSelectedAddressId(address.addressId)
-                }
-              >
-                <View style={styles.addressHeader}>
-                  <Text style={styles.addressLabel}>
-                    {address.label || "Delivery Address"}
-                  </Text>
-
-                  {address.isDefault && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultText}>
-                        Default
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <Text style={styles.addressText}>
-                  {address.streetAddress}
-                </Text>
-
-                <Text style={styles.addressText}>
-                  {address.city}, {address.province}
-                </Text>
-
-                <Text style={styles.addressText}>
-                  {address.postalCode}
-                </Text>
-
-                <View
-                  style={[
-                    styles.radio,
-                    selected && styles.radioSelected,
+              return (
+                <Pressable
+                  key={address.addressId}
+                  style={({ pressed }) => [
+                    styles.addressCard,
+                    selected && styles.selectedAddressCard,
+                    pressed && styles.addressCardPressed,
                   ]}
+                  onPress={() => setSelectedAddressId(address.addressId)}
                 >
-                  {selected && (
-                    <View style={styles.radioDot} />
-                  )}
-                </View>
-              </Pressable>
-            );
-          })
+                  <View style={styles.addressContent}>
+                    <View style={styles.addressHeader}>
+                      <Text style={styles.addressLabel}>
+                        {address.label || "Delivery Address"}
+                      </Text>
+
+                      {address.isDefault && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultText}>Default</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.addressText}>
+                      {address.streetAddress}
+                    </Text>
+
+                    <Text style={styles.addressText}>
+                      {address.city}, {address.province}
+                    </Text>
+
+                    <Text style={styles.addressText}>{address.postalCode}</Text>
+                  </View>
+
+                  <View
+                    style={[styles.radio, selected && styles.radioSelected]}
+                  >
+                    {selected && <View style={styles.radioDot} />}
+                  </View>
+                </Pressable>
+              );
+            })}
+
+            {/* Always available */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.addNewAddressButton,
+                pressed && styles.addNewAddressButtonPressed,
+              ]}
+              onPress={() => router.push("/addresses")}
+            >
+              <View style={styles.addNewAddressIcon}>
+                <Text style={styles.addNewAddressIconText}>+</Text>
+              </View>
+
+              <View>
+                <Text style={styles.addNewAddressTitle}>Add a new address</Text>
+
+                <Text style={styles.addNewAddressSubtitle}>
+                  Deliver to a different location
+                </Text>
+              </View>
+            </Pressable>
+          </>
         )}
 
         {error ? (
-          <Text style={styles.errorText}>{error}</Text>
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
         ) : null}
       </ScrollView>
 
+      {/* Bottom checkout bar */}
       {addresses.length > 0 && (
         <View style={styles.bottomBar}>
-          <View>
-            <Text style={styles.bottomLabel}>
-              Delivery
-            </Text>
+          <View style={styles.bottomInfo}>
+            <Text style={styles.bottomLabel}>Delivery address</Text>
 
             <Text style={styles.bottomValue}>
-              Address selected
+              {selectedAddressId ? "Address selected" : "Select an address"}
             </Text>
           </View>
 
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.checkoutButton,
               checkingOut && styles.disabledButton,
+              pressed && !checkingOut && styles.checkoutButtonPressed,
             ]}
             onPress={handleCheckout}
             disabled={checkingOut}
@@ -257,9 +288,7 @@ export default function CheckoutScreen() {
             {checkingOut ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.checkoutButtonText}>
-                Place Order
-              </Text>
+              <Text style={styles.checkoutButtonText}>Continue</Text>
             )}
           </Pressable>
         </View>
@@ -271,69 +300,109 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#071B2C",
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 120,
+    width: "100%",
+    maxWidth: 900,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 130,
   },
 
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#071B2C",
   },
 
   loadingText: {
     marginTop: 10,
-    color: "#666",
+    color: "#AFC0CC",
+    fontSize: 14,
   },
 
   backButton: {
-    marginBottom: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#0D2638",
+    borderWidth: 1,
+    borderColor: "#18384D",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 22,
+  },
+
+  buttonPressed: {
+    opacity: 0.7,
   },
 
   backText: {
-    color: "#1A4B6B",
-    fontSize: 16,
-    fontWeight: "600",
+    color: "#FFFFFF",
+    fontSize: 32,
+    lineHeight: 34,
+    marginTop: -3,
+  },
+
+  header: {
+    marginBottom: 28,
   },
 
   title: {
     fontSize: 30,
     fontWeight: "800",
-    color: "#071B2C",
+    color: "#FFFFFF",
   },
 
   subtitle: {
     marginTop: 6,
-    marginBottom: 28,
-    color: "#666",
-    fontSize: 15,
+    color: "#AFC0CC",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  sectionHeader: {
+    marginBottom: 14,
   },
 
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#071B2C",
-    marginBottom: 14,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+
+  sectionSubtitle: {
+    marginTop: 4,
+    color: "#7F94A3",
+    fontSize: 12,
   },
 
   addressCard: {
     position: "relative",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#0D2638",
     borderRadius: 16,
     padding: 18,
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#E2E6EA",
+    borderColor: "#18384D",
+    minHeight: 125,
   },
 
   selectedAddressCard: {
-    borderColor: "#F28C28",
+    borderColor: "#F97316",
     borderWidth: 2,
+  },
+
+  addressCardPressed: {
+    opacity: 0.85,
+  },
+
+  addressContent: {
+    paddingRight: 35,
   },
 
   addressHeader: {
@@ -344,26 +413,28 @@ const styles = StyleSheet.create({
 
   addressLabel: {
     fontSize: 17,
-    fontWeight: "700",
-    color: "#071B2C",
+    fontWeight: "800",
+    color: "#FFFFFF",
     flex: 1,
   },
 
   defaultBadge: {
-    backgroundColor: "#FFF1E3",
+    backgroundColor: "rgba(249, 115, 22, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(249, 115, 22, 0.25)",
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 10,
   },
 
   defaultText: {
-    color: "#F28C28",
-    fontSize: 12,
-    fontWeight: "700",
+    color: "#F97316",
+    fontSize: 11,
+    fontWeight: "800",
   },
 
   addressText: {
-    color: "#555",
+    color: "#AFC0CC",
     fontSize: 14,
     marginBottom: 3,
   },
@@ -371,63 +442,143 @@ const styles = StyleSheet.create({
   radio: {
     position: "absolute",
     right: 18,
-    bottom: 18,
+    top: 18,
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#B8BEC5",
+    borderColor: "#526A7A",
     alignItems: "center",
     justifyContent: "center",
   },
 
   radioSelected: {
-    borderColor: "#F28C28",
+    borderColor: "#F97316",
   },
 
   radioDot: {
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: "#F28C28",
+    backgroundColor: "#F97316",
   },
 
-  emptyCard: {
-    backgroundColor: "#FFFFFF",
-    padding: 24,
+  addNewAddressButton: {
+    backgroundColor: "#0D2638",
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#315067",
+    borderStyle: "dashed",
+    padding: 16,
+    marginTop: 2,
+    marginBottom: 10,
+    flexDirection: "row",
     alignItems: "center",
   },
 
+  addNewAddressButtonPressed: {
+    opacity: 0.75,
+    transform: [{ scale: 0.99 }],
+  },
+
+  addNewAddressIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "rgba(249, 115, 22, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  addNewAddressIconText: {
+    color: "#F97316",
+    fontSize: 25,
+    fontWeight: "500",
+  },
+
+  addNewAddressTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  addNewAddressSubtitle: {
+    color: "#7F94A3",
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  emptyCard: {
+    backgroundColor: "#0D2638",
+    paddingHorizontal: 24,
+    paddingVertical: 45,
+    borderRadius: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#18384D",
+  },
+
+  emptyIconContainer: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#18384D",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+
+  emptyIcon: {
+    fontSize: 34,
+  },
+
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#071B2C",
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#FFFFFF",
     marginBottom: 8,
   },
 
   emptyText: {
     textAlign: "center",
-    color: "#666",
+    color: "#AFC0CC",
     lineHeight: 21,
+    fontSize: 14,
+    maxWidth: 400,
   },
 
   addAddressButton: {
-    marginTop: 18,
-    backgroundColor: "#F28C28",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+    marginTop: 20,
+    backgroundColor: "#F97316",
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+    borderRadius: 11,
   },
 
-  addAddressText: {
+  addAddressButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.97 }],
+  },
+
+  addAddressButtonText: {
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontWeight: "800",
+    fontSize: 14,
+  },
+
+  errorBox: {
+    backgroundColor: "rgba(248, 113, 113, 0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(248, 113, 113, 0.25)",
+    borderRadius: 12,
+    padding: 13,
+    marginTop: 8,
   },
 
   errorText: {
-    color: "#D32F2F",
-    marginTop: 15,
+    color: "#FCA5A5",
+    fontSize: 13,
     textAlign: "center",
   },
 
@@ -436,33 +587,46 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#071B2C",
     borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
-    padding: 16,
+    borderTopColor: "#18384D",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
+  bottomInfo: {
+    flex: 1,
+    paddingRight: 15,
+  },
+
   bottomLabel: {
-    color: "#777",
-    fontSize: 12,
+    color: "#7F94A3",
+    fontSize: 11,
   },
 
   bottomValue: {
-    color: "#071B2C",
-    fontWeight: "600",
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 13,
     marginTop: 3,
   },
 
   checkoutButton: {
-    backgroundColor: "#F28C28",
+    backgroundColor: "#F97316",
     paddingHorizontal: 25,
     paddingVertical: 14,
     borderRadius: 12,
     minWidth: 125,
     alignItems: "center",
+  },
+
+  checkoutButtonPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 
   checkoutButtonText: {

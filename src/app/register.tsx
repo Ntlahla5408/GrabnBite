@@ -1,18 +1,21 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { register } from "../services/authService";
+
+const logo = require("../../assets/images/GrabnbiteLogo.jpg");
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState("");
@@ -107,16 +110,26 @@ export default function RegisterScreen() {
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* Background Logo */}
+      <View pointerEvents="none" style={styles.backgroundLogoContainer}>
+        <Image
+          source={logo}
+          style={styles.backgroundLogo}
+          resizeMode="contain"
+        />
+      </View>
+
+      <View style={styles.overlay} />
+
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.container}>
           {/* Branding */}
           <View style={styles.brandContainer}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>G</Text>
-            </View>
+            <Image source={logo} style={styles.brandLogo} />
 
             <Text style={styles.brand}>GrabnBite</Text>
 
@@ -240,6 +253,7 @@ export default function RegisterScreen() {
                 <Text style={styles.registerButtonText}>Create Account</Text>
               )}
             </Pressable>
+
             {/* Back to Login */}
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account?</Text>
@@ -259,6 +273,32 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#071B2C",
+    position: "relative",
+  },
+
+  backgroundLogoContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  backgroundLogo: {
+    width: 520,
+    height: 520,
+    opacity: 0.06,
+  },
+
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(7, 27, 44, 0.25)",
   },
 
   scrollContainer: {
@@ -274,34 +314,25 @@ const styles = StyleSheet.create({
 
   brandContainer: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 26,
   },
 
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F97316",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 32,
-    fontWeight: "800",
+  brandLogo: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    marginBottom: 10,
   },
 
   brand: {
     color: "#FFFFFF",
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "800",
   },
 
   tagline: {
-    color: "#CBD5E1",
-    fontSize: 15,
+    color: "#AFC0CC",
+    fontSize: 14,
     marginTop: 5,
   },
 
@@ -311,6 +342,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 28,
+
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+
+    elevation: 8,
   },
 
   heading: {

@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 const categories = [
   { name: "Burgers", icon: "🍔" },
@@ -17,8 +17,17 @@ export default function CategoryList() {
       contentContainerStyle={styles.container}
     >
       {categories.map((category) => (
-        <Pressable key={category.name} style={styles.category}>
-          <Text style={styles.icon}>{category.icon}</Text>
+        <Pressable
+          key={category.name}
+          style={({ pressed }) => [
+            styles.category,
+            pressed && styles.categoryPressed,
+          ]}
+        >
+          <View style={styles.iconContainer}>
+            <Text style={styles.icon}>{category.icon}</Text>
+          </View>
+
           <Text style={styles.name}>{category.name}</Text>
         </Pressable>
       ))}
@@ -28,29 +37,41 @@ export default function CategoryList() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
+    paddingBottom: 6,
+    paddingRight: 20,
     gap: 12,
   },
 
   category: {
-    width: 105,
-    height: 90,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+    width: 82,
+    alignItems: "center",
+  },
+
+  categoryPressed: {
+    opacity: 0.7,
+    transform: [{ scale: 0.96 }],
+  },
+
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#0D2638",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#18384D",
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 8,
   },
 
   icon: {
     fontSize: 28,
-    marginBottom: 6,
   },
 
   name: {
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "600",
-    color: "#172033",
+    textAlign: "center",
   },
 });

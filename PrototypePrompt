@@ -1,0 +1,1488 @@
+"You're right. I left out some of the **most important customer-facing parts** in the prototype prompt, especially because the backend already supports them.
+
+And the **Admin experience needs to be designed around the actual workflow**, not just a generic dashboard.
+
+I would revise the prototype scope before giving it to AI Studio.
+
+### What the prototype must demonstrate
+
+The complete customer journey should be:
+
+**Register → Login → Browse → Restaurant → Menu → Cart → Checkout → Payment → Order → Live Tracking → Delivered**
+
+And the operational journey:
+
+**Restaurant → Accept → Prepare → Ready**
+
+**Admin → Create Delivery → Find Driver → Assign Driver**
+
+**Driver → Pickup → Start Delivery → Live Location → Complete**
+
+So let's make those explicit.
+
+## Revised Google AI Studio prompt
+
+I would actually replace the previous prompt with this version rather than adding random sections to it:
+
+Build a complete mobile food-delivery application called **GrabnBite**.
+
+This is a real working food-delivery system being developed as an MVP. It is inspired by platforms such as Uber Eats, but it must NOT attempt to clone Uber Eats.
+
+The application must demonstrate the complete end-to-end food delivery journey:
+
+CUSTOMER
+Register → Login → Browse Restaurants → View Menu → Add to Cart → Checkout → Payment → Place Order → Track Order → Receive Delivery
+
+RESTAURANT
+Receive Order → Accept → Prepare → Ready for Pickup
+
+ADMIN
+Create Delivery → View Available Drivers → Assign Driver
+
+DRIVER
+Receive Delivery → Pickup → Start Delivery → Send Live Location → Complete Delivery
+
+CUSTOMER
+Receive Live Status Updates → See Driver Location → See Delivered Status
+
+The design must be simple, modern, intuitive and professional.
+
+The user should never feel overwhelmed by the number of features.
+
+---
+
+# TECHNOLOGY
+
+Build the prototype using:
+
+- React Native
+- Expo
+- TypeScript
+
+IMPORTANT:
+
+Generate React Native code, NOT web React.
+
+Do NOT use:
+
+- div
+- button
+- img
+- HTML
+- CSS files
+- DOM APIs
+- web-only components
+
+Use React Native components such as:
+
+- View
+- Text
+- Pressable
+- TouchableOpacity
+- Image
+- TextInput
+- ScrollView
+- FlatList
+- SafeAreaView
+- Modal
+
+Use React Native StyleSheet or compatible styling.
+
+Structure the application using reusable components.
+
+The generated code should be close enough to a real Expo React Native project that individual screens and components can later be copied into an existing React Native application.
+
+---
+
+# DESIGN PRINCIPLES
+
+The application must follow these principles:
+
+1. Keep navigation simple.
+2. Every screen should have one obvious primary action.
+3. Avoid unnecessary information.
+4. Use large, readable text.
+5. Use large touch targets.
+6. Keep forms short.
+7. Do not overload screens with cards and statistics.
+8. Use visual hierarchy.
+9. Make important states obvious.
+10. Use realistic mock data.
+
+The application should feel like a real commercial mobile application rather than a university project.
+
+---
+
+# VISUAL STYLE
+
+Use a modern food-delivery visual style.
+
+Recommended palette:
+
+- Primary: warm orange/coral
+- Background: white/light grey
+- Text: dark charcoal
+- Secondary: neutral grey
+- Success: green
+- Error: red
+
+Use:
+
+- Rounded cards
+- Moderate corner radius
+- Clear spacing
+- Strong primary buttons
+- Large readable typography
+- Food imagery
+- Simple icons
+- Subtle shadows where appropriate
+
+Avoid:
+
+- Excessive gradients
+- Excessive animations
+- Tiny text
+- Clutter
+- Huge amounts of information
+- Complex navigation
+- Excessive dashboard statistics
+
+---
+
+# AUTHENTICATION
+
+Create:
+
+## Welcome Screen
+
+Show:
+
+GrabnBite logo
+
+"Good food. Delivered."
+
+Buttons:
+
+[ Login ]
+
+[ Create Account ]
+
+Keep it visually simple.
+
+---
+
+## Registration
+
+Fields:
+
+First Name
+Last Name
+Email
+Phone Number
+Password
+Confirm Password
+
+Primary button:
+
+[ Create Account ]
+
+Do not add unnecessary registration fields.
+
+---
+
+## Login
+
+Fields:
+
+Email
+Password
+
+Primary button:
+
+[ Login ]
+
+Secondary:
+
+Forgot password
+
+Create account
+
+---
+
+# CUSTOMER APPLICATION
+
+Customer navigation:
+
+Home
+Orders
+Cart
+Profile
+
+Use a bottom navigation bar.
+
+---
+
+# CUSTOMER HOME
+
+The home screen should immediately allow the customer to find food.
+
+Show:
+
+Greeting
+
+"What are you craving?"
+
+Search restaurants
+
+Popular restaurants
+
+Restaurant cards containing:
+
+- Image
+- Restaurant name
+- Rating
+- Open/closed status
+- Short description
+
+Example:
+
+Burger House
+★ 4.8
+Open
+
+Do not overload this screen with excessive categories, advertisements or promotional banners.
+
+The primary action is:
+
+Choose a restaurant.
+
+---
+
+# RESTAURANT DETAILS
+
+When the customer selects a restaurant, display:
+
+Restaurant image
+
+Restaurant name
+
+Rating
+
+Open/closed status
+
+Short description
+
+Menu categories
+
+Example:
+
+BURGERS
+
+Classic Burger
+Beef patty, cheese and sauce
+R75
+
+[ + ]
+
+Chicken Burger
+Crispy chicken and cheese
+R68
+
+[ + ]
+
+SIDES
+
+Large Fries
+R30
+
+[ + ]
+
+The Add button should immediately add the item to the cart.
+
+---
+
+# CART
+
+The cart is a CORE part of the application and must have a dedicated screen.
+
+The cart must clearly show:
+
+Restaurant name
+
+Each selected item
+
+Item name
+
+Unit price
+
+Quantity
+
+Minus button
+
+Quantity
+
+Plus button
+
+Item subtotal
+
+Example:
+
+Classic Burger
+
+[-] 2 [+]
+
+R75 each
+R150
+
+Large Fries
+
+[-] 1 [+]
+
+R30
+
+Then show:
+
+Subtotal
+R180
+
+Delivery Fee
+R25
+
+Total
+R205
+
+Primary button:
+
+[ Proceed to Checkout ]
+
+The cart should also clearly show when it is empty.
+
+Empty cart:
+
+"Your cart is empty."
+
+[ Browse Restaurants ]
+
+Do not allow the customer to accidentally checkout an empty cart.
+
+---
+
+# CHECKOUT
+
+Checkout is a CORE part of the application.
+
+Create a simple but complete checkout screen.
+
+Do NOT turn checkout into a complicated multi-page wizard.
+
+Show these sections:
+
+## Delivery Address
+
+Display the currently selected address.
+
+Example:
+
+Home
+12 Example Street
+Gqeberha
+
+[ Change ]
+
+Allow the customer to select another saved address or add a new address.
+
+## Payment Method
+
+Show the selected payment method.
+
+Options:
+
+Card
+EFT
+Cash
+
+Example:
+
+💳 Card
+
+•••• 4582
+
+[ Change ]
+
+For the prototype, payment details may be mocked.
+
+Do not request or store real card numbers.
+
+## Order Summary
+
+Show:
+
+Items
+Subtotal
+Delivery fee
+Total
+
+Example:
+
+Classic Burger × 2
+R150
+
+Large Fries × 1
+R30
+
+Delivery
+R25
+
+TOTAL
+R205
+
+Primary button:
+
+[ Continue to Payment ]
+
+---
+
+# PAYMENT
+
+Payment must be represented as a distinct step in the customer journey.
+
+Create a clean payment screen.
+
+Show:
+
+Payment amount
+
+Payment method
+
+Order summary
+
+For Card:
+
+Card ending in 4582
+
+For EFT:
+
+EFT payment instructions
+
+For Cash:
+
+"Pay the driver when your order arrives."
+
+Primary button:
+
+[ Pay R205 ]
+
+For the prototype, simulate payment processing.
+
+Show a short processing state:
+
+"Processing payment..."
+
+Then either:
+
+Payment Successful
+
+or
+
+Payment Failed
+
+Successful payment screen:
+
+✓
+
+Payment successful
+
+Your order has been placed.
+
+Order #1042
+
+[ Track Order ]
+
+Failure screen:
+
+Payment failed
+
+Your order has not been paid.
+
+[ Try Again ]
+
+The frontend must NOT allow the customer to simply type an amount and mark an order as paid.
+
+The payment amount must come from the order.
+
+---
+
+# ORDER CONFIRMATION
+
+After successful payment, show a simple confirmation screen.
+
+Example:
+
+✓ Order placed!
+
+Order #1042
+
+Burger House
+
+R205
+
+Estimated delivery:
+
+25–35 minutes
+
+Primary button:
+
+[ Track Order ]
+
+Secondary:
+
+[ View Order ]
+
+---
+
+# CUSTOMER ORDER TRACKING
+
+This is one of the most important screens in the entire application.
+
+Create a visually strong but simple tracking screen.
+
+Show:
+
+Order #1042
+
+Restaurant name
+
+Order status timeline.
+
+Example:
+
+✓ Order placed
+
+✓ Restaurant accepted
+
+✓ Preparing your food
+
+● Driver assigned
+
+○ On the way
+
+○ Delivered
+
+The active state should be visually obvious.
+
+---
+
+# LIVE DRIVER TRACKING
+
+Once a driver has been assigned, show a map.
+
+The map should contain:
+
+Restaurant location
+
+Customer location
+
+Driver marker
+
+The driver marker should appear as if it is moving toward the customer.
+
+Show:
+
+"Your driver is on the way"
+
+Driver name
+
+Driver profile image/avatar
+
+Vehicle type
+
+Rating
+
+Estimated arrival
+
+Example:
+
+Thabo
+★ 4.9
+Toyota Corolla
+
+Arriving in approximately
+15–20 minutes
+
+The prototype should demonstrate simulated live driver movement.
+
+Design this screen so that it can later be connected to:
+
+Redis for current driver location
+
+SignalR for real-time location updates
+
+The frontend should be structured so the mock location data can later be replaced by actual SignalR events.
+
+---
+
+# CUSTOMER ORDERS
+
+Create an Orders screen.
+
+Divide orders into:
+
+ACTIVE
+
+PAST
+
+Active order card:
+
+Order #1042
+
+Burger House
+
+Preparing
+
+R205
+
+[ Track Order ]
+
+Past order card:
+
+Order #1031
+
+Pizza Corner
+
+Delivered
+
+R180
+
+[ View Order ]
+
+---
+
+# ORDER DETAILS
+
+Allow the customer to open an order.
+
+Show:
+
+Order number
+
+Restaurant
+
+Date
+
+Items
+
+Quantities
+
+Prices
+
+Delivery address
+
+Payment status
+
+Order status
+
+Total
+
+For an active order:
+
+[ Track Order ]
+
+---
+
+# CUSTOMER PROFILE
+
+Keep this simple.
+
+Show:
+
+User name
+
+Email
+
+Phone
+
+Then:
+
+Delivery Addresses
+
+Order History
+
+Settings
+
+Logout
+
+Do not add unnecessary account-management features.
+
+---
+
+# RESTAURANT EXPERIENCE
+
+Restaurant users should see a different operational interface.
+
+Navigation:
+
+Dashboard
+Orders
+Menu
+Profile
+
+---
+
+# RESTAURANT DASHBOARD
+
+The dashboard should focus on today's work.
+
+Show:
+
+New Orders
+
+Preparing
+
+Ready for Pickup
+
+Restaurant status:
+
+OPEN / CLOSED
+
+Example:
+
+NEW ORDERS
+3
+
+PREPARING
+2
+
+READY
+1
+
+Then show the most recent pending orders.
+
+Example:
+
+Order #1042
+
+2 × Classic Burger
+1 × Large Fries
+
+R205
+
+[ View Order ]
+
+Do not create complicated business analytics.
+
+---
+
+# RESTAURANT ORDER MANAGEMENT
+
+This is the restaurant's most important workflow.
+
+Pending order:
+
+Order #1042
+
+Customer:
+Ntlahla
+
+Items:
+
+2 × Classic Burger
+1 × Large Fries
+
+Total:
+R205
+
+Primary button:
+
+[ Accept Order ]
+
+After accepting:
+
+Status:
+ACCEPTED
+
+Primary button:
+
+[ Start Preparing ]
+
+After preparing:
+
+Status:
+PREPARING
+
+Primary button:
+
+[ Ready for Pickup ]
+
+After that:
+
+Status:
+READY FOR PICKUP
+
+Show:
+
+"Waiting for driver."
+
+The UI should guide the restaurant through the correct workflow rather than exposing arbitrary status controls.
+
+---
+
+# RESTAURANT MENU
+
+Show:
+
+Categories
+
+Menu items
+
+Availability
+
+Example:
+
+BURGERS
+
+Classic Burger
+R75
+Available ●
+
+Chicken Burger
+R68
+Available ●
+
+SIDES
+
+Large Fries
+R30
+Available ●
+
+Allow:
+
+[ Add Item ]
+
+Edit item
+
+Enable/disable item
+
+Keep this interface simple.
+
+---
+
+# RESTAURANT PROFILE
+
+Show:
+
+Restaurant name
+
+Description
+
+Phone
+
+Email
+
+Address
+
+Open/closed control
+
+---
+
+# DRIVER EXPERIENCE
+
+The driver application should be extremely simple.
+
+Navigation:
+
+Home
+Delivery
+Profile
+
+---
+
+# DRIVER HOME
+
+Show:
+
+Driver name
+
+Online/offline status
+
+Large toggle:
+
+● ONLINE
+
+When online and there is no delivery:
+
+"You're online."
+
+"Waiting for a delivery..."
+
+When a delivery is assigned:
+
+Order #1042
+
+Pickup:
+
+Burger House
+
+Delivery:
+
+12 Example Street
+
+Primary button:
+
+[ View Delivery ]
+
+---
+
+# DRIVER DELIVERY
+
+This is the driver's most important screen.
+
+Show a map.
+
+Map contains:
+
+Restaurant/pickup location
+
+Customer/delivery location
+
+Current driver location
+
+Below the map:
+
+Order #1042
+
+Pickup:
+
+Burger House
+
+Delivery:
+
+12 Example Street
+
+Customer:
+
+Ntlahla
+
+Before pickup:
+
+[ PICK UP ORDER ]
+
+After pickup:
+
+[ START DELIVERY ]
+
+During delivery:
+
+Show:
+
+"Delivering order #1042"
+
+[ COMPLETE DELIVERY ]
+
+The driver should NOT manually enter GPS coordinates.
+
+The app should conceptually obtain the driver's location through the device GPS.
+
+Location updates should later be sent automatically to the backend.
+
+---
+
+# DRIVER LIVE LOCATION
+
+The driver interface should be designed to support automatic location updates.
+
+When the driver is delivering:
+
+GPS coordinates are periodically captured.
+
+The application sends:
+
+latitude
+longitude
+
+to:
+
+PUT /api/Delivery/{deliveryId}/location
+
+The backend stores the latest location in Redis.
+
+SignalR broadcasts the location to customers tracking the order.
+
+Do not create a manual "Update Location" button in the final driver UX.
+
+---
+
+# DRIVER PROFILE
+
+Show:
+
+Driver name
+
+Vehicle type
+
+Vehicle registration
+
+Approval status
+
+Online/offline status
+
+Logout
+
+---
+
+# ADMIN EXPERIENCE
+
+The Admin interface is unfinished and must be designed as a complete MVP administrative workflow.
+
+The Admin does NOT need the same interface as customers.
+
+Create an operational admin dashboard.
+
+Navigation:
+
+Dashboard
+Restaurants
+Drivers
+Deliveries
+
+---
+
+# ADMIN DASHBOARD
+
+Show a small number of useful statistics:
+
+Orders Today
+
+Restaurants
+
+Approved Drivers
+
+Active Deliveries
+
+Example:
+
+Orders Today
+24
+
+Restaurants
+8
+
+Drivers
+12
+
+Active Deliveries
+5
+
+Then show:
+
+ACTIVE DELIVERIES
+
+Order #1042
+
+Burger House
+
+READY FOR PICKUP
+
+Driver:
+Not assigned
+
+[ Assign Driver ]
+
+The dashboard should focus on actions rather than analytics.
+
+---
+
+# ADMIN RESTAURANT MANAGEMENT
+
+Create a restaurant management screen.
+
+Show restaurant list.
+
+Each restaurant card should show:
+
+Restaurant name
+
+Location
+
+Open/closed
+
+Approved/not approved
+
+Example:
+
+Burger House
+
+Gqeberha
+
+OPEN
+
+✓ APPROVED
+
+For unapproved restaurants:
+
+[ Approve ]
+
+Allow Admin to:
+
+View restaurant
+
+Approve restaurant
+
+Deactivate/delete restaurant where appropriate
+
+Keep the screen simple.
+
+---
+
+# ADMIN DRIVER MANAGEMENT
+
+Create a driver management screen.
+
+Show:
+
+Driver name
+
+Vehicle type
+
+Vehicle registration
+
+Online/offline
+
+Approved/not approved
+
+Example:
+
+Thabo
+
+Toyota Corolla
+
+Online
+
+✓ Approved
+
+For unapproved drivers:
+
+[ Approve ]
+
+The admin should be able to approve drivers.
+
+---
+
+# ADMIN DELIVERY MANAGEMENT
+
+This is the most important Admin workflow.
+
+Show active deliveries.
+
+Example:
+
+Order #1042
+
+Restaurant:
+Burger House
+
+Status:
+READY FOR PICKUP
+
+Driver:
+Not Assigned
+
+Primary action:
+
+[ Assign Driver ]
+
+After pressing Assign Driver:
+
+Show available approved and online drivers.
+
+Example:
+
+Thabo
+Toyota Corolla
+● Online
+
+Sipho
+Motorcycle
+● Online
+
+John
+Toyota Polo
+○ Offline
+
+Only approved and online drivers should be presented as available for assignment.
+
+Select a driver.
+
+[ Assign Driver ]
+
+After assignment:
+
+Order #1042
+
+Driver:
+Thabo
+
+Status:
+ASSIGNED
+
+---
+
+# ADMIN DELIVERY DETAILS
+
+When opening a delivery, show:
+
+Order number
+
+Restaurant
+
+Customer
+
+Delivery address
+
+Delivery status
+
+Assigned driver
+
+Driver vehicle
+
+Timeline
+
+Example:
+
+✓ Order ready
+✓ Driver assigned
+● Driver picked up
+○ Delivering
+○ Delivered
+
+This should allow the admin to understand what is happening without excessive information.
+
+---
+
+# ADMIN SHOULD NOT DO EVERYTHING
+
+The Admin interface should NOT contain unnecessary CRUD screens for every database table.
+
+The Admin's main responsibilities in this MVP are:
+
+1. Manage/approve restaurants
+2. Approve drivers
+3. Monitor orders/deliveries
+4. Create deliveries when orders are ready
+5. Assign available drivers
+6. Monitor delivery progress
+
+Do not expose technical database concepts to the Admin.
+
+---
+
+# ROLE-BASED EXPERIENCE
+
+After login, determine the user's role.
+
+Customer → Customer interface
+
+Restaurant → Restaurant interface
+
+Driver → Driver interface
+
+Admin → Admin interface
+
+Do not show customer navigation to restaurant users.
+
+Do not show restaurant management to drivers.
+
+Do not show administrative controls to customers.
+
+---
+
+# MOCK BACKEND BEHAVIOUR
+
+Use mock data initially so the prototype can be fully demonstrated.
+
+However, structure the code so API calls can later replace mock data.
+
+The real backend uses:
+
+ASP.NET Core Web API
+
+JWT authentication
+
+SQL Server
+
+Redis
+
+SignalR
+
+---
+
+# IMPORTANT API CONTEXT
+
+The backend already exposes functionality for:
+
+AUTHENTICATION
+
+POST /api/Authentication/register
+POST /api/Authentication/login
+
+ADDRESSES
+
+GET /api/Addresses
+POST /api/Addresses
+GET /api/Addresses/{id}
+PUT /api/Addresses/{id}
+DELETE /api/Addresses/{id}
+PATCH /api/Addresses/{id}/default
+
+RESTAURANTS
+
+POST /api/Restaurant
+GET /api/Restaurant
+GET /api/Restaurant/{id}
+PUT /api/Restaurant/{id}
+DELETE /api/Restaurant/{id}
+
+MENU
+
+Menu categories and menu items can be created, viewed, updated and deleted.
+
+CART
+
+GET /api/Cart
+POST /api/Cart/items
+PUT /api/Cart/items/{id}
+DELETE /api/Cart/items/{id}
+DELETE /api/Cart
+
+CHECKOUT
+
+POST /api/Checkout
+
+ORDERS
+
+POST /api/Order
+GET /api/Order/{id}
+GET /api/Order/my-orders
+GET /api/Order/restaurant/{restaurantId}
+PUT /api/Order/{id}/restaurant-status
+DELETE /api/Order/{id}
+
+PAYMENTS
+
+POST /api/Payment/{orderId}
+GET /api/Payment/{orderId}
+POST /api/Payment/{orderId}/simulate-success
+POST /api/Payment/{orderId}/simulate-failure
+
+DRIVERS
+
+POST /api/Driver
+GET /api/Driver/me
+PUT /api/Driver/online
+PUT /api/Driver/offline
+PUT /api/Driver/{driverId}/approve
+
+DELIVERIES
+
+POST /api/Delivery/{orderId}
+PUT /api/Delivery/{deliveryId}/assign
+GET /api/Delivery/my-delivery
+PUT /api/Delivery/{deliveryId}/pickup
+PUT /api/Delivery/{deliveryId}/start
+PUT /api/Delivery/{deliveryId}/complete
+PUT /api/Delivery/{deliveryId}/location
+
+---
+
+# REAL-TIME ARCHITECTURE
+
+The final application will use:
+
+Driver React Native App
+↓
+ASP.NET Core API
+↓
+Redis
+↓
+SignalR
+↓
+Customer React Native App
+
+Redis stores the driver's latest location.
+
+SignalR sends:
+
+DriverLocationUpdated
+
+OrderStatusUpdated
+
+The UI should be designed around these events.
+
+When a location update is received, update the driver marker on the customer map.
+
+When an order status update is received, update the order timeline.
+
+---
+
+# COMPLETE DEMONSTRATION
+
+The prototype must make this scenario possible:
+
+1. Customer logs in.
+2. Customer chooses Burger House.
+3. Customer adds Classic Burger and Fries.
+4. Customer opens Cart.
+5. Customer changes quantities.
+6. Customer proceeds to Checkout.
+7. Customer selects delivery address.
+8. Customer selects payment method.
+9. Customer reviews total.
+10. Customer proceeds to Payment.
+11. Payment succeeds.
+12. Customer sees Order Confirmation.
+13. Restaurant receives the order.
+14. Restaurant accepts it.
+15. Restaurant starts preparing.
+16. Restaurant marks it Ready for Pickup.
+17. Admin sees the ready delivery.
+18. Admin creates/opens the delivery.
+19. Admin sees available online drivers.
+20. Admin assigns Thabo.
+21. Driver receives the delivery.
+22. Driver picks up the order.
+23. Driver starts delivery.
+24. Driver location begins updating.
+25. Customer sees the driver moving on the map.
+26. Driver completes delivery.
+27. Customer receives Delivered status.
+
+The entire prototype should make this journey visually clear.
+
+---
+
+# FINAL UX REQUIREMENT
+
+The application must feel SIMPLE.
+
+Do not attempt to display every database field.
+
+Do not create unnecessary screens.
+
+Do not create complicated workflows.
+
+The user should always know:
+
+- Where am I?
+- What is happening?
+- What can I do next?
+
+Every screen should have one primary purpose and one obvious primary action.
+
+Generate the complete React Native/Expo TypeScript prototype with reusable components, navigation, mock data, realistic screens and interactions.
+
+### And I think this version is much closer.
+
+The big difference is that we're now designing around **the actual business journey**, rather than around the database.
+
+One other thing I'd recommend: **don't let AI Studio decide the navigation architecture for us.** We already know the navigation we want. Once it generates the prototype, we can take the screens we like and integrate them into your actual React Native project.
+
+If you paste the generated React Native code back here, I can help you convert it screen-by-screen to use your **real GrabnBite API, JWT authentication, cart, checkout, payment, orders, delivery and SignalR**, rather than leaving it as a mock prototype." So, this prototype was fixed and now we are going to use the code we got from the prototype to build the actual system. so we are two, we will work on different chatgpts, but this is our first prompt. what we need is you to help fix the errors but keep the layout and everything the same. you can also advise.

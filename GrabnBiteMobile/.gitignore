@@ -59,7 +59,3 @@ obj/
 
 # Backend build output
 backend-build/
-
-# Local ASP.NET configuration
-appsettings.Local.json
-appsettings.*.Local.json

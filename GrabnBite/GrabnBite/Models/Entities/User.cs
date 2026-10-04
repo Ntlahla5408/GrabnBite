@@ -1,0 +1,42 @@
+﻿namespace GrabnBite.Models.Entities
+{
+    public class User
+    {
+        public int UserId { get; set; }
+
+        public string FirstName { get; set; } = string.Empty;
+
+        public string LastName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        public string PasswordHash { get; set; } = string.Empty;
+
+        public int RoleId { get; set; }
+
+        public Role Role { get; set; } = null!;
+
+        public bool IsActive { get; set; } = true;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
+
+        // Relationships
+        public ICollection<Address> Addresses { get; set; } = new List<Address>();
+
+        public ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+        public Driver? Driver { get; set; }
+
+        public ICollection<Restaurant> Restaurants { get; set; } = new List<Restaurant>();
+
+        public ICollection<Cart> Carts { get; set; } = new List<Cart>();
+    }
+}

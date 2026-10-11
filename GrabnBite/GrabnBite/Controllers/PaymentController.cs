@@ -475,8 +475,7 @@ namespace GrabnBite.Controllers
                     .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
 
                 // A webhook may arrive before the checkout ID has been saved.
-                // Return success so the provider does not retry forever; the
-                // authenticated customer can still reconcile through /confirm.
+                // Return a retryable response so Yoco can deliver it again.
                 if (payment == null)
                 {
                     _logger.LogWarning("Received Yoco webhook for an unknown checkout; asking Yoco to retry.");

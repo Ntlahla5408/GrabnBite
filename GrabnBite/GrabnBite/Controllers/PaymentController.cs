@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using GrabnBite.Services;
 using System.Security.Claims;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -427,6 +428,164 @@ namespace GrabnBite.Controllers
                 message = "Yoco payment was cancelled.",
                 orderId = orderId
             });
+        }
+
+        // Yoco's browser redirect is not proof of payment. This signed webhook
+        // triggers a server-to-server lookup and uses that response as authority.
+        [AllowAnonymous]
+        [HttpPost("yoco/webhook")]
+        public async Task<IActionResult> YocoWebhook()
+        {
+            if (string.IsNullOrWhiteSpace(_yocoSettings.WebhookSecret))
+            {
+                _logger.LogError("Yoco webhook secret is not configured.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+
+            Request.EnableBuffering();
+            string rawBody;
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+            {
+                rawBody = await reader.ReadToEndAsync();
+                Request.Body.Position = 0;
+            }
+
+            if (!VerifyYocoWebhookSignature(rawBody))
+                return Unauthorized();
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawBody);
+                var root = document.RootElement;
+                var checkoutId = FindCheckoutId(root);
+                if (string.IsNullOrWhiteSpace(checkoutId))
+                    return BadRequest("Webhook did not contain a checkout ID.");
+
+                var payment = await _context.Payments
+                    .Include(p => p.Order)
+                    .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
+
+                // A webhook may arrive before the checkout ID has been saved.
+                // Return success so the provider does not retry forever; the
+                // authenticated customer can still reconcile through /confirm.
+                if (payment == null)
+                {
+                    _logger.LogWarning("Received Yoco webhook for an unknown checkout.");
+                    return Ok(new { received = true });
+                }
+
+                if (payment.PaymentStatus == "PAID")
+                    return Ok(new { received = true, alreadyProcessed = true });
+
+                var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);
+                if (!string.Equals(checkout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
+                    checkout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                    !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Yoco webhook checkout details did not match payment {PaymentId}", payment.PaymentId);
+                    return BadRequest("Checkout details did not match the recorded payment.");
+                }
+
+                if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "PAID";
+                    payment.TransactionReference = checkout.Id;
+                    if (payment.Order.Status != "CANCELLED")
+                        payment.Order.Status = "PENDING";
+                    await _context.SaveChangesAsync();
+                }
+                else if (string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (payment.PaymentStatus != "PAID")
+                    {
+                        payment.PaymentStatus = "FAILED";
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                return Ok(new { received = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Invalid JSON received at Yoco webhook.");
+                return BadRequest("Invalid webhook payload.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process Yoco webhook.");
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        private bool VerifyYocoWebhookSignature(string rawBody)
+        {
+            var webhookId = Request.Headers["webhook-id"].ToString();
+            var timestamp = Request.Headers["webhook-timestamp"].ToString();
+            var signatureHeader = Request.Headers["webhook-signature"].ToString();
+
+            if (string.IsNullOrWhiteSpace(webhookId) ||
+                string.IsNullOrWhiteSpace(timestamp) ||
+                string.IsNullOrWhiteSpace(signatureHeader) ||
+                !long.TryParse(timestamp, out var timestampSeconds))
+                return false;
+
+            var nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (Math.Abs(nowSeconds - timestampSeconds) > 300)
+                return false;
+
+            try
+            {
+                var secret = _yocoSettings.WebhookSecret;
+                if (secret.StartsWith("whsec_", StringComparison.Ordinal))
+                    secret = secret.Substring("whsec_".Length);
+
+                var key = Convert.FromBase64String(secret);
+                var signedContent = $"{webhookId}.{timestamp}.{rawBody}";
+                using var hmac = new HMACSHA256(key);
+                var expected = Convert.ToBase64String(
+                    hmac.ComputeHash(Encoding.UTF8.GetBytes(signedContent)));
+
+                foreach (var item in signatureHeader.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var parts = item.Split(',', 2);
+                    if (parts.Length == 2 &&
+                        parts[0] == "v1" &&
+                        CryptographicOperations.FixedTimeEquals(
+                            Encoding.UTF8.GetBytes(parts[1]),
+                            Encoding.UTF8.GetBytes(expected)))
+                        return true;
+                }
+            }
+            catch (FormatException)
+            {
+                _logger.LogError("Yoco webhook secret is not a valid base64 signing secret.");
+            }
+
+            return false;
+        }
+
+        private static string? FindCheckoutId(JsonElement root)
+        {
+            foreach (var propertyName in new[] { "data", "payload", "checkout" })
+            {
+                if (root.TryGetProperty(propertyName, out var nested) &&
+                    nested.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var idName in new[] { "checkoutId", "checkout_id", "id" })
+                    {
+                        if (nested.TryGetProperty(idName, out var id) &&
+                            id.ValueKind == JsonValueKind.String)
+                        {
+                            var value = id.GetString();
+                            if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("ch_", StringComparison.Ordinal))
+                                return value;
+                        }
+                    }
+                }
+            }
+
+            return null;
         }
 
         [Authorize(Roles = "Customer")]

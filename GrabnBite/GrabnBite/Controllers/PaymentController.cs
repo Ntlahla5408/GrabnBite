@@ -636,8 +636,16 @@ namespace GrabnBite.Controllers
                     await _yocoPaymentService.GetCheckoutStatusAsync(
                         payment.YocoCheckoutId);
 
-                Console.WriteLine(
-                    $"YOCO CHECKOUT STATUS: {checkout.Status}");
+                if (!string.Equals(checkout.Id, payment.YocoCheckoutId, StringComparison.Ordinal))
+                    return Conflict("The payment provider returned a different checkout.");
+
+                var expectedAmountInCents = (int)Math.Round(payment.Amount * 100);
+                if (checkout.Amount != expectedAmountInCents ||
+                    !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Yoco checkout amount/currency mismatch for payment {PaymentId}", payment.PaymentId);
+                    return Conflict("The payment details could not be verified. Please contact support.");
+                }
 
                 if (string.Equals(
                     checkout.Status,

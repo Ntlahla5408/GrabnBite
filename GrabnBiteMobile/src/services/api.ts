@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
 
-const API_URL = "https://localhost:7127";
+// Set EXPO_PUBLIC_API_URL for local development or another deployment.
+// Render is the default for the deployed GrabnBite API.
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://grubnbite.onrender.com";
 
 const TOKEN_KEY = "grabnbite_token";
 

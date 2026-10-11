@@ -678,7 +678,8 @@ namespace GrabnBite.Controllers
                     payment.TransactionReference =
                         checkout.Id;
 
-                    order.Status = "PENDING";
+                    if (order.Status != "CANCELLED")
+                        order.Status = "PENDING";
 
                     await _context.SaveChangesAsync();
 

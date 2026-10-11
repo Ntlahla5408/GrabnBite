@@ -28,7 +28,8 @@ namespace GrabnBite.Services
             decimal amount,
             string currency,
             string successUrl,
-            string cancelUrl)
+            string cancelUrl,
+            string idempotencyKey)
         {
             if (string.IsNullOrWhiteSpace(_settings.SecretKey))
             {
@@ -51,6 +52,9 @@ namespace GrabnBite.Services
                 HttpMethod.Post,
                 $"{_settings.BaseUrl.TrimEnd('/')}/api/checkouts");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.SecretKey);
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+                throw new ArgumentException("An idempotency key is required.", nameof(idempotencyKey));
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
 
             // --------------------------------------------------------
             // Convert amount to cents

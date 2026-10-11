@@ -25,3 +25,22 @@ export async function createYocoPayment(
     token
   );
 }
+
+export interface YocoPaymentConfirmation {
+  message: string;
+  orderId: number;
+  paymentId?: number;
+  paymentStatus: string;
+  orderStatus?: string;
+}
+
+export async function confirmYocoPayment(
+  orderId: number,
+  token: string
+): Promise<YocoPaymentConfirmation> {
+  return apiRequest(
+    `/api/Payment/yoco/${orderId}/confirm`,
+    { method: "POST" },
+    token
+  );
+}

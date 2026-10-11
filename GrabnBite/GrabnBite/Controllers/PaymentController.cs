@@ -265,6 +265,14 @@ namespace GrabnBite.Controllers
                     }
                 }
 
+                if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                {
+                    // A terminal checkout is a new payment attempt, so use a new
+                    // idempotency key. For an ambiguous attempt with no saved
+                    // checkout ID, keep the same key to avoid duplicate sessions.
+                    payment.PaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                }
+
                 payment.PaymentStatus = "INITIATED";
                 payment.YocoCheckoutId = null;
                 payment.TransactionReference = null;
@@ -308,7 +316,8 @@ namespace GrabnBite.Controllers
                         payment.Amount,
                         "ZAR",
                         successUrl,
-                        cancelUrl);
+                        cancelUrl,
+                        payment.PaymentReference ?? throw new InvalidOperationException("Payment reference is missing."));
 
                 // ----------------------------------------------------
                 // Save Yoco checkout ID
@@ -531,7 +540,7 @@ namespace GrabnBite.Controllers
                 return false;
 
             var nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (Math.Abs(nowSeconds - timestampSeconds) > 300)
+            if (timestampSeconds < nowSeconds - 300 || timestampSeconds > nowSeconds + 300)
                 return false;
 
             try

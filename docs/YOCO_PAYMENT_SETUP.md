@@ -14,6 +14,10 @@ Configure these in the Render API service. Keep secret values out of GitHub.
 
 The success/cancel URLs above are configuration examples, not proof that those web pages are already hosted. The verified domain must point to a real website or hosted return page before using it for live checkout. The browser redirect must never be treated as payment proof.
 
+## Mobile app API URL
+
+The mobile client defaults to `https://grubnbite.onrender.com`. For local development or another API host, set `EXPO_PUBLIC_API_URL` in the Expo environment (for example, `https://<your-ngrok-host>` when testing a local API). Do not put Yoco secret keys in this variable or in the app.
+
 ## Register the webhook in Yoco
 
 Register this HTTPS endpoint in the Yoco Checkout API configuration:

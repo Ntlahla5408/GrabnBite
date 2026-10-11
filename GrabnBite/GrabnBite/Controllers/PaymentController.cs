@@ -574,23 +574,35 @@ namespace GrabnBite.Controllers
             return false;
         }
 
-        private static string? FindCheckoutId(JsonElement root)
+        private static string? FindCheckoutId(JsonElement element)
         {
-            foreach (var propertyName in new[] { "data", "payload", "checkout" })
+            if (element.ValueKind == JsonValueKind.Object)
             {
-                if (root.TryGetProperty(propertyName, out var nested) &&
-                    nested.ValueKind == JsonValueKind.Object)
+                foreach (var property in element.EnumerateObject())
                 {
-                    foreach (var idName in new[] { "checkoutId", "checkout_id", "id" })
+                    if ((property.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                         property.Name.Equals("checkoutId", StringComparison.OrdinalIgnoreCase) ||
+                         property.Name.Equals("checkout_id", StringComparison.OrdinalIgnoreCase)) &&
+                        property.Value.ValueKind == JsonValueKind.String)
                     {
-                        if (nested.TryGetProperty(idName, out var id) &&
-                            id.ValueKind == JsonValueKind.String)
-                        {
-                            var value = id.GetString();
-                            if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("ch_", StringComparison.Ordinal))
-                                return value;
-                        }
+                        var value = property.Value.GetString();
+                        if (!string.IsNullOrWhiteSpace(value) &&
+                            value.StartsWith("ch_", StringComparison.Ordinal))
+                            return value;
                     }
+
+                    var nestedResult = FindCheckoutId(property.Value);
+                    if (nestedResult != null)
+                        return nestedResult;
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    var nestedResult = FindCheckoutId(item);
+                    if (nestedResult != null)
+                        return nestedResult;
                 }
             }
 

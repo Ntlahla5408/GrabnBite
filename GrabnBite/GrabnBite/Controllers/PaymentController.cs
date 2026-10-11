@@ -444,7 +444,7 @@ namespace GrabnBite.Controllers
 
             Request.EnableBuffering();
             string rawBody;
-            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true))
             {
                 rawBody = await reader.ReadToEndAsync();
                 Request.Body.Position = 0;
@@ -470,8 +470,8 @@ namespace GrabnBite.Controllers
                 // authenticated customer can still reconcile through /confirm.
                 if (payment == null)
                 {
-                    _logger.LogWarning("Received Yoco webhook for an unknown checkout.");
-                    return Ok(new { received = true });
+                    _logger.LogWarning("Received Yoco webhook for an unknown checkout; asking Yoco to retry.");
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable);
                 }
 
                 if (payment.PaymentStatus == "PAID")

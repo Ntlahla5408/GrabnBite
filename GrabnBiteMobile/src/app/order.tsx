@@ -42,8 +42,8 @@ export default function OrderScreen() {
   const orderId = Number(params.orderId);
 
   const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
+  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
 
   const loadOrder = useCallback(async () => {
     if (!token || !orderId) return;

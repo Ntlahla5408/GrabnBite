@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Load persisted session asynchronously during provider initialization.
     void loadSession();
   }, [loadSession]);
 

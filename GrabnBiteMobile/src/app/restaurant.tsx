@@ -21,7 +21,7 @@ import { MenuItem } from "../types/menu";
 import { Restaurant } from "../types/restaurant";
 
 export default function RestaurantScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const [cart, setCart] = useState<Cart[]>([]);
   const [addingItemId, setAddingItemId] = useState<number | null>(null);
@@ -89,8 +89,12 @@ export default function RestaurantScreen() {
   }
 
   async function handleAddToCart(menuItemId: number) {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
 

@@ -40,10 +40,8 @@ export default function CheckoutScreen() {
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const result = await getAddresses();
+      setError("");
       setAddresses(result);
 
       // Automatically select the default address.

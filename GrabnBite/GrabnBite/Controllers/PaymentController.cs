@@ -184,7 +184,7 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Customer")]
         [HttpPost("yoco/{orderId}")]
-        public async Task<IActionResult> CreateYocoPayment(int orderId, [FromQuery] string? platform = null)
+        public async Task<IActionResult> CreateYocoPayment(int orderId)
         {
             if (orderId <= 0)
             {
@@ -307,9 +307,8 @@ namespace GrabnBite.Controllers
                     new { message = "Online payments are not configured yet. Please contact support." });
             }
 
-            var returnPlatform = string.Equals(platform, "web", StringComparison.OrdinalIgnoreCase) ? "web" : "mobile";
-            successUrl = $"{successUrl.TrimEnd('/')}?orderId={order.OrderId}&platform={returnPlatform}";
-            cancelUrl = $"{cancelUrl.TrimEnd('/')}?orderId={order.OrderId}&platform={returnPlatform}";
+            successUrl = $"{successUrl.TrimEnd('/')}?orderId={order.OrderId}";
+            cancelUrl = $"{cancelUrl.TrimEnd('/')}?orderId={order.OrderId}";
 
             try
             {
@@ -417,18 +416,14 @@ namespace GrabnBite.Controllers
 
         [AllowAnonymous]
         [HttpGet("yoco/success")]
-        public IActionResult YocoSuccess(int orderId, [FromQuery] string? platform = null)
+        public IActionResult YocoSuccess(int orderId)
         {
-            if (orderId <= 0)
-                return BadRequest("A valid order ID is required.");
-
-            // Local Expo web testing returns to the browser route. The production
-            // website should use its real HTTPS domain instead of localhost.
-            if (string.Equals(platform, "web", StringComparison.OrdinalIgnoreCase))
-                return Redirect($"http://localhost:8081/payment-success?orderId={orderId}");
-
-            var appReturnUrl = $"grabnbitemobile://payment-success?orderId={orderId}";
-            return Redirect(appReturnUrl);
+            return Ok(new
+            {
+                message = "Payment return received. This page does not confirm payment.",
+                orderId = orderId,
+                paymentStatusMustBeVerified = true
+            });
         }
 
         // ============================================================
@@ -438,16 +433,13 @@ namespace GrabnBite.Controllers
 
         [AllowAnonymous]
         [HttpGet("yoco/cancel")]
-        public IActionResult YocoCancel(int orderId, [FromQuery] string? platform = null)
+        public IActionResult YocoCancel(int orderId)
         {
-            if (orderId <= 0)
-                return BadRequest("A valid order ID is required.");
-
-            if (string.Equals(platform, "web", StringComparison.OrdinalIgnoreCase))
-                return Redirect($"http://localhost:8081/payment-cancelled?orderId={orderId}");
-
-            var appReturnUrl = $"grabnbitemobile://payment-cancelled?orderId={orderId}";
-            return Redirect(appReturnUrl);
+            return Ok(new
+            {
+                message = "Yoco payment was cancelled.",
+                orderId = orderId
+            });
         }
 
         // Yoco's browser redirect is not proof of payment. This signed webhook

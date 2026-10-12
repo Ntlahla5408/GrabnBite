@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
 } from "react-native";
 
 import { router } from "expo-router";
+import { useCallback } from "react";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 
@@ -31,6 +33,21 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await apiRequest("/api/Users", {}, token);
+      setUsers(data);
+    } catch (err) {
+      console.error("Failed to load admin users:", err);
+      setError("Unable to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!user) {
       router.replace("/login");
@@ -42,24 +59,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    loadUsers();
-  }, [user]);
-
-  async function loadUsers() {
-    try {
-      setLoading(true);
-      setError("");
-
-      const data = await apiRequest("/api/Users", {}, token);
-
-      setUsers(data);
-    } catch (err) {
-      console.error("Failed to load admin users:", err);
-      setError("Unable to load dashboard data.");
-    } finally {
-      setLoading(false);
-    }
-  }
+    void loadUsers();
+  }, [user, loadUsers]);
 
   async function handleLogout() {
     Alert.alert("Logout", "Are you sure you want to logout?", [

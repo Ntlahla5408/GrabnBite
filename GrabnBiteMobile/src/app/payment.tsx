@@ -52,6 +52,7 @@ export default function PaymentScreen() {
     }
 
     if (Number.isInteger(orderId) && orderId > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async payment initiation; state updates occur when the request progresses.
       void startPayment();
     }
   }, [token, orderId, startPayment]);

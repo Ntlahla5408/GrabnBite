@@ -101,7 +101,7 @@ export default function AdminRestaurantEditScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     if (restaurantId) void loadRestaurant();
-  }, [user, restaurantId, router, loadRestaurant]);
+  }, [user, restaurantId, loadRestaurant]);
 
   async function saveRestaurant() {
     if (!name.trim()) {

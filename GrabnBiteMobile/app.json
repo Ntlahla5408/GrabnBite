@@ -29,16 +29,10 @@
       [
         "expo-splash-screen",
         {
-<<<<<<< HEAD
           "backgroundColor": "#0B1F33",
           "image": "./assets/images/GrabnbiteLogo.jpg",
           "imageWidth": 220,
           "resizeMode": "contain"
-=======
-          "backgroundColor": "#000000",
-          "image": "./assets/images/GrabnbiteLogo.jpg",
-          "imageWidth": 240
->>>>>>> cc7df55090d16948f1f740d8d1de4f5dff1625e9
         }
       ],
       "expo-secure-store"

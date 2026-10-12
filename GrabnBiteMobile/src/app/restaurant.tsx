@@ -36,8 +36,8 @@ export default function RestaurantScreen() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Number.isInteger(restaurantId) && restaurantId > 0);
+  const [error, setError] = useState(Number.isInteger(restaurantId) && restaurantId > 0 ? "" : "Restaurant could not be found.");
 
   const loadRestaurant = useCallback(async () => {
     try {

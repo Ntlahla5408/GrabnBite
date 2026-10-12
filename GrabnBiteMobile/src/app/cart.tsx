@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -26,25 +26,14 @@ export default function CartScreen() {
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    loadCart();
-  }, [token]);
-
-  async function loadCart() {
+  const loadCart = useCallback(async () => {
     if (!token) {
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const data = await getCart(token);
+      setError("");
 
       setCarts(data);
     } catch (error) {
@@ -53,7 +42,16 @@ export default function CartScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    void loadCart();
+  }, [token, loadCart]);
 
   async function changeQuantity(
     cartItemId: number,

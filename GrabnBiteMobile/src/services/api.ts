@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Platform } from "react-native";
 
 // Render is the default API URL.
@@ -38,7 +39,19 @@ export async function apiRequest(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || `API Error: ${response.status}`);
+
+    // A protected API request with an expired or missing token should send
+    // the customer to login instead of leaving them on a broken screen.
+    const isAuthenticationRequest =
+      endpoint.startsWith("/api/Authentication/login") ||
+      endpoint.startsWith("/api/Authentication/register");
+
+    if (response.status === 401 && !isAuthenticationRequest) {
+      router.replace("/login");
+    }
+
+    const message = errorText || `API Error: ${response.status}`;
+    throw new Error(`${message} (HTTP ${response.status})`);
   }
 
   return response.json();

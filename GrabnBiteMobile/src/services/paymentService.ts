@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 import { apiRequest } from "./api";
 
 export interface YocoPaymentResponse {
@@ -18,7 +20,7 @@ export async function createYocoPayment(
   token: string
 ): Promise<YocoPaymentResponse> {
   return apiRequest(
-    `/api/Payment/yoco/${orderId}`,
+    `/api/Payment/yoco/${orderId}?platform=${Platform.OS === "web" ? "web" : "mobile"}`,
     {
       method: "POST",
     },

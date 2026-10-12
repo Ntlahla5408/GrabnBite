@@ -1,85 +1,93 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+
 import { useAuth } from "../context/authContext";
 import { confirmYocoPayment } from "../services/paymentService";
-import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function PaymentSuccessScreen() {
-  const params = useLocalSearchParams<{
-    orderId?: string;
-  }>();
-
+  const params = useLocalSearchParams<{ orderId?: string }>();
   const orderId = params.orderId;
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
+
   const [checking, setChecking] = useState(true);
   const [verified, setVerified] = useState(false);
   const [message, setMessage] = useState("Checking your payment with Yoco...");
 
-  useEffect(() => {
-    let active = true;
+  const verifyPayment = useCallback(async () => {
+    if (authLoading) return;
 
-    async function verifyPayment() {
-      if (!token || !orderId || !Number.isInteger(Number(orderId))) {
-        if (active) {
-          setMessage("We could not verify this payment. Open your order to check its current status.");
-          setChecking(false);
-        }
-        return;
-      }
-
-      try {
-        const result = await confirmYocoPayment(Number(orderId), token);
-        if (!active) return;
-        const isPaid = result.paymentStatus?.toUpperCase() === "PAID";
-        setVerified(isPaid);
-        setMessage(isPaid
-          ? "Yoco has confirmed your payment."
-          : "Yoco has not confirmed this payment yet. Please check again shortly.");
-      } catch {
-        if (active) {
-          setMessage("We could not verify your payment right now. Your order has not been marked paid by this screen.");
-        }
-      } finally {
-        if (active) setChecking(false);
-      }
+    if (!token || !orderId || !Number.isInteger(Number(orderId)) || Number(orderId) <= 0) {
+      setVerified(false);
+      setMessage("We could not verify this payment. Sign in and open your order to check its current status.");
+      setChecking(false);
+      return;
     }
 
-    verifyPayment();
-    return () => { active = false; };
-  }, [token, orderId]);
+    setChecking(true);
+    try {
+      const result = await confirmYocoPayment(Number(orderId), token);
+      const isPaid = result.paymentStatus?.toUpperCase() === "PAID";
+      setVerified(isPaid);
+      setMessage(
+        isPaid
+          ? "Yoco has confirmed your payment."
+          : "Yoco has not confirmed this payment yet. You can check again shortly."
+      );
+    } catch {
+      setVerified(false);
+      setMessage("We could not verify your payment right now. This screen has not marked your order as paid. Please try checking again.");
+    } finally {
+      setChecking(false);
+    }
+  }, [authLoading, token, orderId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Trigger asynchronous verification after auth restoration.
+    void verifyPayment();
+  }, [authLoading, verifyPayment]);
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.icon}>✓</Text>
+        <Text style={[styles.icon, !verified && styles.pendingIcon]}>
+          {verified ? "✓" : checking ? "…" : "!"}
+        </Text>
 
-        <Text style={styles.title}>{checking ? "Verifying Payment" : verified ? "Payment Successful" : "Payment Not Yet Verified"}</Text>
+        <Text style={styles.title}>
+          {authLoading || checking
+            ? "Verifying Payment"
+            : verified
+              ? "Payment Successful"
+              : "Payment Not Yet Verified"}
+        </Text>
 
         <Text style={styles.message}>{message}</Text>
 
         {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
+        {!verified && !checking ? (
+          <Pressable style={styles.button} onPress={() => void verifyPayment()}>
+            <Text style={styles.buttonText}>Check Payment Again</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
-          style={[styles.button, (!verified || checking) && { opacity: 0.5 }]}
+          style={[styles.button, (!verified || checking) && styles.disabledButton]}
           disabled={!verified || checking}
           onPress={() =>
-            router.push({
-              pathname: "/order",
-              params: {
-                orderId: orderId ?? "",
-              },
-            })
+            router.push({ pathname: "/order", params: { orderId: orderId ?? "" } })
           }
         >
           <Text style={styles.buttonText}>Track My Order</Text>
         </Pressable>
 
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => router.replace("/")}
-        >
+        <Pressable style={styles.secondaryButton} onPress={() => router.replace("/")}>
           <Text style={styles.secondaryText}>Back to Home</Text>
         </Pressable>
+
+        {checking ? <ActivityIndicator style={styles.spinner} color="#F28C28" /> : null}
       </View>
     </View>
   );
@@ -93,7 +101,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-
   card: {
     width: "100%",
     maxWidth: 430,
@@ -102,7 +109,6 @@ const styles = StyleSheet.create({
     padding: 30,
     alignItems: "center",
   },
-
   icon: {
     width: 70,
     height: 70,
@@ -115,50 +121,54 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 20,
   },
-
+  pendingIcon: {
+    backgroundColor: "#FFF3E0",
+    color: "#E65100",
+  },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
     color: "#071B2C",
     marginBottom: 10,
+    textAlign: "center",
   },
-
   message: {
     textAlign: "center",
     color: "#666",
     fontSize: 15,
     lineHeight: 22,
   },
-
   order: {
     marginTop: 18,
     fontSize: 18,
     fontWeight: "700",
     color: "#1A4B6B",
   },
-
   button: {
     width: "100%",
     backgroundColor: "#F28C28",
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 28,
+    marginTop: 18,
   },
-
+  disabledButton: {
+    opacity: 0.45,
+  },
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
   },
-
   secondaryButton: {
     marginTop: 15,
     padding: 10,
   },
-
   secondaryText: {
     color: "#1A4B6B",
     fontWeight: "600",
+  },
+  spinner: {
+    marginTop: 14,
   },
 });

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -39,6 +39,20 @@ export default function AdminRestaurantsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadRestaurants = useCallback(async () => {
+    try {
+      const data = await apiRequest("/api/Restaurant", {}, token);
+      setError("");
+
+      setRestaurants(data);
+    } catch (err) {
+      console.error("Failed to load restaurants:", err);
+      setError("Unable to load restaurants. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!user) {
       router.replace("/login");
@@ -50,24 +64,9 @@ export default function AdminRestaurantsScreen() {
       return;
     }
 
-    loadRestaurants();
-  }, [user]);
-
-  async function loadRestaurants() {
-    try {
-      setLoading(true);
-      setError("");
-
-      const data = await apiRequest("/api/Restaurant", {}, token);
-
-      setRestaurants(data);
-    } catch (err) {
-      console.error("Failed to load restaurants:", err);
-      setError("Unable to load restaurants. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
+    void loadRestaurants();
+  }, [user, loadRestaurants]);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

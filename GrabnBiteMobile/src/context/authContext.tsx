@@ -2,10 +2,12 @@ import {
     createContext,
     ReactNode,
     useContext,
+    useCallback,
     useEffect,
     useState,
 } from "react";
 import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 import { login as loginApi } from "../services/authService";
 import { LoginResponse, User } from "../types/auth";
@@ -26,13 +28,19 @@ const USER_KEY = "grabnbite_user";
 async function saveToken(token: string) {
   if (Platform.OS === "web") {
     localStorage.setItem(TOKEN_KEY, token);
+    return;
   }
+
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
 }
 
 async function saveUser(user: User) {
   if (Platform.OS === "web") {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    return;
   }
+
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
 }
 
 async function getToken() {
@@ -40,7 +48,7 @@ async function getToken() {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  return null;
+  return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 async function getUser() {
@@ -50,16 +58,23 @@ async function getUser() {
     if (storedUser) {
       return JSON.parse(storedUser) as User;
     }
+
+    return null;
   }
 
-  return null;
+  const storedUser = await SecureStore.getItemAsync(USER_KEY);
+  return storedUser ? (JSON.parse(storedUser) as User) : null;
 }
 
 async function removeSession() {
   if (Platform.OS === "web") {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    return;
   }
+
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await SecureStore.deleteItemAsync(USER_KEY);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -67,11 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSession();
-  }, []);
-
-  async function loadSession() {
+  const loadSession = useCallback(async () => {
     try {
       const storedToken = await getToken();
       const storedUser = await getUser();
@@ -85,25 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Load persisted session asynchronously during provider initialization.
+    void loadSession();
+  }, [loadSession]);
 
   async function login(email: string, password: string) {
     const cleanEmail = String(email).trim();
     const cleanPassword = String(password);
 
-    console.log("AUTH CONTEXT:", {
-      email: cleanEmail,
-      passwordProvided: cleanPassword.length > 0,
-    });
-
     const result = await loginApi(cleanEmail, cleanPassword);
-
-    console.log("LOGIN RESULT:", {
-  userId: result.userId,
-  email: result.email,
-  role: result.role,
-  hasToken: !!result.token,
-});
 
     const userData: User = {
       userId: result.userId,
@@ -121,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return result;
   }
+
   async function logout() {
     await removeSession();
 

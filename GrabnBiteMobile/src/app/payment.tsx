@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -13,7 +13,7 @@ import { useAuth } from "../context/authContext";
 import { createYocoPayment } from "../services/paymentService";
 
 export default function PaymentScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -22,36 +22,19 @@ export default function PaymentScreen() {
 
   const orderId = Number(params.orderId);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
   const [openingPayment, setOpeningPayment] = useState(false);
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!orderId) {
-      setError("Invalid order.");
-      setLoading(false);
-      return;
-    }
-
-    startPayment();
-  }, [token, orderId]);
-
-  async function startPayment() {
+  const startPayment = useCallback(async () => {
     if (!token || !orderId) {
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const result = await createYocoPayment(orderId, token);
+      setError("");
 
       setCheckoutUrl(result.redirectUrl);
     } catch {
@@ -61,7 +44,12 @@ export default function PaymentScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, orderId]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
 
   async function openPayment() {
     if (!checkoutUrl) {
@@ -147,11 +135,11 @@ export default function PaymentScreen() {
         <Text style={styles.title}>Secure Payment</Text>
 
         <Text style={styles.description}>
-          Your order has been created successfully.
+          Your order has been created and is awaiting payment.
         </Text>
 
         <Text style={styles.description}>
-          Continue to Yoco to securely complete your payment.
+          Continue to Yoco to complete your payment. Your order will not be marked as paid until the payment is verified.
         </Text>
 
         {/* Order Card */}

@@ -1,4 +1,6 @@
+import { router } from "expo-router";
 import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 // Render is the default API URL.
 // Set EXPO_PUBLIC_API_URL to use another deployment or a local development API.
@@ -12,7 +14,7 @@ async function getStoredToken(): Promise<string | null> {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  return null;
+  return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export async function apiRequest(
@@ -38,7 +40,19 @@ export async function apiRequest(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(errorText || `API Error: ${response.status}`);
+
+    // A protected API request with an expired or missing token should send
+    // the customer to login instead of leaving them on a broken screen.
+    const isAuthenticationRequest =
+      endpoint.startsWith("/api/Authentication/login") ||
+      endpoint.startsWith("/api/Authentication/register");
+
+    if (response.status === 401 && !isAuthenticationRequest) {
+      router.replace("/login");
+    }
+
+    const message = errorText || `API Error: ${response.status}`;
+    throw new Error(`${message} (HTTP ${response.status})`);
   }
 
   return response.json();

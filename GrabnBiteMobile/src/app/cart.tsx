@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -19,32 +19,21 @@ import {
 import { Cart } from "../types/cart";
 
 export default function CartScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    loadCart();
-  }, [token]);
-
-  async function loadCart() {
+  const loadCart = useCallback(async () => {
     if (!token) {
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const data = await getCart(token);
+      setError("");
 
       setCarts(data);
     } catch (error) {
@@ -53,7 +42,21 @@ export default function CartScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
+    void loadCart();
+  }, [authLoading, token, loadCart]);
 
   async function changeQuantity(
     cartItemId: number,

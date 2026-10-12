@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
+import { useAuth } from "../context/authContext";
 import {
   Address,
   createAddress,
@@ -23,6 +24,8 @@ import {
 } from "../services/addressService";
 
 export default function AddressesScreen() {
+  const { token, loading: authLoading } = useAuth();
+
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,11 +39,21 @@ export default function AddressesScreen() {
   const [postalCode, setPostalCode] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const loadAddresses = async () => {
+  const loadAddresses = useCallback(async () => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!token) {
+      router.replace("/login");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const result = await getAddresses();
+      const result = await getAddresses(token);
 
       setAddresses(result);
     } catch (error) {
@@ -53,19 +66,24 @@ export default function AddressesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, token]);
 
   useFocusEffect(
     useCallback(() => {
-      loadAddresses();
-    }, []),
+      void loadAddresses();
+    }, [loadAddresses]),
   );
 
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
 
-      const result = await getAddresses();
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      const result = await getAddresses(token);
 
       setAddresses(result);
     } catch (error) {
@@ -101,6 +119,11 @@ export default function AddressesScreen() {
     try {
       setSaving(true);
 
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
       const newAddress = await createAddress({
         label: label.trim(),
         streetAddress: streetAddress.trim(),
@@ -110,7 +133,7 @@ export default function AddressesScreen() {
         latitude: 0,
         longitude: 0,
         isDefault: addresses.length === 0,
-      });
+      }, token);
 
       setAddresses((current) => [...current, newAddress]);
 
@@ -144,7 +167,12 @@ export default function AddressesScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteAddress(address.addressId);
+              if (!token) {
+                router.replace("/login");
+                return;
+              }
+
+              await deleteAddress(address.addressId, token);
 
               setAddresses((current) =>
                 current.filter((item) => item.addressId !== address.addressId),
@@ -169,7 +197,12 @@ export default function AddressesScreen() {
     }
 
     try {
-      await setDefaultAddress(address.addressId);
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+
+      await setDefaultAddress(address.addressId, token);
 
       setAddresses((current) =>
         current.map((item) => ({

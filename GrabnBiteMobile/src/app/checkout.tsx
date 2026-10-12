@@ -43,7 +43,7 @@ export default function CheckoutScreen() {
       setLoading(true);
       setError("");
 
-      const result = await getAddresses(token);
+      const result = await getAddresses();
       setAddresses(result);
 
       // Automatically select the default address.

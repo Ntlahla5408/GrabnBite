@@ -53,7 +53,7 @@ export default function PaymentScreen() {
       const result = await createYocoPayment(orderId, token);
 
       setCheckoutUrl(result.redirectUrl);
-    } catch (error) {
+    } catch {
       console.error("Failed to create Yoco payment.");
 
       setError("Unable to start payment. Please try again.");

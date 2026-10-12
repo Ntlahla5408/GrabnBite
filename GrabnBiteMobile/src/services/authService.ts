@@ -10,8 +10,6 @@ export async function login(
     password: password,
   };
 
-  console.log("AUTH BODY:", JSON.stringify(body));
-
   return apiRequest("/api/Authentication/login", {
     method: "POST",
     body: JSON.stringify(body),
@@ -49,8 +47,6 @@ export async function register(
     phoneNumber: phoneNumber.trim(),
     password,
   };
-
-  console.log("REGISTER BODY:", JSON.stringify(body));
 
   return apiRequest("/api/Authentication/register", {
     method: "POST",

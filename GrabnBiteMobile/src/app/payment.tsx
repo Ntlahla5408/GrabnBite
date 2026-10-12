@@ -12,7 +12,7 @@ import { useAuth } from "../context/authContext";
 import { createYocoPayment } from "../services/paymentService";
 
 export default function PaymentScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -46,6 +46,10 @@ export default function PaymentScreen() {
   }, [token, orderId]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
       router.replace("/login");
       return;
@@ -55,7 +59,7 @@ export default function PaymentScreen() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async payment initiation; state updates occur when the request progresses.
       void startPayment();
     }
-  }, [token, orderId, startPayment]);
+  }, [authLoading, token, orderId, startPayment]);
 
   function openPayment() {
     if (!checkoutUrl) {

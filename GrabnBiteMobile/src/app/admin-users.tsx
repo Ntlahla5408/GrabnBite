@@ -63,6 +63,7 @@ export default function AdminUsersScreen() {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadUsers();
   }, [user, router, loadUsers]);
 

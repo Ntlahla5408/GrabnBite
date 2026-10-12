@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -62,19 +63,23 @@ export default function PaymentScreen() {
     }
   }
 
-  function openPayment() {
+  async function openPayment() {
     if (!checkoutUrl) {
+      setError("The payment link is missing. Please try again.");
       return;
     }
 
     try {
       setOpeningPayment(true);
+      setError("");
 
-      window.location.assign(checkoutUrl);
-    } catch {
-      console.error("Failed to open the Yoco payment page.");
+      // Linking opens Yoco in the device browser in Expo Go and native apps.
+      await Linking.openURL(checkoutUrl);
+    } catch (openError) {
+      console.error("Failed to open the Yoco payment page.", openError);
+      setError("Unable to open the payment page. Please check your connection and try again.");
+    } finally {
       setOpeningPayment(false);
-      setError("Unable to open the payment page. Please try again.");
     }
   }
 

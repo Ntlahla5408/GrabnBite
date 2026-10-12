@@ -102,6 +102,7 @@ export default function OrdersScreen() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadOrders();
   }, [loadOrders]);
 

@@ -40,7 +40,7 @@ export default function CheckoutScreen() {
     }
 
     try {
-      const result = await getAddresses();
+      const result = await getAddresses(token);
       setError("");
       setAddresses(result);
 

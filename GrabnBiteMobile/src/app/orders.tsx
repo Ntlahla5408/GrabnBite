@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -83,7 +83,7 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  async function loadOrders() {
+  const loadOrders = useCallback(async () => {
     try {
       const result = await apiRequest("/api/Orders/my-orders");
       setError("");
@@ -99,11 +99,11 @@ export default function OrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    void loadOrders();
+  }, [loadOrders]);
 
   async function handleRefresh() {
     setRefreshing(true);

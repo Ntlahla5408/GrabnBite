@@ -70,9 +70,8 @@ export default function RestaurantMenuScreen() {
     if (!token || user?.role !== "Restaurant") return;
 
     try {
-      setError("");
-
       const restaurant = await getMyRestaurant(token);
+      setError("");
 
       setRestaurantId(restaurant.restaurantId);
       setRestaurantName(restaurant.name);

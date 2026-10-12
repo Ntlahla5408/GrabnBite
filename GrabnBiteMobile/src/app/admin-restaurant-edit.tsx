@@ -48,9 +48,9 @@ export default function AdminRestaurantEditScreen() {
   const [longitude, setLongitude] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(restaurantId));
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(restaurantId ? "" : "Restaurant ID is missing.");
 
   const loadRestaurant = useCallback(async () => {
     try {

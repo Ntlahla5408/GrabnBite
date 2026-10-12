@@ -4,7 +4,7 @@
     "slug": "GrabnBiteMobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/GrabnbiteLogo.jpg",
     "scheme": "grabnbitemobile",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -17,7 +17,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.grubnbite.app"
     },
     "web": {
       "output": "static",
@@ -28,9 +29,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#0B1F33",
+          "image": "./assets/images/GrabnbiteLogo.jpg",
+          "imageWidth": 220,
+          "resizeMode": "contain"
         }
       ],
       "expo-secure-store"
@@ -38,6 +40,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "decacac0-103e-48f6-9afc-77a98b65c7a5"
+      }
     }
   }
 }

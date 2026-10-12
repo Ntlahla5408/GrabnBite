@@ -33,7 +33,7 @@ interface Order {
 }
 
 export default function OrderScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -65,6 +65,10 @@ export default function OrderScreen() {
   }, [token, orderId]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
       router.replace("/login");
       return;
@@ -74,7 +78,7 @@ export default function OrderScreen() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
       void loadOrder();
     }
-  }, [token, orderId, loadOrder]);
+  }, [authLoading, token, orderId, loadOrder]);
 
   if (loading) {
     return (

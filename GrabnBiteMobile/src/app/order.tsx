@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -45,29 +45,12 @@ export default function OrderScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!orderId) {
-      setError("Invalid order.");
-      setLoading(false);
-      return;
-    }
-
-    loadOrder();
-  }, [token, orderId]);
-
-  async function loadOrder() {
+  const loadOrder = useCallback(async () => {
     if (!token || !orderId) return;
 
     try {
-      setLoading(true);
-      setError("");
-
       const result = await apiRequest(`/api/Orders/${orderId}`, {}, token);
+      setError("");
 
       console.log("ORDER RESULT:", result);
 
@@ -79,7 +62,18 @@ export default function OrderScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, orderId]);
+
+  useEffect(() => {
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (Number.isInteger(orderId) && orderId > 0) {
+      void loadOrder();
+    }
+  }, [token, orderId, loadOrder]);
 
   if (loading) {
     return (

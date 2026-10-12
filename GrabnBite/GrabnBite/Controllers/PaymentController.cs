@@ -421,8 +421,7 @@ namespace GrabnBite.Controllers
             if (orderId <= 0)
                 return BadRequest("A valid order ID is required.");
 
-            // The browser must return to the installed GrabnBite app.
-            // This redirect does not confirm payment; the app verifies with Yoco.
+            // Return to the installed GrabnBite app. Payment must still be verified by the app.
             return Redirect($"grabnbitemobile://payment-success?orderId={orderId}");
         }
 

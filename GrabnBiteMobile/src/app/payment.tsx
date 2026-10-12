@@ -51,17 +51,6 @@ export default function PaymentScreen() {
       return;
     }
 
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (Number.isInteger(orderId) && orderId > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async payment initiation; state updates occur when the request progresses.
-      void startPayment();
-    }
-  }, [authLoading, token, orderId, startPayment]);
-
   async function openPayment() {
     if (!checkoutUrl) {
       setError("The payment link is missing. Please try again.");

@@ -26,16 +26,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadRestaurants();
-  }, []);
-
   async function loadRestaurants() {
     try {
-      setLoading(true);
-      setError("");
-
       const data = await getRestaurants();
+      setError("");
 
       // Only show approved restaurants to customers.
       const approvedRestaurants = data.filter(
@@ -50,6 +44,10 @@ export default function HomeScreen() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

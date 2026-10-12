@@ -65,7 +65,7 @@ export default function AdminUsersScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadUsers();
-  }, [user, router, loadUsers]);
+  }, [user, loadUsers]);
 
   const filteredUsers = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

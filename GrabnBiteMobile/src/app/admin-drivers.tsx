@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -41,6 +41,19 @@ export default function AdminDrivers() {
   const [refreshing, setRefreshing] = useState(false);
   const [approvingId, setApprovingId] = useState<number | null>(null);
 
+  const loadDrivers = useCallback(async () => {
+    try {
+      const data = await apiRequest("/api/Driver", {}, token);
+
+      setDrivers(data);
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to load drivers.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!user) {
       router.replace("/login");
@@ -52,21 +65,8 @@ export default function AdminDrivers() {
       return;
     }
 
-    loadDrivers();
-  }, [user]);
-
-  const loadDrivers = async () => {
-    try {
-      const data = await apiRequest("/api/Driver", {}, token);
-
-      setDrivers(data);
-    } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to load drivers.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    void loadDrivers();
+  }, [user, router, loadDrivers]);
 
   const onRefresh = () => {
     setRefreshing(true);

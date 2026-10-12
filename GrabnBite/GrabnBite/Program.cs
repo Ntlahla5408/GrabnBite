@@ -109,10 +109,10 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("DATABASE CONNECTION: True");
         await db.Database.CloseConnectionAsync();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
         Console.WriteLine("DATABASE CONNECTION: False");
-        Console.WriteLine($"ERROR: {ex}");
+        app.Logger.LogError("Database connection failed during startup; exception details were omitted to protect connection credentials.");
     }
 
     await DbSeeder.SeedAsync(db);

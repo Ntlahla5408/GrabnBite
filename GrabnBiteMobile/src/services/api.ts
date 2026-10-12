@@ -1,6 +1,9 @@
 import { Platform } from "react-native";
 
-const API_URL = "https://localhost:7127";
+// Render is the default API URL.
+// Set EXPO_PUBLIC_API_URL to use another deployment or a local development API.
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "https://grubnbite.onrender.com";
 
 const TOKEN_KEY = "grabnbite_token";
 
@@ -19,13 +22,13 @@ export async function apiRequest(
 ) {
   const storedToken = token ?? (await getStoredToken());
 
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
+  // Headers safely supports both existing headers and Authorization.
+  const headers = new Headers(options.headers);
+
+  headers.set("Content-Type", "application/json");
 
   if (storedToken) {
-    headers.Authorization = `Bearer ${storedToken}`;
+    headers.set("Authorization", `Bearer ${storedToken}`);
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -35,7 +38,6 @@ export async function apiRequest(
 
   if (!response.ok) {
     const errorText = await response.text();
-
     throw new Error(errorText || `API Error: ${response.status}`);
   }
 

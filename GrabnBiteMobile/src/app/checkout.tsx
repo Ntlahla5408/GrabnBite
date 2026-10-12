@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -34,16 +34,7 @@ export default function CheckoutScreen() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    loadAddresses();
-  }, [token]);
-
-  async function loadAddresses() {
+  const loadAddresses = useCallback(async () => {
     if (!token) {
       return;
     }
@@ -52,8 +43,7 @@ export default function CheckoutScreen() {
       setLoading(true);
       setError("");
 
-      const result = await getAddresses(token);
-
+      const result = await getAddresses();
       setAddresses(result);
 
       // Automatically select the default address.
@@ -63,6 +53,8 @@ export default function CheckoutScreen() {
         setSelectedAddressId(defaultAddress.addressId);
       } else if (result.length > 0) {
         setSelectedAddressId(result[0].addressId);
+      } else {
+        setSelectedAddressId(null);
       }
     } catch (error) {
       console.error("Failed to load addresses:", error);
@@ -70,7 +62,16 @@ export default function CheckoutScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    void loadAddresses();
+  }, [token, loadAddresses]);
 
   async function handleCheckout() {
     if (!token) {

@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrabnBite.Configuration;
 using GrabnBite.DTOs.Payment;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace GrabnBite.Services
 {
@@ -11,20 +12,24 @@ namespace GrabnBite.Services
     {
         private readonly HttpClient _httpClient;
         private readonly YocoSettings _settings;
+        private readonly ILogger<YocoPaymentService> _logger;
 
         public YocoPaymentService(
             HttpClient httpClient,
-            IOptions<YocoSettings> settings)
+            IOptions<YocoSettings> settings,
+            ILogger<YocoPaymentService> logger)
         {
             _httpClient = httpClient;
             _settings = settings.Value;
+            _logger = logger;
         }
 
         public async Task<YocoCheckoutResponseDto> CreateCheckoutAsync(
             decimal amount,
             string currency,
             string successUrl,
-            string cancelUrl)
+            string cancelUrl,
+            string idempotencyKey)
         {
             if (string.IsNullOrWhiteSpace(_settings.SecretKey))
             {
@@ -43,10 +48,13 @@ namespace GrabnBite.Services
             // Yoco authentication
             // --------------------------------------------------------
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue(
-                    "Bearer",
-                    _settings.SecretKey);
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"{_settings.BaseUrl.TrimEnd('/')}/api/checkouts");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.SecretKey);
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+                throw new ArgumentException("An idempotency key is required.", nameof(idempotencyKey));
+            request.Headers.Add("Idempotency-Key", idempotencyKey);
 
             // --------------------------------------------------------
             // Convert amount to cents
@@ -70,30 +78,10 @@ namespace GrabnBite.Services
             };
 
             var json = JsonSerializer.Serialize(requestBody);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            Console.WriteLine("========== YOCO REQUEST ==========");
-            Console.WriteLine(json);
-            Console.WriteLine("==================================");
-
-            using var content = new StringContent(
-                json,
-                Encoding.UTF8,
-                "application/json");
-
-            // --------------------------------------------------------
-            // Send request to Yoco
-            // --------------------------------------------------------
-            Console.WriteLine("========== YOCO DEBUG ==========");
-            Console.WriteLine($"Yoco Base URL: {_settings.BaseUrl}");
-            Console.WriteLine($"Yoco Key Loaded: {!string.IsNullOrWhiteSpace(_settings.SecretKey)}");
-            Console.WriteLine($"Yoco Key Length: {_settings.SecretKey?.Length}");
-            Console.WriteLine($"Yoco Key Prefix: {_settings.SecretKey?.Substring(0, Math.Min(8, _settings.SecretKey.Length))}");
-            Console.WriteLine($"Amount in cents: {amountInCents}");
-            Console.WriteLine($"Currency: {currency}");
-            Console.WriteLine("================================");
-            var response = await _httpClient.PostAsync(
-                $"{_settings.BaseUrl}/api/checkouts",
-                content);
+            // Send the request without logging credentials or payment payloads.
+            var response = await _httpClient.SendAsync(request);
 
             var responseBody =
                 await response.Content.ReadAsStringAsync();
@@ -104,10 +92,8 @@ namespace GrabnBite.Services
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException(
-                    $"Yoco checkout creation failed. " +
-                    $"Status: {(int)response.StatusCode}. " +
-                    $"Response: {responseBody}");
+                _logger.LogWarning("Yoco checkout creation returned HTTP {StatusCode}", (int)response.StatusCode);
+                throw new HttpRequestException($"Yoco checkout creation failed with HTTP {(int)response.StatusCode}.");
             }
 
             // --------------------------------------------------------
@@ -159,23 +145,19 @@ namespace GrabnBite.Services
                     nameof(checkoutId));
             }
 
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue(
-                    "Bearer",
-                    _settings.SecretKey);
-
-            var response = await _httpClient.GetAsync(
-                $"{_settings.BaseUrl}/api/checkouts/{checkoutId}");
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{_settings.BaseUrl.TrimEnd('/')}/api/checkouts/{Uri.EscapeDataString(checkoutId)}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.SecretKey);
+            var response = await _httpClient.SendAsync(request);
 
             var responseBody =
                 await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException(
-                    $"Yoco checkout status request failed. " +
-                    $"Status: {(int)response.StatusCode}. " +
-                    $"Response: {responseBody}");
+                _logger.LogWarning("Yoco checkout status request returned HTTP {StatusCode}", (int)response.StatusCode);
+                throw new HttpRequestException($"Yoco checkout status request failed with HTTP {(int)response.StatusCode}.");
             }
 
             var checkout =

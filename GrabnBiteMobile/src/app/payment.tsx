@@ -52,11 +52,9 @@ export default function PaymentScreen() {
 
       const result = await createYocoPayment(orderId, token);
 
-      console.log("YOCO PAYMENT RESULT:", result);
-
       setCheckoutUrl(result.redirectUrl);
-    } catch (error) {
-      console.error("Failed to create Yoco payment:", error);
+    } catch {
+      console.error("Failed to create Yoco payment.");
 
       setError("Unable to start payment. Please try again.");
     } finally {
@@ -65,13 +63,7 @@ export default function PaymentScreen() {
   }
 
   function openPayment() {
-    console.log("================================");
-    console.log("PAY BUTTON CLICKED");
-    console.log("Checkout URL:", checkoutUrl);
-    console.log("================================");
-
     if (!checkoutUrl) {
-      console.log("NO CHECKOUT URL");
       return;
     }
 
@@ -79,8 +71,8 @@ export default function PaymentScreen() {
       setOpeningPayment(true);
 
       window.location.assign(checkoutUrl);
-    } catch (error) {
-      console.error("Failed to open payment:", error);
+    } catch {
+      console.error("Failed to open the Yoco payment page.");
       setOpeningPayment(false);
       setError("Unable to open the payment page. Please try again.");
     }

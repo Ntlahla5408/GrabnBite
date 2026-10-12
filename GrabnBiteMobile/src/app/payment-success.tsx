@@ -1,4 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/authContext";
+import { confirmYocoPayment } from "../services/paymentService";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function PaymentSuccessScreen() {
@@ -7,22 +10,58 @@ export default function PaymentSuccessScreen() {
   }>();
 
   const orderId = params.orderId;
+  const { token } = useAuth();
+  const [checking, setChecking] = useState(true);
+  const [verified, setVerified] = useState(false);
+  const [message, setMessage] = useState("Checking your payment with Yoco...");
+
+  useEffect(() => {
+    let active = true;
+
+    async function verifyPayment() {
+      if (!token || !orderId || !Number.isInteger(Number(orderId))) {
+        if (active) {
+          setMessage("We could not verify this payment. Open your order to check its current status.");
+          setChecking(false);
+        }
+        return;
+      }
+
+      try {
+        const result = await confirmYocoPayment(Number(orderId), token);
+        if (!active) return;
+        const isPaid = result.paymentStatus?.toUpperCase() === "PAID";
+        setVerified(isPaid);
+        setMessage(isPaid
+          ? "Yoco has confirmed your payment."
+          : "Yoco has not confirmed this payment yet. Please check again shortly.");
+      } catch {
+        if (active) {
+          setMessage("We could not verify your payment right now. Your order has not been marked paid by this screen.");
+        }
+      } finally {
+        if (active) setChecking(false);
+      }
+    }
+
+    verifyPayment();
+    return () => { active = false; };
+  }, [token, orderId]);
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.icon}>✓</Text>
 
-        <Text style={styles.title}>Payment Successful</Text>
+        <Text style={styles.title}>{checking ? "Verifying Payment" : verified ? "Payment Successful" : "Payment Not Yet Verified"}</Text>
 
-        <Text style={styles.message}>
-          Your payment was completed successfully.
-        </Text>
+        <Text style={styles.message}>{message}</Text>
 
         {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
         <Pressable
-          style={styles.button}
+          style={[styles.button, (!verified || checking) && { opacity: 0.5 }]}
+          disabled={!verified || checking}
           onPress={() =>
             router.push({
               pathname: "/order",

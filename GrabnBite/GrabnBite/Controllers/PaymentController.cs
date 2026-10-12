@@ -6,6 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using GrabnBite.Services;
 using System.Security.Claims;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Options;
+using GrabnBite.Configuration;
 
 namespace GrabnBite.Controllers
 {
@@ -15,13 +21,19 @@ namespace GrabnBite.Controllers
     {
         private readonly AppDbContext _context;
         private readonly YocoPaymentService _yocoPaymentService;
+        private readonly YocoSettings _yocoSettings;
+        private readonly ILogger<PaymentController> _logger;
 
         public PaymentController(
             AppDbContext context,
-            YocoPaymentService yocoPaymentService)
+            YocoPaymentService yocoPaymentService,
+            IOptions<YocoSettings> yocoSettings,
+            ILogger<PaymentController> logger)
         {
             _context = context;
             _yocoPaymentService = yocoPaymentService;
+            _yocoSettings = yocoSettings.Value;
+            _logger = logger;
         }
 
         // ============================================================
@@ -221,52 +233,82 @@ namespace GrabnBite.Controllers
                     "Order amount must be greater than zero.");
             }
 
-            // --------------------------------------------------------
-            // Prevent duplicate payment
-            // --------------------------------------------------------
-
+            // Reuse a payment only when no checkout was created, or when
+            // Yoco has authoritatively confirmed the previous checkout failed/cancelled.
+            Payment payment;
             if (order.Payment != null)
             {
-                return BadRequest(
-                    "A payment already exists for this order.");
+                payment = order.Payment;
+                if (payment.PaymentStatus == "PAID")
+                    return BadRequest("This order has already been paid.");
+
+                if (!string.Equals(payment.PaymentMethod, "YOCO", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("A different payment method is already recorded for this order.");
+
+                if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                {
+                    try
+                    {
+                        var previousCheckout = await _yocoPaymentService.GetCheckoutStatusAsync(payment.YocoCheckoutId);
+                        var terminalFailure =
+                            string.Equals(previousCheckout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(previousCheckout.Status, "cancelled", StringComparison.OrdinalIgnoreCase);
+                        if (!terminalFailure)
+                            return Conflict("A Yoco checkout already exists for this order. Check its status before trying again.");
+                        if (previousCheckout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                            !string.Equals(previousCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                            return Conflict("The previous Yoco checkout does not match this order. Contact support before retrying.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Could not safely reconcile prior Yoco checkout for order {OrderId}", orderId);
+                        return Conflict("The previous payment could not be verified. Please try again later or contact support.");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                {
+                    // A terminal checkout is a new payment attempt, so use a new
+                    // idempotency key. For an ambiguous attempt with no saved
+                    // checkout ID, keep the same key to avoid duplicate sessions.
+                    payment.PaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                }
+
+                payment.PaymentStatus = "INITIATED";
+                payment.YocoCheckoutId = null;
+                payment.TransactionReference = null;
+                payment.PaymentDate = DateTime.UtcNow;
             }
-
-            // --------------------------------------------------------
-            // Create payment record
-            // --------------------------------------------------------
-
-            var payment = new Payment
+            else
             {
-                OrderId = order.OrderId,
-
-                // Always use amount stored on order.
-                Amount = order.TotalAmount,
-
-                PaymentStatus = "INITIATED",
-
-                PaymentMethod = "YOCO",
-
-                PaymentReference =
-                    $"GNB-YOCO-{Guid.NewGuid():N}"
-                        .Substring(0, 18)
-                        .ToUpper(),
-
-                PaymentDate = DateTime.UtcNow
-            };
-
-            _context.Payments.Add(payment);
+                payment = new Payment
+                {
+                    OrderId = order.OrderId,
+                    Amount = order.TotalAmount,
+                    PaymentStatus = "INITIATED",
+                    PaymentMethod = "YOCO",
+                    PaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper(),
+                    PaymentDate = DateTime.UtcNow
+                };
+                _context.Payments.Add(payment);
+            }
 
             await _context.SaveChangesAsync();
 
-            // --------------------------------------------------------
-            // Create Yoco checkout
-            // --------------------------------------------------------
+            var successUrl = _yocoSettings.SuccessUrl;
+            var cancelUrl = _yocoSettings.CancelUrl;
+            if (!Uri.TryCreate(successUrl, UriKind.Absolute, out var successUri) ||
+                successUri.Scheme != Uri.UriSchemeHttps ||
+                !Uri.TryCreate(cancelUrl, UriKind.Absolute, out var cancelUri) ||
+                cancelUri.Scheme != Uri.UriSchemeHttps)
+            {
+                _logger.LogError("Yoco success/cancel URLs are missing or not HTTPS.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    new { message = "Online payments are not configured yet. Please contact support." });
+            }
 
-            var successUrl =
-     $"http://localhost:8081/payment-success?orderId={order.OrderId}";
-
-            var cancelUrl =
-                $"http://localhost:8081/payment-cancelled?orderId={order.OrderId}";
+            successUrl = $"{successUrl.TrimEnd('/') }?orderId={order.OrderId}";
+            cancelUrl = $"{cancelUrl.TrimEnd('/') }?orderId={order.OrderId}";
 
             try
             {
@@ -275,7 +317,8 @@ namespace GrabnBite.Controllers
                         payment.Amount,
                         "ZAR",
                         successUrl,
-                        cancelUrl);
+                        cancelUrl,
+                        payment.PaymentReference ?? throw new InvalidOperationException("Payment reference is missing."));
 
                 // ----------------------------------------------------
                 // Save Yoco checkout ID
@@ -305,17 +348,15 @@ namespace GrabnBite.Controllers
             }
             catch (Exception ex)
             {
+                // Preserve a failed attempt for reconciliation. If Yoco created
+                // a checkout but the response was lost, do not assume no charge.
                 payment.PaymentStatus = "FAILED";
-
                 await _context.SaveChangesAsync();
+                _logger.LogError(ex, "Yoco checkout creation failed for order {OrderId}", orderId);
 
                 return StatusCode(
                     StatusCodes.Status502BadGateway,
-                    new
-                    {
-                        message = "Unable to create Yoco checkout.",
-                        error = ex.Message
-                    });
+                    new { message = "Unable to create Yoco checkout. Please check payment status before retrying." });
             }
         }
 
@@ -367,141 +408,6 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
-        // MOCK PAYMENT SUCCESS
-        // DEVELOPMENT / TESTING ONLY
-        //
-        // POST: /api/Payment/{orderId}/simulate-success
-        // ============================================================
-
-        [Authorize(Roles = "Customer")]
-        [HttpPost("{orderId}/simulate-success")]
-        public async Task<IActionResult> SimulatePaymentSuccess(
-            int orderId)
-        {
-            if (orderId <= 0)
-            {
-                return BadRequest("Invalid order ID.");
-            }
-
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var payment = await _context.Payments
-                .Include(p => p.Order)
-                .FirstOrDefaultAsync(p =>
-                    p.OrderId == orderId &&
-                    p.Order.UserId == userId.Value);
-
-            if (payment == null)
-            {
-                return NotFound(
-                    "No payment exists for this order.");
-            }
-
-            if (payment.PaymentStatus == "PAID")
-            {
-                return BadRequest(
-                    "This payment has already been completed.");
-            }
-
-            if (payment.PaymentStatus != "PENDING")
-            {
-                return BadRequest(
-                    "Only pending payments can be completed.");
-            }
-
-            payment.TransactionReference =
-                $"MOCK-{Guid.NewGuid():N}"
-                    .Substring(0, 18)
-                    .ToUpper();
-
-            payment.PaymentStatus = "PAID";
-
-            // Order remains PENDING.
-            // Restaurant still needs to accept the order.
-            payment.Order.Status = "PENDING";
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Payment completed successfully.",
-                paymentId = payment.PaymentId,
-                orderId = payment.OrderId,
-                amount = payment.Amount,
-                paymentStatus = payment.PaymentStatus,
-                transactionReference =
-                    payment.TransactionReference,
-                orderStatus = payment.Order.Status
-            });
-        }
-
-        // ============================================================
-        // MOCK PAYMENT FAILURE
-        // DEVELOPMENT / TESTING ONLY
-        //
-        // POST: /api/Payment/{orderId}/simulate-failure
-        // ============================================================
-
-        [Authorize(Roles = "Customer")]
-        [HttpPost("{orderId}/simulate-failure")]
-        public async Task<IActionResult> SimulatePaymentFailure(
-            int orderId)
-        {
-            if (orderId <= 0)
-            {
-                return BadRequest("Invalid order ID.");
-            }
-
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            var payment = await _context.Payments
-                .Include(p => p.Order)
-                .FirstOrDefaultAsync(p =>
-                    p.OrderId == orderId &&
-                    p.Order.UserId == userId.Value);
-
-            if (payment == null)
-            {
-                return NotFound(
-                    "No payment exists for this order.");
-            }
-
-            if (payment.PaymentStatus == "PAID")
-            {
-                return BadRequest(
-                    "A completed payment cannot be marked as failed.");
-            }
-
-            if (payment.PaymentStatus != "PENDING")
-            {
-                return BadRequest(
-                    "Only pending payments can fail.");
-            }
-
-            payment.PaymentStatus = "FAILED";
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Payment failed.",
-                paymentId = payment.PaymentId,
-                orderId = payment.OrderId,
-                paymentStatus = payment.PaymentStatus
-            });
-        }
-
-        // ============================================================
         // YOCO SUCCESS REDIRECT
         // GET: /api/Payment/yoco/success
         // ============================================================
@@ -512,9 +418,9 @@ namespace GrabnBite.Controllers
         {
             return Ok(new
             {
-                message = "Yoco payment page completed.",
+                message = "Payment return received. This page does not confirm payment.",
                 orderId = orderId,
-                note = "Payment confirmation will be implemented with the Yoco webhook."
+                paymentStatusMustBeVerified = true
             });
         }
 
@@ -532,6 +438,175 @@ namespace GrabnBite.Controllers
                 message = "Yoco payment was cancelled.",
                 orderId = orderId
             });
+        }
+
+        // Yoco's browser redirect is not proof of payment. This signed webhook
+        // triggers a server-to-server lookup and uses that response as authority.
+        [AllowAnonymous]
+        [HttpPost("yoco/webhook")]
+        public async Task<IActionResult> YocoWebhook()
+        {
+            if (string.IsNullOrWhiteSpace(_yocoSettings.WebhookSecret))
+            {
+                _logger.LogError("Yoco webhook secret is not configured.");
+                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+
+            Request.EnableBuffering();
+            string rawBody;
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true))
+            {
+                rawBody = await reader.ReadToEndAsync();
+                Request.Body.Position = 0;
+            }
+
+            if (!VerifyYocoWebhookSignature(rawBody))
+                return Unauthorized();
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawBody);
+                var root = document.RootElement;
+                var checkoutId = FindCheckoutId(root);
+                if (string.IsNullOrWhiteSpace(checkoutId))
+                    return BadRequest("Webhook did not contain a checkout ID.");
+
+                var payment = await _context.Payments
+                    .Include(p => p.Order)
+                    .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
+
+                // A webhook may arrive before the checkout ID has been saved.
+                // Return a retryable response so Yoco can deliver it again.
+                if (payment == null)
+                {
+                    _logger.LogWarning("Received Yoco webhook for an unknown checkout; asking Yoco to retry.");
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable);
+                }
+
+                if (payment.PaymentStatus == "PAID")
+                    return Ok(new { received = true, alreadyProcessed = true });
+
+                var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);
+                if (!string.Equals(checkout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
+                    checkout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                    !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Yoco webhook checkout details did not match payment {PaymentId}", payment.PaymentId);
+                    return BadRequest("Checkout details did not match the recorded payment.");
+                }
+
+                if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "PAID";
+                    payment.TransactionReference = checkout.Id;
+                    if (payment.Order.Status != "CANCELLED")
+                        payment.Order.Status = "PENDING";
+                    await _context.SaveChangesAsync();
+                }
+                else if (string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (payment.PaymentStatus != "PAID")
+                    {
+                        payment.PaymentStatus = "FAILED";
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                return Ok(new { received = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Invalid JSON received at Yoco webhook.");
+                return BadRequest("Invalid webhook payload.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process Yoco webhook.");
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        private bool VerifyYocoWebhookSignature(string rawBody)
+        {
+            var webhookId = Request.Headers["webhook-id"].ToString();
+            var timestamp = Request.Headers["webhook-timestamp"].ToString();
+            var signatureHeader = Request.Headers["webhook-signature"].ToString();
+
+            if (string.IsNullOrWhiteSpace(webhookId) ||
+                string.IsNullOrWhiteSpace(timestamp) ||
+                string.IsNullOrWhiteSpace(signatureHeader) ||
+                !long.TryParse(timestamp, out var timestampSeconds))
+                return false;
+
+            var nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (timestampSeconds < nowSeconds - 300 || timestampSeconds > nowSeconds + 300)
+                return false;
+
+            try
+            {
+                var secret = _yocoSettings.WebhookSecret;
+                if (secret.StartsWith("whsec_", StringComparison.Ordinal))
+                    secret = secret.Substring("whsec_".Length);
+
+                var key = Convert.FromBase64String(secret);
+                var signedContent = $"{webhookId}.{timestamp}.{rawBody}";
+                using var hmac = new HMACSHA256(key);
+                var expected = Convert.ToBase64String(
+                    hmac.ComputeHash(Encoding.UTF8.GetBytes(signedContent)));
+
+                foreach (var item in signatureHeader.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var parts = item.Split(',', 2);
+                    if (parts.Length == 2 &&
+                        parts[0] == "v1" &&
+                        CryptographicOperations.FixedTimeEquals(
+                            Encoding.UTF8.GetBytes(parts[1]),
+                            Encoding.UTF8.GetBytes(expected)))
+                        return true;
+                }
+            }
+            catch (FormatException)
+            {
+                _logger.LogError("Yoco webhook secret is not a valid base64 signing secret.");
+            }
+
+            return false;
+        }
+
+        private static string? FindCheckoutId(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    if ((property.Name.Equals("id", StringComparison.OrdinalIgnoreCase) ||
+                         property.Name.Equals("checkoutId", StringComparison.OrdinalIgnoreCase) ||
+                         property.Name.Equals("checkout_id", StringComparison.OrdinalIgnoreCase)) &&
+                        property.Value.ValueKind == JsonValueKind.String)
+                    {
+                        var value = property.Value.GetString();
+                        if (!string.IsNullOrWhiteSpace(value) &&
+                            value.StartsWith("ch_", StringComparison.Ordinal))
+                            return value;
+                    }
+
+                    var nestedResult = FindCheckoutId(property.Value);
+                    if (nestedResult != null)
+                        return nestedResult;
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    var nestedResult = FindCheckoutId(item);
+                    if (nestedResult != null)
+                        return nestedResult;
+                }
+            }
+
+            return null;
         }
 
         [Authorize(Roles = "Customer")]
@@ -582,8 +657,16 @@ namespace GrabnBite.Controllers
                     await _yocoPaymentService.GetCheckoutStatusAsync(
                         payment.YocoCheckoutId);
 
-                Console.WriteLine(
-                    $"YOCO CHECKOUT STATUS: {checkout.Status}");
+                if (!string.Equals(checkout.Id, payment.YocoCheckoutId, StringComparison.Ordinal))
+                    return Conflict("The payment provider returned a different checkout.");
+
+                var expectedAmountInCents = (int)Math.Round(payment.Amount * 100);
+                if (checkout.Amount != expectedAmountInCents ||
+                    !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Yoco checkout amount/currency mismatch for payment {PaymentId}", payment.PaymentId);
+                    return Conflict("The payment details could not be verified. Please contact support.");
+                }
 
                 if (string.Equals(
                     checkout.Status,
@@ -595,7 +678,8 @@ namespace GrabnBite.Controllers
                     payment.TransactionReference =
                         checkout.Id;
 
-                    order.Status = "PENDING";
+                    if (order.Status != "CANCELLED")
+                        order.Status = "PENDING";
 
                     await _context.SaveChangesAsync();
 
@@ -660,13 +744,10 @@ namespace GrabnBite.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Yoco payment confirmation failed for order {OrderId}", orderId);
                 return StatusCode(
                     StatusCodes.Status502BadGateway,
-                    new
-                    {
-                        message = "Unable to confirm Yoco payment.",
-                        error = ex.Message
-                    });
+                    new { message = "Unable to verify the payment right now. Please try again later." });
             }
         }
     }

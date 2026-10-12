@@ -1,25 +1,25 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import {
-    Address,
-    createAddress,
-    deleteAddress,
-    getAddresses,
-    setDefaultAddress,
+  Address,
+  createAddress,
+  deleteAddress,
+  getAddresses,
+  setDefaultAddress,
 } from "../services/addressService";
 
 export default function AddressesScreen() {

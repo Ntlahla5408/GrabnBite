@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -12,7 +13,7 @@ import { useAuth } from "../context/authContext";
 import { createYocoPayment } from "../services/paymentService";
 
 export default function PaymentScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -21,36 +22,19 @@ export default function PaymentScreen() {
 
   const orderId = Number(params.orderId);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
   const [openingPayment, setOpeningPayment] = useState(false);
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!orderId) {
-      setError("Invalid order.");
-      setLoading(false);
-      return;
-    }
-
-    startPayment();
-  }, [token, orderId]);
-
-  async function startPayment() {
+  const startPayment = useCallback(async () => {
     if (!token || !orderId) {
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const result = await createYocoPayment(orderId, token);
+      setError("");
 
       setCheckoutUrl(result.redirectUrl);
     } catch {
@@ -60,21 +44,41 @@ export default function PaymentScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, orderId]);
 
-  function openPayment() {
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (Number.isInteger(orderId) && orderId > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async payment initiation; state updates occur when the request progresses.
+      void startPayment();
+    }
+  }, [authLoading, token, orderId, startPayment]);
+
+  async function openPayment() {
     if (!checkoutUrl) {
+      setError("The payment link is missing. Please try again.");
       return;
     }
 
     try {
       setOpeningPayment(true);
+      setError("");
 
-      window.location.assign(checkoutUrl);
-    } catch {
-      console.error("Failed to open the Yoco payment page.");
+      // Linking opens Yoco in the device browser in Expo Go and native apps.
+      await Linking.openURL(checkoutUrl);
+    } catch (openError) {
+      console.error("Failed to open the Yoco payment page.", openError);
+      setError("Unable to open the payment page. Please check your connection and try again.");
+    } finally {
       setOpeningPayment(false);
-      setError("Unable to open the payment page. Please try again.");
     }
   }
 
@@ -142,11 +146,11 @@ export default function PaymentScreen() {
         <Text style={styles.title}>Secure Payment</Text>
 
         <Text style={styles.description}>
-          Your order has been created successfully.
+          Your order has been created and is awaiting payment.
         </Text>
 
         <Text style={styles.description}>
-          Continue to Yoco to securely complete your payment.
+          Continue to Yoco to complete your payment. Your order will not be marked as paid until the payment is verified.
         </Text>
 
         {/* Order Card */}

@@ -307,8 +307,8 @@ namespace GrabnBite.Controllers
                     new { message = "Online payments are not configured yet. Please contact support." });
             }
 
-            successUrl = $"{successUrl.TrimEnd('/') }?orderId={order.OrderId}";
-            cancelUrl = $"{cancelUrl.TrimEnd('/') }?orderId={order.OrderId}";
+            successUrl = $"{successUrl.TrimEnd('/')}?orderId={order.OrderId}";
+            cancelUrl = $"{cancelUrl.TrimEnd('/')}?orderId={order.OrderId}";
 
             try
             {
@@ -409,35 +409,36 @@ namespace GrabnBite.Controllers
 
         // ============================================================
         // YOCO SUCCESS REDIRECT
-        // GET: /api/Payment/yoco/success
+        // Yoco redirects here after checkout. The app verifies payment
+        // separately with Yoco; this redirect is not proof of payment.
+        // GET: /api/Payment/yoco/success?orderId={orderId}
         // ============================================================
 
         [AllowAnonymous]
         [HttpGet("yoco/success")]
         public IActionResult YocoSuccess(int orderId)
         {
-            return Ok(new
-            {
-                message = "Payment return received. This page does not confirm payment.",
-                orderId = orderId,
-                paymentStatusMustBeVerified = true
-            });
+            if (orderId <= 0)
+                return BadRequest("A valid order ID is required.");
+
+            // The browser must return to the installed GrabnBite app.
+            // This redirect does not confirm payment; the app verifies with Yoco.
+            return Redirect($"grabnbitemobile://payment-success?orderId={orderId}");
         }
 
         // ============================================================
         // YOCO CANCEL REDIRECT
-        // GET: /api/Payment/yoco/cancel
+        // GET: /api/Payment/yoco/cancel?orderId={orderId}
         // ============================================================
 
         [AllowAnonymous]
         [HttpGet("yoco/cancel")]
         public IActionResult YocoCancel(int orderId)
         {
-            return Ok(new
-            {
-                message = "Yoco payment was cancelled.",
-                orderId = orderId
-            });
+            if (orderId <= 0)
+                return BadRequest("A valid order ID is required.");
+
+            return Redirect($"grabnbitemobile://payment-cancelled?orderId={orderId}");
         }
 
         // Yoco's browser redirect is not proof of payment. This signed webhook

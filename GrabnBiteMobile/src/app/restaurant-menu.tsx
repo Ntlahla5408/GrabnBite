@@ -70,9 +70,8 @@ export default function RestaurantMenuScreen() {
     if (!token || user?.role !== "Restaurant") return;
 
     try {
-      setError("");
-
       const restaurant = await getMyRestaurant(token);
+      setError("");
 
       setRestaurantId(restaurant.restaurantId);
       setRestaurantName(restaurant.name);
@@ -98,6 +97,7 @@ export default function RestaurantMenuScreen() {
 
   useEffect(() => {
     if (!authLoading && token && user?.role === "Restaurant") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async menu loading; state updates occur after the request resolves.
       loadMenu();
     }
   }, [authLoading, token, user?.role, loadMenu]);

@@ -146,7 +146,7 @@ export default function LoginScreen() {
 
           {/* Register */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account?</Text>
+            <Text style={styles.registerText}>Don&apos;t have an account?</Text>
 
             <Pressable onPress={() => router.push("/register")}>
               <Text style={styles.registerLink}>Create account</Text>

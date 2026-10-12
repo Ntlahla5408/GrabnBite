@@ -4,7 +4,11 @@ import { AuthProvider } from "../context/authContext";
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
     </AuthProvider>
   );
 }

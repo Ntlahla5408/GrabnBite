@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -21,7 +21,7 @@ import { MenuItem } from "../types/menu";
 import { Restaurant } from "../types/restaurant";
 
 export default function RestaurantScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const [cart, setCart] = useState<Cart[]>([]);
   const [addingItemId, setAddingItemId] = useState<number | null>(null);
@@ -36,29 +36,17 @@ export default function RestaurantScreen() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(Number.isInteger(restaurantId) && restaurantId > 0);
+  const [error, setError] = useState(Number.isInteger(restaurantId) && restaurantId > 0 ? "" : "Restaurant could not be found.");
 
-  useEffect(() => {
-    if (!restaurantId) {
-      setError("Restaurant could not be found.");
-      setLoading(false);
-      return;
-    }
-
-    loadRestaurant();
-  }, [restaurantId]);
-
-  async function loadRestaurant() {
+  const loadRestaurant = useCallback(async () => {
     try {
-      setLoading(true);
-      setError("");
-
       const [restaurantData, menuData] = await Promise.all([
         getRestaurant(restaurantId),
         getRestaurantMenu(restaurantId),
       ]);
 
+      setError("");
       setRestaurant(restaurantData);
       setMenuItems(menuData.filter((item) => item.isAvailable));
     } catch (err) {
@@ -67,7 +55,14 @@ export default function RestaurantScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (Number.isInteger(restaurantId) && restaurantId > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async restaurant loading; state updates occur after the request resolves.
+      void loadRestaurant();
+    }
+  }, [restaurantId, loadRestaurant]);
 
   const categories = useMemo(() => {
     const categoryIds = Array.from(
@@ -94,8 +89,12 @@ export default function RestaurantScreen() {
   }
 
   async function handleAddToCart(menuItemId: number) {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
 

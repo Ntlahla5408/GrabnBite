@@ -43,7 +43,7 @@ export default function RestaurantDashboardScreen() {
     }
   }, [authLoading, user]);
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -57,14 +57,14 @@ export default function RestaurantDashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token]);
 
   useFocusEffect(
     useCallback(() => {
       if (!authLoading && token && user?.role === "Restaurant") {
         loadOrders();
       }
-    }, [authLoading, token, user?.role]),
+    }, [authLoading, token, user?.role, loadOrders]),
   );
 
   // ONLY NOW can conditional returns happen

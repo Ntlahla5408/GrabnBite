@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -83,11 +83,10 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  async function loadOrders() {
+  const loadOrders = useCallback(async () => {
     try {
-      setError("");
-
       const result = await apiRequest("/api/Orders/my-orders");
+      setError("");
 
       console.log("MY ORDERS RESULT:", result);
 
@@ -100,11 +99,12 @@ export default function OrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
+    void loadOrders();
+  }, [loadOrders]);
 
   async function handleRefresh() {
     setRefreshing(true);

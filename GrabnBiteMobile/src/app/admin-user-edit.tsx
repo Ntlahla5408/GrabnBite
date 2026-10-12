@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -45,21 +45,10 @@ export default function AdminUserEditScreen() {
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (!user || user.role !== "Admin") {
-      router.replace("/");
-      return;
-    }
-
-    loadUser();
-  }, [user, userId]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     if (!token || !userId) return;
 
     try {
-      setLoading(true);
-
       const data = await apiRequest(
         `/api/Users/${userId}`,
         {},
@@ -86,7 +75,17 @@ export default function AdminUserEditScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, userId]);
+
+  useEffect(() => {
+    if (!user || user.role !== "Admin") {
+      router.replace("/");
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
+    void loadUser();
+  }, [user, loadUser]);
 
   const saveDetails = async () => {
     if (!token || !selectedUser) return;

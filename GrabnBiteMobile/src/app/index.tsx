@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -26,16 +26,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadRestaurants();
-  }, []);
-
-  async function loadRestaurants() {
+  const loadRestaurants = useCallback(async () => {
     try {
-      setLoading(true);
-      setError("");
-
       const data = await getRestaurants();
+      setError("");
 
       // Only show approved restaurants to customers.
       const approvedRestaurants = data.filter(
@@ -49,7 +43,12 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
+    void loadRestaurants();
+  }, [loadRestaurants]);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

@@ -65,28 +65,10 @@ export default function DriverDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      if (user.role !== "Driver") {
-        router.replace("/");
-        return;
-      }
-
-      loadDriverData();
-    }, [user]),
-  );
-
-  const loadDriverData = async () => {
+  const loadDriverData = useCallback(async () => {
     if (!token) return;
 
     try {
-      setLoading(true);
-
       // Get driver's current profile/status
       const driver = await apiRequest("/api/Driver/me", {}, token);
 
@@ -123,7 +105,23 @@ export default function DriverDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      if (user.role !== "Driver") {
+        router.replace("/");
+        return;
+      }
+
+      void loadDriverData();
+    }, [user, router, loadDriverData]),
+  );
 
   const refresh = async () => {
     setRefreshing(true);

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -52,37 +52,15 @@ export default function AdminRestaurantEditScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-
-    if (user.role !== "Admin") {
-      router.replace("/");
-      return;
-    }
-
-    if (!restaurantId) {
-      setError("Restaurant ID is missing.");
-      setLoading(false);
-      return;
-    }
-
-    loadRestaurant();
-  }, [user, restaurantId]);
-
-  async function loadRestaurant() {
+  const loadRestaurant = useCallback(async () => {
     try {
-      setLoading(true);
-      setError("");
-
       const data = await apiRequest(
         `/api/Restaurant/${restaurantId}`,
         {},
         token,
       );
 
+      setError("");
       setRestaurant(data);
 
       setName(data.name ?? "");
@@ -108,7 +86,21 @@ export default function AdminRestaurantEditScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId, token]);
+
+  useEffect(() => {
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+
+    if (user.role !== "Admin") {
+      router.replace("/");
+      return;
+    }
+
+    if (restaurantId) void loadRestaurant();
+  }, [user, restaurantId, router, loadRestaurant]);
 
   async function saveRestaurant() {
     if (!name.trim()) {

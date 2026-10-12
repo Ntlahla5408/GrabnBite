@@ -1,8 +1,8 @@
-import { TouchableOpacity } from "react-native";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    TouchableOpacity,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -38,6 +38,20 @@ export default function AdminUsersScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadUsers = useCallback(async () => {
+    try {
+      const data = await apiRequest("/api/Users", {}, token);
+      setError("");
+
+      setUsers(data);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+      setError("Unable to load users. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!user) {
       router.replace("/login");
@@ -49,24 +63,8 @@ export default function AdminUsersScreen() {
       return;
     }
 
-    loadUsers();
-  }, [user]);
-
-  async function loadUsers() {
-    try {
-      setLoading(true);
-      setError("");
-
-      const data = await apiRequest("/api/Users", {}, token);
-
-      setUsers(data);
-    } catch (err) {
-      console.error("Failed to load users:", err);
-      setError("Unable to load users. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
+    void loadUsers();
+  }, [user, router, loadUsers]);
 
   const filteredUsers = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

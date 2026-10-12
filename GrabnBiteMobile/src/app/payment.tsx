@@ -137,11 +137,11 @@ export default function PaymentScreen() {
         <Text style={styles.title}>Secure Payment</Text>
 
         <Text style={styles.description}>
-          Your order has been created successfully.
+          Your order has been created and is awaiting payment.
         </Text>
 
         <Text style={styles.description}>
-          Continue to Yoco to securely complete your payment.
+          Continue to Yoco to complete your payment. Your order will not be marked as paid until the payment is verified.
         </Text>
 
         {/* Order Card */}

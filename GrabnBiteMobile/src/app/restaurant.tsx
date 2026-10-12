@@ -58,7 +58,10 @@ export default function RestaurantScreen() {
   }, [restaurantId]);
 
   useEffect(() => {
-    if (Number.isInteger(restaurantId) && restaurantId > 0) void loadRestaurant();
+    if (Number.isInteger(restaurantId) && restaurantId > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async restaurant loading; state updates occur after the request resolves.
+      void loadRestaurant();
+    }
   }, [restaurantId, loadRestaurant]);
 
   const categories = useMemo(() => {

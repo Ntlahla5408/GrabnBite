@@ -416,12 +416,11 @@ namespace GrabnBite.Controllers
         [HttpGet("yoco/success")]
         public IActionResult YocoSuccess(int orderId)
         {
-            return Ok(new
-            {
-                message = "Payment return received. This page does not confirm payment.",
-                orderId = orderId,
-                paymentStatusMustBeVerified = true
-            });
+            if (orderId <= 0)
+                return BadRequest("A valid order ID is required.");
+
+            // Return to the installed GrabnBite app. Payment must still be verified by the app.
+            return Redirect($"grabnbitemobile://payment-success?orderId={orderId}");
         }
 
         // ============================================================
@@ -433,11 +432,10 @@ namespace GrabnBite.Controllers
         [HttpGet("yoco/cancel")]
         public IActionResult YocoCancel(int orderId)
         {
-            return Ok(new
-            {
-                message = "Yoco payment was cancelled.",
-                orderId = orderId
-            });
+            if (orderId <= 0)
+                return BadRequest("A valid order ID is required.");
+
+            return Redirect($"grabnbitemobile://payment-cancelled?orderId={orderId}");
         }
 
         // Yoco's browser redirect is not proof of payment. This signed webhook

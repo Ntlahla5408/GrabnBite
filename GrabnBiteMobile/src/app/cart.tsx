@@ -19,7 +19,7 @@ import {
 import { Cart } from "../types/cart";
 
 export default function CartScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,10 @@ export default function CartScreen() {
   }, [token]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
       router.replace("/login");
       return;
@@ -52,7 +56,7 @@ export default function CartScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadCart();
-  }, [token, loadCart]);
+  }, [authLoading, token, loadCart]);
 
   async function changeQuantity(
     cartItemId: number,

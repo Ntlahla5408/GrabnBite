@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -26,31 +26,14 @@ export default function PaymentScreen() {
   const [error, setError] = useState("");
   const [openingPayment, setOpeningPayment] = useState(false);
 
-  useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!orderId) {
-      setError("Invalid order.");
-      setLoading(false);
-      return;
-    }
-
-    startPayment();
-  }, [token, orderId]);
-
-  async function startPayment() {
+  const startPayment = useCallback(async () => {
     if (!token || !orderId) {
       return;
     }
 
     try {
-      setLoading(true);
-      setError("");
-
       const result = await createYocoPayment(orderId, token);
+      setError("");
 
       setCheckoutUrl(result.redirectUrl);
     } catch {
@@ -60,7 +43,18 @@ export default function PaymentScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, orderId]);
+
+  useEffect(() => {
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    if (Number.isInteger(orderId) && orderId > 0) {
+      void startPayment();
+    }
+  }, [token, orderId, startPayment]);
 
   function openPayment() {
     if (!checkoutUrl) {

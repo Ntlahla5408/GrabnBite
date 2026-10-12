@@ -66,7 +66,7 @@ export default function AdminRestaurantsScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadRestaurants();
-  }, [user, router, loadRestaurants]);
+  }, [user, loadRestaurants]);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();

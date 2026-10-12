@@ -22,7 +22,7 @@ export default function PaymentCancelledScreen() {
 
         <Pressable
           style={styles.button}
-          onPress={() => router.back()}
+          onPress={() => params.orderId ? router.replace({ pathname: "/payment", params: { orderId: params.orderId } }) : router.back()}
         >
           <Text style={styles.buttonText}>
             Try Payment Again

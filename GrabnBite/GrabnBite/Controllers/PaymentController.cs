@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using GrabnBite.Configuration;
 
 namespace GrabnBite.Controllers
 {

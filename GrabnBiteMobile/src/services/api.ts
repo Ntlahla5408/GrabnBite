@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 // Render is the default API URL.
 // Set EXPO_PUBLIC_API_URL to use another deployment or a local development API.
@@ -13,7 +14,7 @@ async function getStoredToken(): Promise<string | null> {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  return null;
+  return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export async function apiRequest(

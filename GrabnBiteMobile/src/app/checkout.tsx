@@ -15,7 +15,7 @@ import { createCheckout } from "../services/checkoutService";
 import { Address } from "../types/address";
 
 export default function CheckoutScreen() {
-  const { token } = useAuth();
+  const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     cartId?: string;
@@ -63,6 +63,10 @@ export default function CheckoutScreen() {
   }, [token]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!token) {
       router.replace("/login");
       return;
@@ -70,7 +74,7 @@ export default function CheckoutScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadAddresses();
-  }, [token, loadAddresses]);
+  }, [authLoading, token, loadAddresses]);
 
   async function handleCheckout() {
     if (!token) {

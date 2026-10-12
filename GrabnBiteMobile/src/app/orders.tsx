@@ -85,9 +85,8 @@ export default function OrdersScreen() {
 
   async function loadOrders() {
     try {
-      setError("");
-
       const result = await apiRequest("/api/Orders/my-orders");
+      setError("");
 
       console.log("MY ORDERS RESULT:", result);
 

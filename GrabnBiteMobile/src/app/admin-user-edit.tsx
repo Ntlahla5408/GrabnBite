@@ -83,6 +83,7 @@ export default function AdminUserEditScreen() {
       return;
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadUser();
   }, [user, loadUser]);
 

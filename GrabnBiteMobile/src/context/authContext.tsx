@@ -2,6 +2,7 @@ import {
     createContext,
     ReactNode,
     useContext,
+    useCallback,
     useEffect,
     useState,
 } from "react";
@@ -67,11 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSession();
-  }, []);
-
-  async function loadSession() {
+  const loadSession = useCallback(async () => {
     try {
       const storedToken = await getToken();
       const storedUser = await getUser();
@@ -85,25 +82,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadSession();
+  }, [loadSession]);
 
   async function login(email: string, password: string) {
     const cleanEmail = String(email).trim();
     const cleanPassword = String(password);
 
-    console.log("AUTH CONTEXT:", {
-      email: cleanEmail,
-      passwordProvided: cleanPassword.length > 0,
-    });
-
     const result = await loginApi(cleanEmail, cleanPassword);
-
-    console.log("LOGIN RESULT:", {
-  userId: result.userId,
-  email: result.email,
-  role: result.role,
-  hasToken: !!result.token,
-});
 
     const userData: User = {
       userId: result.userId,

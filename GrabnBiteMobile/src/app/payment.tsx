@@ -21,9 +21,9 @@ export default function PaymentScreen() {
 
   const orderId = Number(params.orderId);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
   const [openingPayment, setOpeningPayment] = useState(false);
 
   const startPayment = useCallback(async () => {

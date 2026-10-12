@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "GrabnBiteMobile",
-    "slug": "GrabnBiteMobile",
+    "name": "GrubnBiteMobile",
+    "slug": "GrubnBiteMobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/GrabnbiteLogo.jpg",
     "scheme": "grabnbitemobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/grabnbiteLogo.jpg"
     },
     "android": {
       "adaptiveIcon": {

@@ -113,7 +113,7 @@ export default function RestaurantDashboardScreen() {
     (order) => order.status === "PREPARING",
   );
 
-  const readyOrders = orders.filter((order) => order.status === "READY");
+  const readyOrders = orders.filter((order) => order.status === "READY_FOR_PICKUP");
 
   if (authLoading || loading) {
     return (

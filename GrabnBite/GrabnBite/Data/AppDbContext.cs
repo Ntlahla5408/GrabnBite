@@ -333,6 +333,10 @@ namespace GrabnBite.Data
             // ============================================================
 
             modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => new { ci.CartId, ci.MenuItemId })
+                .IsUnique();
+
+            modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.MenuItem)
                 .WithMany()
                 .HasForeignKey(ci => ci.MenuItemId)

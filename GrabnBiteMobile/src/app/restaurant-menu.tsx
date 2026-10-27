@@ -23,8 +23,11 @@ import {
   updateMenuItem,
 } from "../services/menuService";
 import { getMyRestaurant } from "../services/restaurantService";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function RestaurantMenuScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { user, token, loading: authLoading } = useAuth();
 
   const [restaurantId, setRestaurantId] = useState<number | null>(null);
@@ -311,7 +314,7 @@ export default function RestaurantMenuScreen() {
    */
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

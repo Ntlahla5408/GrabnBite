@@ -119,7 +119,10 @@ namespace GrabnBite.Controllers
             {
                 // The unique OrderId index prevents duplicate reviews if two
                 // requests race after both pass the application-level check.
-                return Conflict("This order has already been reviewed.");
+                if (await _context.Reviews.AnyAsync(r => r.OrderId == order.OrderId))
+                    return Conflict("This order has already been reviewed.");
+
+                throw;
             }
 
             return CreatedAtAction(

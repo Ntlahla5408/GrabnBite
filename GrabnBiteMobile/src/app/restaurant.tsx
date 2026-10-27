@@ -155,7 +155,7 @@ export default function RestaurantScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Restaurant Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

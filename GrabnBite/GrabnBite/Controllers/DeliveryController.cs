@@ -142,6 +142,22 @@ namespace GrabnBite.Controllers
                     "Driver is currently offline.");
             }
 
+            if (delivery.Order.Status != "READY_FOR_PICKUP")
+            {
+                return BadRequest(
+                    "Only orders ready for pickup can be assigned.");
+            }
+
+            var driverHasActiveDelivery = await _context.Deliveries
+                .AnyAsync(d =>
+                    d.DriverId == driver.DriverId &&
+                    d.Status != "DELIVERED");
+
+            if (driverHasActiveDelivery)
+            {
+                return Conflict("This driver already has an active delivery.");
+            }
+
             delivery.DriverId = driver.DriverId;
             delivery.Status = "ASSIGNED";
 
@@ -290,6 +306,16 @@ namespace GrabnBite.Controllers
             if (!driver.IsOnline)
             {
                 return BadRequest("You must be online to accept a delivery.");
+            }
+
+            var driverHasActiveDelivery = await _context.Deliveries
+                .AnyAsync(d =>
+                    d.DriverId == driver.DriverId &&
+                    d.Status != "DELIVERED");
+
+            if (driverHasActiveDelivery)
+            {
+                return Conflict("You already have an active delivery.");
             }
 
             await using var transaction = await _context.Database.BeginTransactionAsync();

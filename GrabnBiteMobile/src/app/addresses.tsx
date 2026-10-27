@@ -16,6 +16,7 @@ import {
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
 import {
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
   Address,
   createAddress,
   deleteAddress,
@@ -24,6 +25,8 @@ import {
 } from "../services/addressService";
 
 export default function AddressesScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -221,7 +224,7 @@ export default function AddressesScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={

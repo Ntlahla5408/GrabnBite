@@ -196,14 +196,16 @@ namespace GrabnBite.Controllers
                     $"Order must be {expectedStatus} before it can become {newStatus}.");
             }
 
-            // Cash-on-delivery may remain pending until the driver collects it.
-            // Every other recorded payment must be verified before the restaurant
-            // accepts the order, so failed/pending fake or online payments cannot
-            // enter food preparation. Orders without a payment row remain compatible
-            // with the existing checkout flow.
+            // A payment method must be recorded before restaurant acceptance.
+            // Cash-on-delivery may remain pending until collection; every other
+            // payment method must be verified as PAID before food preparation.
+            if (newStatus == "ACCEPTED" && order.Payment == null)
+            {
+                return BadRequest("A payment method must be selected before the restaurant can accept this order.");
+            }
+
             if (newStatus == "ACCEPTED" &&
-                order.Payment != null &&
-                !string.Equals(order.Payment.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(order.Payment!.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest("Payment must be confirmed before the restaurant can accept this order.");

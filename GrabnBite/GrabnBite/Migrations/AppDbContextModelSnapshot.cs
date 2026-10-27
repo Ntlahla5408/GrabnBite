@@ -124,6 +124,9 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("CartId");
 
+                    b.HasIndex("CartId", "MenuItemId")
+                        .IsUnique();
+
                     b.HasIndex("MenuItemId");
 
                     b.ToTable("CartItems");
@@ -311,6 +314,32 @@ namespace GrabnBite.Migrations
 
                     b.Property<int>("DeliveryAddressId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("DeliveryAddressLabel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryStreetAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryCity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryProvince")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryPostalCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double>("DeliveryLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("DeliveryLongitude")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");

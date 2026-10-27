@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TextInput, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 interface SearchBarProps {
   value: string;
@@ -6,12 +7,14 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ value, onChangeText }: SearchBarProps) {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
       <Text style={styles.icon}>⌕</Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { color: colors.text }]}
         placeholder="Search for food or restaurants..."
         placeholderTextColor="#7F94A3"
         value={value}

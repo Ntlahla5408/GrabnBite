@@ -1,18 +1,21 @@
 import { router } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 const logo = require("../../../assets/images/GrabnbiteLogo.jpg");
 
 export default function HomeHeader() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
         <Image source={logo} style={styles.logoImage} />
 
         <View>
-          <Text style={styles.logoText}>GrabnBite</Text>
+          <Text style={[styles.logoText, { color: "#F97316" }]}>GrabnBite</Text>
 
-          <Text style={styles.tagline}>Your next meal starts here.</Text>
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
         </View>
       </View>
 

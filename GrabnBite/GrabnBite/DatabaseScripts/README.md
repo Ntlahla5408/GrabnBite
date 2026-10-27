@@ -28,7 +28,8 @@ The migrations add a checkout-time delivery address snapshot to each order, a un
 
 Run these scripts in timestamp order against the target PostgreSQL database (for example, in the Supabase SQL editor) after taking a backup:
 
-- `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql`- `DatabaseScripts/20261028010000_OrderStatusHistoryActor.sql`
+- `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql`
+- `DatabaseScripts/20261028010000_OrderStatusHistoryActor.sql`
 
 The SQL script also records the migration in `__EFMigrationsHistory`, so EF Core knows it has already been applied. Do not run the same schema update by both options.
 

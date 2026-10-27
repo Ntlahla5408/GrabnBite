@@ -109,4 +109,4 @@ The second migration adds nullable `ChangedByUserId` and `ChangedByRole` fields 
 
 ### Payment acceptance rule
 
-A restaurant cannot accept an order that has a recorded non-cash payment unless the payment status is `PAID`. This prevents pending or failed fake/online payments from entering food preparation. Cash-on-delivery orders can still be accepted while the cash payment remains pending. Existing orders with no payment row remain compatible with the current checkout flow.
+A restaurant cannot accept an order that has a recorded non-cash payment unless the payment status is `PAID`. This prevents pending or failed fake/online payments from entering food preparation. Cash-on-delivery orders can still be accepted while the cash payment remains pending. Orders without a payment record must have a payment method selected before restaurant acceptance.

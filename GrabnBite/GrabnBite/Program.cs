@@ -17,6 +17,7 @@ if (!builder.Environment.IsDevelopment())
 
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
 builder.Services.AddHttpClient<YocoPaymentService>();
+builder.Services.AddScoped<FakePaymentGateway>();
 
 builder.Services.AddCors(options =>
 {

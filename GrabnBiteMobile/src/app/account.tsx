@@ -3,9 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function AccountScreen() {
   const { user, logout } = useAuth();
+  const { theme, isDark } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   async function handleLogout() {
     await logout();
@@ -14,7 +17,7 @@ export default function AccountScreen() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.surface }]}>
         <View style={styles.loggedOutContainer}>
           <Text style={styles.icon}>👤</Text>
 
@@ -38,7 +41,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -111,6 +114,21 @@ export default function AccountScreen() {
           </Pressable>
         </View>
 
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+          <Pressable
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+            onPress={() => router.push("/settings")}
+          >
+            <View style={styles.optionIcon}><Text>{isDark ? "🌙" : "🎨"}</Text></View>
+            <View style={styles.optionContent}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>Settings</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>Change light and dark appearance</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </Pressable>
+        </View>
+
         {/* Logout */}
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
@@ -125,7 +143,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
 
   content: {

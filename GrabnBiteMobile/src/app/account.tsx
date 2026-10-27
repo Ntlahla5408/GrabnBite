@@ -41,7 +41,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}

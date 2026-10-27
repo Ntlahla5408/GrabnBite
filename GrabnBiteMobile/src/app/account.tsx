@@ -63,11 +63,11 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={[styles.name, { color: colors.text }]}
+            <Text style={[styles.name, { color: colors.text }]}>
               {user.firstName} {user.lastName}
             </Text>
 
-            <Text style={[styles.email, { color: colors.textSecondary }]}{user.email}</Text>
+            <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
 
             <Text style={styles.role}>Customer</Text>
           </View>
@@ -105,7 +105,7 @@ export default function AccountScreen() {
 
             <View style={styles.optionContent}>
               <Text style={[styles.optionTitle, { color: colors.text }]}>My Addresses</Text>
-              <Text style={styles.optionSubtitle}>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>
                 Manage your delivery addresses
               </Text>
             </View>

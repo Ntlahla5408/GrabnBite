@@ -381,10 +381,16 @@ function formatStatus(status: string) {
     case "PREPARING":
       return "PREPARING";
 
-    case "READY":
-      return "READY";
+    case "READY_FOR_PICKUP":
+      return "READY FOR PICKUP";
 
-    case "OUT_FOR_DELIVERY":
+    case "ASSIGNED":
+      return "DRIVER ASSIGNED";
+
+    case "PICKED_UP":
+      return "PICKED UP";
+
+    case "DELIVERING":
       return "OUT FOR DELIVERY";
 
     case "DELIVERED":

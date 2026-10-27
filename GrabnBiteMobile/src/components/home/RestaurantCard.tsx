@@ -1,4 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 interface RestaurantCardProps {
   name: string;
@@ -17,9 +18,11 @@ export default function RestaurantCard({
   deliveryTime,
   onPress,
 }: RestaurantCardProps) {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, { backgroundColor: colors.surfaceElevated }, pressed && styles.cardPressed]}
       onPress={onPress}
     >
       {imageUrl ? (
@@ -36,11 +39,11 @@ export default function RestaurantCard({
       )}
 
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
           {name}
         </Text>
 
-        <Text style={styles.cuisine} numberOfLines={2}>
+        <Text style={[styles.cuisine, { color: colors.textSecondary }]} numberOfLines={2}>
           {cuisine}
         </Text>
 
@@ -71,7 +74,7 @@ export default function RestaurantCard({
             <>
               <Text style={styles.separator}>•</Text>
 
-              <Text style={styles.time}>{deliveryTime}</Text>
+              <Text style={[styles.time, { color: colors.textSecondary }]}>{deliveryTime}</Text>
             </>
           )}
         </View>

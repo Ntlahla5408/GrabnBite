@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import {
   acceptRestaurantOrder,
   getRestaurantOrders,
@@ -28,6 +29,8 @@ const GREEN = "#2E7D32";
 
 export default function RestaurantDashboardScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   // ALL STATE HOOKS
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
@@ -141,15 +144,15 @@ export default function RestaurantDashboardScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: colors.header }]}>
         <View>
           <Text style={styles.headerSmall}>Restaurant Dashboard</Text>
 
-          <Text style={styles.headerTitle}>Welcome back</Text>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>Welcome back</Text>
 
           {user?.email ? (
-            <Text style={styles.headerEmail}>{user.email}</Text>
+            <Text style={[styles.headerEmail, { color: colors.textSecondary }]}>{user.email}</Text>
           ) : null}
         </View>
 

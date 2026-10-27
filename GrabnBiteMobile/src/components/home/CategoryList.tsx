@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 const categories = [
   { name: "Burgers", icon: "🍔" },
@@ -10,6 +11,8 @@ const categories = [
 ];
 
 export default function CategoryList() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
     <ScrollView
       horizontal
@@ -24,11 +27,11 @@ export default function CategoryList() {
             pressed && styles.categoryPressed,
           ]}
         >
-          <View style={styles.iconContainer}>
+          <View style={[styles.iconContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <Text style={styles.icon}>{category.icon}</Text>
           </View>
 
-          <Text style={styles.name}>{category.name}</Text>
+          <Text style={[styles.name, { color: colors.text }]}>{category.name}</Text>
         </Pressable>
       ))}
     </ScrollView>

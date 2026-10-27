@@ -88,3 +88,25 @@ The new actor-audit migration and its SQL script have been authored but have not
 
 
 The second migration adds nullable `ChangedByUserId` and `ChangedByRole` fields to `OrderStatusHistories`, so new status changes can identify the authenticated user and role. Older rows remain valid with no actor recorded.
+
+## Additional backend behavior on this branch
+
+### Reviews
+
+- `GET /api/reviews/restaurant/{restaurantId}` — public list of restaurant reviews, newest first, with count and average rating.
+- `POST /api/reviews` — customer-only; body example:
+
+  ```json
+  {
+    "orderId": 123,
+    "rating": 5,
+    "comment": "Good food and delivery."
+  }
+  ```
+
+  The API derives the restaurant from the customer's order and permits a review only after that order is delivered. The existing unique order-review index prevents a second review for the same order.
+- `GET /api/reviews/order/{orderId}` — retrieves the authenticated customer's review for their own order.
+
+### Payment acceptance rule
+
+A restaurant cannot accept an order that has a recorded non-cash payment unless the payment status is `PAID`. This prevents pending or failed fake/online payments from entering food preparation. Cash-on-delivery orders can still be accepted while the cash payment remains pending. Existing orders with no payment row remain compatible with the current checkout flow.

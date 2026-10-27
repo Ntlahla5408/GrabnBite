@@ -17,7 +17,7 @@ export default function AccountScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loggedOutContainer}>
           <Text style={styles.icon}>👤</Text>
 
@@ -41,7 +41,7 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}

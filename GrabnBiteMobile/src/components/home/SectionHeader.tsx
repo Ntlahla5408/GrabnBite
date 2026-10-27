@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 interface SectionHeaderProps {
   title: string;
@@ -6,11 +7,13 @@ interface SectionHeaderProps {
 }
 
 export default function SectionHeader({ title, subtitle }: SectionHeaderProps) {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 
-      {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+      {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
     </View>
   );
 }

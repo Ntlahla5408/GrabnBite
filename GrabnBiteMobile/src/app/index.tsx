@@ -17,9 +17,12 @@ import SectionHeader from "../components/home/SectionHeader";
 
 import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { theme, isDark } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const [search, setSearch] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -67,7 +70,7 @@ export default function HomeScreen() {
   }, [restaurants, search]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <HomeHeader />
 
       <ScrollView
@@ -75,13 +78,13 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Hero */}
-        <View style={styles.hero}>
+        <View style={[styles.hero, { backgroundColor: colors.header }]}>
           <View style={styles.heroContent}>
             <Text style={styles.eyebrow}>DELIVERING GREAT FOOD</Text>
 
-            <Text style={styles.heroTitle}>What are you craving today?</Text>
+            <Text style={[styles.heroTitle, { color: colors.headerText }]}>What are you craving today?</Text>
 
-            <Text style={styles.heroSubtitle}>
+            <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}
               Find your favourite meals from restaurants near you.
             </Text>
 
@@ -110,7 +113,7 @@ export default function HomeScreen() {
             <View style={styles.center}>
               <ActivityIndicator size="large" color="#F97316" />
 
-              <Text style={styles.loadingText}>
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
                 Finding restaurants near you...
               </Text>
             </View>
@@ -171,7 +174,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#071B2C",
+    backgroundColor: "#FFFFFF",
   },
 
   scrollContent: {

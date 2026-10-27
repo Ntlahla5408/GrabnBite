@@ -101,7 +101,7 @@ export default function AdminDashboard() {
         <View>
           <Text style={[styles.headerTitle, { color: colors.headerText }]}>Admin Dashboard</Text>
 
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             Welcome back, {user.firstName}
           </Text>
         </View>

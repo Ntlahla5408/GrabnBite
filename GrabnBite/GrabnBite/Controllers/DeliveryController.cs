@@ -167,7 +167,9 @@ namespace GrabnBite.Controllers
             {
                 OrderId = delivery.OrderId,
                 Status = "ASSIGNED",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
             });
 
             await _context.SaveChangesAsync();
@@ -332,7 +334,9 @@ namespace GrabnBite.Controllers
             {
                 OrderId = delivery.OrderId,
                 Status = "PICKED_UP",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
             });
 
             await _context.SaveChangesAsync();
@@ -401,7 +405,9 @@ namespace GrabnBite.Controllers
             {
                 OrderId = delivery.OrderId,
                 Status = "DELIVERING",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
             });
 
             await _context.SaveChangesAsync();
@@ -471,7 +477,9 @@ namespace GrabnBite.Controllers
             {
                 OrderId = delivery.OrderId,
                 Status = "DELIVERED",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
             });
 
             driver.IsOnline = true;
@@ -791,7 +799,9 @@ namespace GrabnBite.Controllers
             {
                 OrderId = delivery.OrderId,
                 Status = "ASSIGNED",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
             });
 
             await _context.SaveChangesAsync();

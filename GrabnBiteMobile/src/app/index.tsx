@@ -84,7 +84,7 @@ export default function HomeScreen() {
 
             <Text style={[styles.heroTitle, { color: colors.headerText }]}>What are you craving today?</Text>
 
-            <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}
+            <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
               Find your favourite meals from restaurants near you.
             </Text>
 

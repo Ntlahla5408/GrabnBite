@@ -163,7 +163,7 @@ export default function OrderScreen() {
   const currentIndex = statusOrder.indexOf(status);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>

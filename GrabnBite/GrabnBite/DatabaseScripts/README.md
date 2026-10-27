@@ -14,12 +14,11 @@ For this update, use **one** of the following options, not both.
 4. Run:
 
    ```bash
-   dotnet tool restore
    dotnet ef migrations list
    dotnet ef database update
    ```
 
-   If the EF tool is not installed/restored, install it or restore the repository's local tool manifest as appropriate.
+   If the EF tool is not installed, install the matching EF Core 8 tool once with `dotnet tool install --global dotnet-ef --version 8.0.4`. If the repository contains a local tool manifest, use `dotnet tool restore` instead.
 
 5. Check that the migration `20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex` appears in `__EFMigrationsHistory`.
 

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
   orderItemId: number;
@@ -84,6 +85,8 @@ function getStatusColor(status: string) {
 }
 
 export default function OrdersScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -147,7 +150,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}

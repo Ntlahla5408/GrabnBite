@@ -202,7 +202,9 @@ namespace GrabnBite.Controllers
                 {
                     OrderId = order.OrderId,
                     Status = newStatus,
-                    ChangedAt = DateTime.UtcNow
+                    ChangedAt = DateTime.UtcNow,
+                    ChangedByUserId = GetCurrentUserId(),
+                    ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Restaurant"
                 });
 
             // Create the delivery only when the order reaches the

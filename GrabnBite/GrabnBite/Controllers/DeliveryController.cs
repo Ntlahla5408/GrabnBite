@@ -169,7 +169,8 @@ namespace GrabnBite.Controllers
                 Status = "ASSIGNED",
                 ChangedAt = DateTime.UtcNow,
             ChangedByUserId = GetCurrentUserId(),
-                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
             });
 
             await _context.SaveChangesAsync();
@@ -336,7 +337,8 @@ namespace GrabnBite.Controllers
                 Status = "PICKED_UP",
                 ChangedAt = DateTime.UtcNow,
             ChangedByUserId = GetCurrentUserId(),
-                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
             });
 
             await _context.SaveChangesAsync();
@@ -407,7 +409,8 @@ namespace GrabnBite.Controllers
                 Status = "DELIVERING",
                 ChangedAt = DateTime.UtcNow,
             ChangedByUserId = GetCurrentUserId(),
-                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
             });
 
             await _context.SaveChangesAsync();
@@ -479,7 +482,8 @@ namespace GrabnBite.Controllers
                 Status = "DELIVERED",
                 ChangedAt = DateTime.UtcNow,
             ChangedByUserId = GetCurrentUserId(),
-                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
             });
 
             driver.IsOnline = true;
@@ -801,7 +805,8 @@ namespace GrabnBite.Controllers
                 Status = "ASSIGNED",
                 ChangedAt = DateTime.UtcNow,
             ChangedByUserId = GetCurrentUserId(),
-                            ChangedByRole = User.FindFirstValue(ClaimTypes.Role),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
             });
 
             await _context.SaveChangesAsync();

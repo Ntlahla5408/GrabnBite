@@ -397,6 +397,15 @@ namespace GrabnBite.Data
             // ============================================================
 
             modelBuilder.Entity<OrderStatusHistory>()
+                .HasIndex(h => h.ChangedByUserId);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(h => h.ChangedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<OrderStatusHistory>()
                 .HasOne(h => h.Order)
                 .WithMany(o => o.StatusHistory)
                 .HasForeignKey(h => h.OrderId)

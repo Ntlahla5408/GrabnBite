@@ -106,15 +106,20 @@ export default function AdminDashboard() {
           </Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>Settings</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView

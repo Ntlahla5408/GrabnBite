@@ -188,7 +188,9 @@ namespace GrabnBite.Controllers
             order.StatusHistory.Add(new OrderStatusHistory
             {
                 Status = "PENDING",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+                ChangedByUserId = userId.Value,
+                ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Customer"
             });
 
             // --------------------------------------------------------

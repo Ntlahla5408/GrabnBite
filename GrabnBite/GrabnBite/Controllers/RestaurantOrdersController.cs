@@ -147,7 +147,7 @@ namespace GrabnBite.Controllers
             return await ChangeOrderStatus(
                 orderId,
                 "PREPARING",
-                "READY",
+                "READY_FOR_PICKUP",
                 "Order is ready for pickup.");
         }
 
@@ -205,25 +205,28 @@ namespace GrabnBite.Controllers
                     ChangedAt = DateTime.UtcNow
                 });
 
-            // ============================================================
-            // CREATE DELIVERY WHEN ORDER BECOMES READY
-            // ============================================================
-
-            if (newStatus == "READY")
+            // Create the delivery only when the order reaches the
+            // canonical READY_FOR_PICKUP state used by DeliveryController.
+            if (newStatus == "READY_FOR_PICKUP" && order.Delivery == null)
             {
-                // Prevent duplicate delivery records
-                if (order.Delivery == null)
+                order.Delivery = new Delivery
                 {
-                    order.Delivery = new Delivery
-                    {
-                        OrderId = order.OrderId,
-                        DriverId = null,
-                        Status = "UNASSIGNED"
-                    };
-                }
+                    OrderId = order.OrderId,
+                    DriverId = null,
+                    Status = "UNASSIGNED"
+                };
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent request may have created the one-to-one delivery.
+                // The unique OrderId index remains the final duplicate guard.
+                return Conflict("The order could not be updated because a delivery may already exist. Refresh and try again.");
+            }
 
             // Notify the customer that the order status changed.
             await _hubContext.Clients
@@ -238,7 +241,7 @@ namespace GrabnBite.Controllers
                 message,
                 orderId = order.OrderId,
                 status = order.Status,
-                deliveryCreated = newStatus == "READY"
+                deliveryCreated = order.Delivery != null
             });
         }
     }

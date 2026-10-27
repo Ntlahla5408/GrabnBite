@@ -11,6 +11,7 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
   orderItemId: number;
@@ -33,6 +34,8 @@ interface Order {
 }
 
 export default function OrderScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
@@ -160,7 +163,7 @@ export default function OrderScreen() {
   const currentIndex = statusOrder.indexOf(status);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>

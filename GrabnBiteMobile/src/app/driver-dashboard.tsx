@@ -361,17 +361,22 @@ export default function DriverDashboard() {
         <View style={styles.header}>
           <View>
             <Text style={[styles.logo, { color: colors.text }]}>GrabnBite</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}Driver Dashboard</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Driver Dashboard</Text>
           </View>
 
-          <TouchableOpacity
-            onPress={async () => {
-              await logout();
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+            <TouchableOpacity onPress={() => router.push("/settings" as any)}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                await logout();
               router.replace("/login");
-            }}
-          >
-            <Text style={styles.logout}>Logout</Text>
-          </TouchableOpacity>
+              }}
+            >
+              <Text style={styles.logout}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ONLINE STATUS */}

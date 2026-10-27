@@ -49,7 +49,7 @@ export default function AccountScreen() {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.header }]}>
           <Text style={[styles.headerTitle, { color: colors.headerText }]}>My Account</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             Manage your GrabnBite account
           </Text>
         </View>
@@ -87,7 +87,7 @@ export default function AccountScreen() {
 
             <View style={styles.optionContent}>
               <Text style={[styles.optionTitle, { color: colors.text }]}>My Orders</Text>
-              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>
                 View your current and previous orders
               </Text>
             </View>

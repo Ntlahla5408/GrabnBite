@@ -17,8 +17,11 @@ import {
   updateCartItem,
 } from "../services/cartService";
 import { Cart } from "../types/cart";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function CartScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const [carts, setCarts] = useState<Cart[]>([]);
@@ -111,7 +114,7 @@ export default function CartScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

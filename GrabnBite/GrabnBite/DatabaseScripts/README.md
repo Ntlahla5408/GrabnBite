@@ -22,11 +22,11 @@ For this update, use **one** of the following options, not both.
 
 5. Check that the migration `20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex` appears in `__EFMigrationsHistory`.
 
-The migration adds a checkout-time delivery address snapshot to each order and a unique index that prevents duplicate rows for the same cart/menu-item combination. It backfills old orders from their referenced saved addresses. It intentionally stops if duplicate cart items are found rather than deleting or merging customer data automatically.
+The migrations add a checkout-time delivery address snapshot to each order, a unique index that prevents duplicate rows for the same cart/menu-item combination, and actor attribution on future order status history entries. They backfill old orders from their referenced saved addresses. The cart migration intentionally stops if duplicate cart items are found rather than deleting or merging customer data automatically. Existing status-history entries retain a null actor because the old schema did not record who initiated them.
 
 ### Option B — Run the SQL script manually
 
-Run `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql` against the target PostgreSQL database (for example, in the Supabase SQL editor) after taking a backup.
+Run these scripts in timestamp order against the target PostgreSQL database (for example, in the Supabase SQL editor) after taking a backup:\n\n- `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql`\n- `DatabaseScripts/20261028010000_OrderStatusHistoryActor.sql`
 
 The SQL script also records the migration in `__EFMigrationsHistory`, so EF Core knows it has already been applied. Do not run the same schema update by both options.
 
@@ -79,6 +79,7 @@ These endpoints are intended for local API/Swagger workflow testing only. Do not
 
 ## Current scope and verification
 
-This migration does not delete tables or existing orders. It adds these order snapshot columns: `DeliveryAddressLabel`, `DeliveryStreetAddress`, `DeliveryCity`, `DeliveryProvince`, `DeliveryPostalCode`, `DeliveryLatitude`, and `DeliveryLongitude`.
+These migrations do not delete tables or existing orders. The first adds these order snapshot columns: `DeliveryAddressLabel`, `DeliveryStreetAddress`, `DeliveryCity`, `DeliveryProvince`, `DeliveryPostalCode`, `DeliveryLatitude`, and `DeliveryLongitude`.
 
 The migration and SQL script were authored together but have not been executed against your database in this environment. Run the build and apply the migration in your own development environment before relying on the new schema.
+\n\nThe second migration adds nullable `ChangedByUserId` and `ChangedByRole` fields to `OrderStatusHistories`, so new status changes can identify the authenticated user and role. Older rows remain valid with no actor recorded.\n

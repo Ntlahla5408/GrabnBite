@@ -141,6 +141,8 @@ namespace GrabnBite.Controllers
             {
                 Status = "CANCELLED",
                 ChangedAt = DateTime.UtcNow,
+                ChangedByUserId = userId.Value,
+                ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Customer",
                 OrderId = order.OrderId
             });
 
@@ -198,7 +200,9 @@ namespace GrabnBite.Controllers
                 {
                     h.OrderStatusHistoryId,
                     h.Status,
-                    h.ChangedAt
+                    h.ChangedAt,
+                    h.ChangedByUserId,
+                    h.ChangedByRole
                 })
                 .ToListAsync();
 

@@ -12,6 +12,7 @@ import {
 import { router } from "expo-router";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface AdminUser {
   userId: number;
@@ -27,6 +28,8 @@ interface AdminUser {
 
 export default function AdminDashboard() {
   const { user, token, logout } = useAuth();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,13 +95,13 @@ export default function AdminDashboard() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.header }]}>
         <View>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>Admin Dashboard</Text>
 
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}
             Welcome back, {user.firstName}
           </Text>
         </View>

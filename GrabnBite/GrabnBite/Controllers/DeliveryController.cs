@@ -106,6 +106,7 @@ namespace GrabnBite.Controllers
 
             var delivery = await _context.Deliveries
                 .Include(d => d.Order)
+                    .ThenInclude(o => o.StatusHistory)
                 .FirstOrDefaultAsync(d =>
                     d.DeliveryId == deliveryId);
 
@@ -143,6 +144,15 @@ namespace GrabnBite.Controllers
 
             delivery.DriverId = driver.DriverId;
             delivery.Status = "ASSIGNED";
+
+            // Keep the customer-facing order lifecycle aligned with delivery assignment.
+            delivery.Order.Status = "ASSIGNED";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "ASSIGNED",
+                ChangedAt = DateTime.UtcNow
+            });
 
             await _context.SaveChangesAsync();
 
@@ -291,8 +301,13 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "PICKED_UP";
             delivery.PickedUpAt = DateTime.UtcNow;
-
-            delivery.Order.Status = "DRIVER_PICKED_UP";
+            delivery.Order.Status = "PICKED_UP";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "PICKED_UP",
+                ChangedAt = DateTime.UtcNow
+            });
 
             await _context.SaveChangesAsync();
 
@@ -356,6 +371,12 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "DELIVERING";
             delivery.Order.Status = "DELIVERING";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "DELIVERING",
+                ChangedAt = DateTime.UtcNow
+            });
 
             await _context.SaveChangesAsync();
 
@@ -419,8 +440,13 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "DELIVERED";
             delivery.DeliveredAt = DateTime.UtcNow;
-
             delivery.Order.Status = "DELIVERED";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "DELIVERED",
+                ChangedAt = DateTime.UtcNow
+            });
 
             driver.IsOnline = true;
 

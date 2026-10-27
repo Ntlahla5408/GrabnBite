@@ -156,9 +156,14 @@ export default function RestaurantDashboardScreen() {
           ) : null}
         </View>
 
-        <View style={styles.headerIcon}>
-          <Text style={styles.headerIconText}>🍴</Text>
-        </View>
+        <Pressable
+          style={styles.headerIcon}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          onPress={() => router.push("/settings" as any)}
+        >
+          <Text style={styles.headerIconText}>⚙️</Text>
+        </Pressable>
       </View>
 
       <ScrollView

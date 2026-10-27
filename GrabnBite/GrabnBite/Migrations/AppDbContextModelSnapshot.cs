@@ -418,6 +418,12 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("ChangedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ChangedByRole")
+                        .HasColumnType("text");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
@@ -426,6 +432,8 @@ namespace GrabnBite.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("OrderStatusHistoryId");
+
+                    b.HasIndex("ChangedByUserId");
 
                     b.HasIndex("OrderId");
 
@@ -810,6 +818,11 @@ namespace GrabnBite.Migrations
 
             modelBuilder.Entity("GrabnBite.Models.Entities.OrderStatusHistory", b =>
                 {
+                    b.HasOne("GrabnBite.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GrabnBite.Models.Entities.Order", "Order")
                         .WithMany("StatusHistory")
                         .HasForeignKey("OrderId")

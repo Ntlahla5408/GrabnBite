@@ -102,7 +102,9 @@ namespace GrabnBite.Controllers
                     .Select(h => new
                     {
                         status = h.Status,
-                        changedAt = h.ChangedAt
+                        changedAt = h.ChangedAt,
+                        changedByUserId = h.ChangedByUserId,
+                        changedByRole = h.ChangedByRole
                     })
             });
 

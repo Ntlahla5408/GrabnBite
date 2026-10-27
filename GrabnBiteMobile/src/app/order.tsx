@@ -203,9 +203,13 @@ export default function OrderScreen() {
                   ? "Preparing Your Order"
                   : status === "READY_FOR_PICKUP"
                     ? "Ready for Pickup"
-                    : status === "DELIVERING"
-                      ? "On the Way"
-                      : status === "DELIVERED"
+                    : status === "ASSIGNED"
+                      ? "Driver Assigned"
+                      : status === "PICKED_UP"
+                        ? "Picked Up"
+                        : status === "DELIVERING"
+                          ? "On the Way"
+                          : status === "DELIVERED"
                         ? "Order Delivered"
                         : "Order Received"}
           </Text>

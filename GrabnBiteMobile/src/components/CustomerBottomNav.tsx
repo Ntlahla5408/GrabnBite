@@ -1,8 +1,11 @@
 import { router, usePathname } from "expo-router";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function CustomerBottomNav() {
   const pathname = usePathname();
+  const { theme, isDark } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const tabs = [
     {
@@ -23,8 +26,8 @@ export default function CustomerBottomNav() {
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.nav}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View style={[styles.nav, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {tabs.map((tab) => {
           const active =
             tab.route === "/"
@@ -46,12 +49,12 @@ export default function CustomerBottomNav() {
                   active && styles.activeIconContainer,
                 ]}
               >
-                <Text style={[styles.icon, active && styles.activeIcon]}>
+                <Text style={[styles.icon, { color: isDark ? "#AFC0CC" : "#64748B" }, active && styles.activeIcon]}>
                   {tab.icon}
                 </Text>
               </View>
 
-              <Text style={[styles.label, active && styles.activeLabel]}>
+              <Text style={[styles.label, { color: isDark ? "#AFC0CC" : "#64748B" }, active && { color: colors.text }, active && styles.activeLabel]}>
                 {tab.label}
               </Text>
 

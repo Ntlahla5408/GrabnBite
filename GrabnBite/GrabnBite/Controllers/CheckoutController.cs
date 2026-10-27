@@ -170,6 +170,13 @@ namespace GrabnBite.Controllers
                 UserId = userId.Value,
                 RestaurantId = cart.RestaurantId,
                 DeliveryAddressId = dto.DeliveryAddressId,
+                DeliveryAddressLabel = address.Label,
+                DeliveryStreetAddress = address.StreetAddress,
+                DeliveryCity = address.City,
+                DeliveryProvince = address.Province,
+                DeliveryPostalCode = address.PostalCode,
+                DeliveryLatitude = address.Latitude,
+                DeliveryLongitude = address.Longitude,
                 Status = "PENDING",
                 OrderDate = DateTime.UtcNow
             };

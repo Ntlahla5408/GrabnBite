@@ -19,8 +19,11 @@ import { getRestaurant } from "../services/restaurantService";
 import { Cart } from "../types/cart";
 import { MenuItem } from "../types/menu";
 import { Restaurant } from "../types/restaurant";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function RestaurantScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const [cart, setCart] = useState<Cart[]>([]);
@@ -152,7 +155,7 @@ export default function RestaurantScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Restaurant Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>

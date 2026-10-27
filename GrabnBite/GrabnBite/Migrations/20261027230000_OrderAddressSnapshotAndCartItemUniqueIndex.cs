@@ -1,13 +1,10 @@
 using GrabnBite.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace GrabnBite.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex")]
     public partial class OrderAddressSnapshotAndCartItemUniqueIndex : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -179,6 +179,7 @@ namespace GrabnBite.Controllers
 
             var order = await _context.Orders
                 .Include(o => o.StatusHistory)
+                .Include(o => o.Payment)
                 .Include(o => o.Delivery)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == orderId &&
@@ -193,6 +194,19 @@ namespace GrabnBite.Controllers
             {
                 return BadRequest(
                     $"Order must be {expectedStatus} before it can become {newStatus}.");
+            }
+
+            // Cash-on-delivery may remain pending until the driver collects it.
+            // Every other recorded payment must be verified before the restaurant
+            // accepts the order, so failed/pending fake or online payments cannot
+            // enter food preparation. Orders without a payment row remain compatible
+            // with the existing checkout flow.
+            if (newStatus == "ACCEPTED" &&
+                order.Payment != null &&
+                !string.Equals(order.Payment.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Payment must be confirmed before the restaurant can accept this order.");
             }
 
             // Change order status

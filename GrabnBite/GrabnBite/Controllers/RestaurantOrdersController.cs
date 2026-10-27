@@ -207,6 +207,7 @@ namespace GrabnBite.Controllers
 
             // Create the delivery only when the order reaches the
             // canonical READY_FOR_PICKUP state used by DeliveryController.
+            var deliveryCreated = false;
             if (newStatus == "READY_FOR_PICKUP" && order.Delivery == null)
             {
                 order.Delivery = new Delivery
@@ -215,6 +216,7 @@ namespace GrabnBite.Controllers
                     DriverId = null,
                     Status = "UNASSIGNED"
                 };
+                deliveryCreated = true;
             }
 
             try
@@ -241,7 +243,7 @@ namespace GrabnBite.Controllers
                 message,
                 orderId = order.OrderId,
                 status = order.Status,
-                deliveryCreated = order.Delivery != null
+                deliveryCreated
             });
         }
     }

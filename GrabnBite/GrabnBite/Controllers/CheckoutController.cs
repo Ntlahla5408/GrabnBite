@@ -154,10 +154,10 @@ namespace GrabnBite.Controllers
                         "Cart contains an invalid quantity.");
                 }
 
-                if (cartItem.UnitPrice < 0)
+                if (cartItem.MenuItem.Price < 0)
                 {
                     return BadRequest(
-                        "Cart contains an invalid item price.");
+                        "A menu item has an invalid price.");
                 }
             }
 
@@ -195,9 +195,11 @@ namespace GrabnBite.Controllers
                     MenuItemId = cartItem.MenuItemId,
                     ItemName = cartItem.MenuItem.Name,
                     Quantity = cartItem.Quantity,
-                    UnitPrice = cartItem.UnitPrice,
+                    // Use the current menu price at checkout, not a stale
+                    // cart price captured before a restaurant changed its menu.
+                    UnitPrice = cartItem.MenuItem.Price,
                     Subtotal =
-                        cartItem.UnitPrice * cartItem.Quantity
+                        cartItem.MenuItem.Price * cartItem.Quantity
                 };
 
                 order.OrderItems.Add(orderItem);

@@ -135,12 +135,22 @@ export default function OrderScreen() {
       description: "Your food is being prepared.",
     },
     {
-      key: "READY",
+      key: "READY_FOR_PICKUP",
       title: "Ready for pickup",
       description: "Your order is ready for collection.",
     },
     {
-      key: "OUT_FOR_DELIVERY",
+      key: "ASSIGNED",
+      title: "Driver assigned",
+      description: "A driver has accepted your delivery.",
+    },
+    {
+      key: "PICKED_UP",
+      title: "Picked up",
+      description: "The driver has collected your order.",
+    },
+    {
+      key: "DELIVERING",
       title: "On the way",
       description: "Your order is on its way to you.",
     },
@@ -155,8 +165,10 @@ export default function OrderScreen() {
     "PENDING",
     "ACCEPTED",
     "PREPARING",
-    "READY",
-    "OUT_FOR_DELIVERY",
+    "READY_FOR_PICKUP",
+    "ASSIGNED",
+    "PICKED_UP",
+    "DELIVERING",
     "DELIVERED",
   ];
 
@@ -189,9 +201,9 @@ export default function OrderScreen() {
                 ? "Restaurant Accepted"
                 : status === "PREPARING"
                   ? "Preparing Your Order"
-                  : status === "READY"
+                  : status === "READY_FOR_PICKUP"
                     ? "Ready for Pickup"
-                    : status === "OUT_FOR_DELIVERY"
+                    : status === "DELIVERING"
                       ? "On the Way"
                       : status === "DELIVERED"
                         ? "Order Delivered"

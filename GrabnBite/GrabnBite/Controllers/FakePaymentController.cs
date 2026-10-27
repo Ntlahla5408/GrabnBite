@@ -65,7 +65,32 @@ namespace GrabnBite.Controllers
             if (order.TotalAmount <= 0)
                 return BadRequest("Order amount must be greater than zero.");
             if (order.Payment != null)
-                return Conflict("A payment already exists for this order. Do not create a second payment record.");
+            {
+                // A failed fake attempt can be retried on the same payment row because
+                // the current schema intentionally allows one payment record per order.
+                if (order.Payment.PaymentMethod == "FAKE" &&
+                    order.Payment.PaymentStatus == "FAILED")
+                {
+                    order.Payment.PaymentStatus = "PENDING";
+                    order.Payment.PaymentReference = $"GNB-FAKE-{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+                    order.Payment.TransactionReference = null;
+                    order.Payment.PaymentDate = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        message = "Fake payment retry created. No money has been charged.",
+                        paymentId = order.Payment.PaymentId,
+                        orderId = order.Payment.OrderId,
+                        amount = order.Payment.Amount,
+                        paymentStatus = order.Payment.PaymentStatus,
+                        paymentMethod = order.Payment.PaymentMethod,
+                        paymentReference = order.Payment.PaymentReference
+                    });
+                }
+
+                return Conflict("A payment already exists for this order. A paid or in-progress payment cannot be replaced.");
+            }
 
             var payment = new Payment
             {

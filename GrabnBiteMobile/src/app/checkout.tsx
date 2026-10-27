@@ -13,8 +13,11 @@ import { useAuth } from "../context/authContext";
 import { getAddresses } from "../services/addressService";
 import { createCheckout } from "../services/checkoutService";
 import { Address } from "../types/address";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function CheckoutScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
@@ -133,7 +136,7 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

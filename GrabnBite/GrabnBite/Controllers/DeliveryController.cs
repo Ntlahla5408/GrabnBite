@@ -253,7 +253,17 @@ namespace GrabnBite.Controllers
 
                 orderDate = delivery.Order.OrderDate,
 
-                deliveryAddress = delivery.Order.DeliveryAddress,
+                deliveryAddress = new
+                {
+                    AddressId = delivery.Order.DeliveryAddressId,
+                    Label = delivery.Order.DeliveryAddressLabel,
+                    StreetAddress = delivery.Order.DeliveryStreetAddress,
+                    City = delivery.Order.DeliveryCity,
+                    Province = delivery.Order.DeliveryProvince,
+                    PostalCode = delivery.Order.DeliveryPostalCode,
+                    Latitude = delivery.Order.DeliveryLatitude,
+                    Longitude = delivery.Order.DeliveryLongitude
+                },
 
                 items = delivery.Order.OrderItems.Select(item => new
                 {
@@ -670,7 +680,17 @@ namespace GrabnBite.Controllers
                     },
                     totalAmount = d.Order.TotalAmount,
                     orderDate = d.Order.OrderDate,
-                    deliveryAddress = d.Order.DeliveryAddress,
+                    deliveryAddress = new
+                    {
+                        AddressId = d.Order.DeliveryAddressId,
+                        Label = d.Order.DeliveryAddressLabel,
+                        StreetAddress = d.Order.DeliveryStreetAddress,
+                        City = d.Order.DeliveryCity,
+                        Province = d.Order.DeliveryProvince,
+                        PostalCode = d.Order.DeliveryPostalCode,
+                        Latitude = d.Order.DeliveryLatitude,
+                        Longitude = d.Order.DeliveryLongitude
+                    },
 
                     items = d.Order.OrderItems.Select(item => new
                     {

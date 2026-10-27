@@ -107,15 +107,23 @@ using (var scope = app.Services.CreateScope())
     {
         await db.Database.OpenConnectionAsync();
         Console.WriteLine("DATABASE CONNECTION: True");
-        await db.Database.CloseConnectionAsync();
-    }
-    catch (Exception)
-    {
-        Console.WriteLine("DATABASE CONNECTION: False");
-        app.Logger.LogError("Database connection failed during startup; exception details were omitted to protect connection credentials.");
-    }
 
-    await DbSeeder.SeedAsync(db);
+        // Close the probe connection before running the idempotent development seeder.
+        await db.Database.CloseConnectionAsync();
+
+        await DbSeeder.SeedAsync(db);
+        app.Logger.LogInformation("Development database seeding completed.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("DATABASE CONNECTION / STARTUP SEEDING: False");
+        app.Logger.LogCritical(
+            ex,
+            "Application startup stopped because the database connection or startup seeding failed.");
+
+        // Never continue into a partially usable API after a failed DB probe/seed.
+        throw;
+    }
 }
 
 app.UseCors("MyPolicy");

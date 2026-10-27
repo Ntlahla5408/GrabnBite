@@ -26,7 +26,9 @@ The migrations add a checkout-time delivery address snapshot to each order, a un
 
 ### Option B — Run the SQL script manually
 
-Run these scripts in timestamp order against the target PostgreSQL database (for example, in the Supabase SQL editor) after taking a backup:\n\n- `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql`\n- `DatabaseScripts/20261028010000_OrderStatusHistoryActor.sql`
+Run these scripts in timestamp order against the target PostgreSQL database (for example, in the Supabase SQL editor) after taking a backup:
+
+- `DatabaseScripts/20261027230000_OrderAddressSnapshotAndCartItemUniqueIndex.sql`\n- `DatabaseScripts/20261028010000_OrderStatusHistoryActor.sql`
 
 The SQL script also records the migration in `__EFMigrationsHistory`, so EF Core knows it has already been applied. Do not run the same schema update by both options.
 
@@ -82,4 +84,6 @@ These endpoints are intended for local API/Swagger workflow testing only. Do not
 These migrations do not delete tables or existing orders. The first adds these order snapshot columns: `DeliveryAddressLabel`, `DeliveryStreetAddress`, `DeliveryCity`, `DeliveryProvince`, `DeliveryPostalCode`, `DeliveryLatitude`, and `DeliveryLongitude`.
 
 The migration and SQL script were authored together but have not been executed against your database in this environment. Run the build and apply the migration in your own development environment before relying on the new schema.
-\n\nThe second migration adds nullable `ChangedByUserId` and `ChangedByRole` fields to `OrderStatusHistories`, so new status changes can identify the authenticated user and role. Older rows remain valid with no actor recorded.\n
+
+
+The second migration adds nullable `ChangedByUserId` and `ChangedByRole` fields to `OrderStatusHistories`, so new status changes can identify the authenticated user and role. Older rows remain valid with no actor recorded.\n

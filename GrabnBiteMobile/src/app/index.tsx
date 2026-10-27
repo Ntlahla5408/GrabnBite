@@ -21,7 +21,7 @@ import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { theme, isDark } = useThemePreference();
+  const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
 
   const [search, setSearch] = useState("");

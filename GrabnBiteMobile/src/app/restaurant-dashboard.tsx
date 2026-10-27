@@ -144,7 +144,7 @@ export default function RestaurantDashboardScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.header }]}>
         <View>
           <Text style={styles.headerSmall}>Restaurant Dashboard</Text>

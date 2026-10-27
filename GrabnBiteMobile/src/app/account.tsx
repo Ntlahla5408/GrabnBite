@@ -47,15 +47,15 @@ export default function AccountScreen() {
         contentContainerStyle={styles.content}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Account</Text>
-          <Text style={styles.headerSubtitle}>
+        <View style={[styles.header, { backgroundColor: colors.header }]}>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>My Account</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}
             Manage your GrabnBite account
           </Text>
         </View>
 
         {/* Profile */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {user.firstName?.charAt(0).toUpperCase() || "U"}
@@ -63,11 +63,11 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>
+            <Text style={[styles.name, { color: colors.text }]}
               {user.firstName} {user.lastName}
             </Text>
 
-            <Text style={styles.email}>{user.email}</Text>
+            <Text style={[styles.email, { color: colors.textSecondary }]}{user.email}</Text>
 
             <Text style={styles.role}>Customer</Text>
           </View>
@@ -75,10 +75,10 @@ export default function AccountScreen() {
 
         {/* Account options */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My GrabnBite</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>My GrabnBite</Text>
 
           <Pressable
-            style={styles.option}
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/orders")}
           >
             <View style={styles.optionIcon}>
@@ -86,8 +86,8 @@ export default function AccountScreen() {
             </View>
 
             <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>My Orders</Text>
-              <Text style={styles.optionSubtitle}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>My Orders</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}
                 View your current and previous orders
               </Text>
             </View>
@@ -104,7 +104,7 @@ export default function AccountScreen() {
             </View>
 
             <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>My Addresses</Text>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>My Addresses</Text>
               <Text style={styles.optionSubtitle}>
                 Manage your delivery addresses
               </Text>
@@ -130,7 +130,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Logout */}
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Pressable style={[styles.logoutButton, { backgroundColor: isDark ? "#F97316" : "#071B2C" }]} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
       </ScrollView>

@@ -377,6 +377,14 @@ namespace GrabnBite.Data
                 .HasPrecision(10, 2);
 
             modelBuilder.Entity<Payment>()
+                .Property(p => p.RefundStatus)
+                .HasDefaultValue("NOT_REQUIRED");
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RequiresReconciliation)
+                .HasDefaultValue(false);
+
+            modelBuilder.Entity<Payment>()
                 .ToTable(t => t.HasCheckConstraint(
                     "CK_Payments_RefundStatus",
                     "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')"));

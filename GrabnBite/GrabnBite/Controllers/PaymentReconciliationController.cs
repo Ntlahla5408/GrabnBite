@@ -1,3 +1,4 @@
+using Npgsql;
 using GrabnBite.Data;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -249,8 +250,8 @@ namespace GrabnBite.Controllers
                 await transaction.CommitAsync();
             }
             catch (Exception ex) when (ex is DbUpdateException ||
-                                       ex.GetType().Name == "SerializationFailureException" ||
-                                       ex.GetType().Name == "PostgresException")
+                                       ex is PostgresException postgresException &&
+                                           postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
             {
                 await transaction.RollbackAsync();
                 _logger.LogWarning(ex, "Concurrent refund reconciliation update for payment {PaymentId}", paymentId);

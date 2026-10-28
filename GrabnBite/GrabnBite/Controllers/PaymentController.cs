@@ -439,21 +439,48 @@ namespace GrabnBite.Controllers
 
             try
             {
-                var checkout =
-                    await _yocoPaymentService.CreateCheckoutAsync(
-                        payment.Amount,
-                        "ZAR",
-                        successUrl,
-                        cancelUrl,
-                        payment.PaymentReference ?? throw new InvalidOperationException("Payment reference is missing."));
+                var checkoutPaymentReference = payment.PaymentReference
+                    ?? throw new InvalidOperationException("Payment reference is missing.");
+                var checkout = await _yocoPaymentService.CreateCheckoutAsync(
+                    payment.Amount,
+                    "ZAR",
+                    successUrl,
+                    cancelUrl,
+                    checkoutPaymentReference);
 
-                // ----------------------------------------------------
-                // Save Yoco checkout ID
-                // ----------------------------------------------------
+                // Attach the provider checkout only if this payment attempt is still
+                // current. A delayed success for an older checkout can mark the payment
+                // PAID while this provider request is in flight; never then expose a
+                // second checkout as though it were safe to complete.
+                var checkoutAttached = await _context.Payments
+                    .Where(p => p.PaymentId == payment.PaymentId &&
+                                p.PaymentReference == checkoutPaymentReference &&
+                                p.PaymentStatus != "PAID" &&
+                                (p.YocoCheckoutId == null || p.YocoCheckoutId == checkout.Id))
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.YocoCheckoutId, checkout.Id));
 
-                payment.YocoCheckoutId = checkout.Id;
+                await _context.Entry(payment).ReloadAsync();
 
-                await _context.SaveChangesAsync();
+                if (checkoutAttached == 0 ||
+                    string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(payment.TransactionReference, checkout.Id, StringComparison.Ordinal))
+                {
+                    await OpenYocoReconciliationAsync(
+                        payment.PaymentId,
+                        checkout.Id,
+                        payment.RefundStatus,
+                        "YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED",
+                        "Yoco returned a checkout after the payment state or attempt reference changed. Verify whether this checkout can still be paid and reconcile any resulting charge before resolving.",
+                        DateTime.UtcNow);
+
+                    _logger.LogCritical(
+                        "RECONCILIATION REQUIRED: Yoco checkout {CheckoutId} was created after payment {PaymentId} changed state; do not direct the customer to this checkout.",
+                        checkout.Id,
+                        payment.PaymentId);
+
+                    return Conflict("The payment changed while checkout was being created. Do not continue with this checkout; refresh and check payment status.");
+                }
 
                 // ----------------------------------------------------
                 // Return checkout information
@@ -610,7 +637,8 @@ namespace GrabnBite.Controllers
                 {
                     var retryEvent = await _context.PaymentReconciliationEvents
                         .AsNoTracking()
-                        .Where(e => e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" &&
+                        .Where(e => (e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" ||
+                                     e.EventType == "YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED") &&
                                     e.ProviderReference == checkoutId)
                         .OrderByDescending(e => e.CreatedAt)
                         .FirstOrDefaultAsync();

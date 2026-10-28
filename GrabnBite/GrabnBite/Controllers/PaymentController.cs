@@ -500,6 +500,7 @@ namespace GrabnBite.Controllers
         // Yoco's browser redirect is not proof of payment. This signed webhook
         // triggers a server-to-server lookup and uses that response as authority.
         [AllowAnonymous]
+        [RequestSizeLimit(1_048_576)]
         [HttpPost("yoco/webhook")]
         public async Task<IActionResult> YocoWebhook()
         {
@@ -630,11 +631,23 @@ namespace GrabnBite.Controllers
 
             try
             {
-                var secret = _yocoSettings.WebhookSecret;
-                if (secret.StartsWith("whsec_", StringComparison.Ordinal))
-                    secret = secret.Substring("whsec_".Length);
+                var configuredSecret = _yocoSettings.WebhookSecret;
+                const string secretPrefix = "whsec_";
+                if (!configuredSecret.StartsWith(secretPrefix, StringComparison.Ordinal) ||
+                    configuredSecret.Length <= secretPrefix.Length)
+                {
+                    _logger.LogError("Yoco webhook signing secret is missing the required prefix or key material.");
+                    return false;
+                }
 
+                var secret = configuredSecret.Substring(secretPrefix.Length);
                 var key = Convert.FromBase64String(secret);
+                if (key.Length == 0)
+                {
+                    _logger.LogError("Yoco webhook signing secret decoded to an empty key.");
+                    return false;
+                }
+
                 var signedContent = $"{webhookId}.{timestamp}.{rawBody}";
                 using var hmac = new HMACSHA256(key);
                 var expected = Convert.ToBase64String(

@@ -2,7 +2,7 @@
 import { apiRequest } from "./api";
 
 export interface YocoPaymentResponse {
-  redirectUrl: string;
+  redirectUrl?: string;
   paymentId: number;
   orderId: number;
   amount: number;

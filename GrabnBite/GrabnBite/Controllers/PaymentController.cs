@@ -462,6 +462,26 @@ namespace GrabnBite.Controllers
 
                 await _context.Entry(payment).ReloadAsync();
 
+                if (checkoutAttached == 0 &&
+                    string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(payment.TransactionReference, checkout.Id, StringComparison.Ordinal))
+                {
+                    // A concurrent request may have completed this exact checkout.
+                    // Return the verified state without sending the customer back to it.
+                    return Ok(new PaymentResponseDto
+                    {
+                        PaymentId = payment.PaymentId,
+                        OrderId = payment.OrderId,
+                        Amount = payment.Amount,
+                        PaymentStatus = payment.PaymentStatus,
+                        PaymentMethod = payment.PaymentMethod,
+                        PaymentReference = payment.PaymentReference,
+                        TransactionReference = payment.TransactionReference,
+                        PaymentDate = payment.PaymentDate,
+                        YocoCheckoutId = payment.YocoCheckoutId
+                    });
+                }
+
                 if (checkoutAttached == 0 ||
                     string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(payment.TransactionReference, checkout.Id, StringComparison.Ordinal))

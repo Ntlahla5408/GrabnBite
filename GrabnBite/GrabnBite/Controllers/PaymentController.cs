@@ -497,20 +497,24 @@ namespace GrabnBite.Controllers
 
                 if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    payment.PaymentStatus = "PAID";
-                    payment.TransactionReference = checkout.Id;
-                    if (payment.Order.Status != "CANCELLED")
-                        payment.Order.Status = "PENDING";
-                    await _context.SaveChangesAsync();
+                    // The provider's verified completion is authoritative. Update only
+                    // the payment row: payment confirmation must never reset an order
+                    // that the restaurant has already moved forward.
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "PAID")
+                            .SetProperty(p => p.TransactionReference, checkout.Id));
                 }
                 else if (string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (payment.PaymentStatus != "PAID")
-                    {
-                        payment.PaymentStatus = "FAILED";
-                        await _context.SaveChangesAsync();
-                    }
+                    // Conditional update makes PAID terminal even if a failure callback
+                    // races with a successful confirmation in another request.
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "FAILED"));
                 }
 
                 return Ok(new { received = true });
@@ -673,15 +677,17 @@ namespace GrabnBite.Controllers
                     "completed",
                     StringComparison.OrdinalIgnoreCase))
                 {
-                    payment.PaymentStatus = "PAID";
+                    // Confirm the payment without mutating the order lifecycle.
+                    // A verified payment must not move ACCEPTED/PREPARING/etc. back
+                    // to PENDING. A completed provider result may safely win over a
+                    // previously recorded FAILED result after reconciliation.
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "PAID")
+                            .SetProperty(p => p.TransactionReference, checkout.Id));
 
-                    payment.TransactionReference =
-                        checkout.Id;
-
-                    if (order.Status != "CANCELLED")
-                        order.Status = "PENDING";
-
-                    await _context.SaveChangesAsync();
+                    await _context.Entry(payment).ReloadAsync();
 
                     return Ok(new
                     {
@@ -699,13 +705,18 @@ namespace GrabnBite.Controllers
                     "failed",
                     StringComparison.OrdinalIgnoreCase))
                 {
-                    payment.PaymentStatus = "FAILED";
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "FAILED"));
 
-                    await _context.SaveChangesAsync();
+                    await _context.Entry(payment).ReloadAsync();
 
                     return Ok(new
                     {
-                        message = "Yoco payment failed.",
+                        message = payment.PaymentStatus == "PAID"
+                            ? "Payment was already confirmed successfully."
+                            : "Yoco payment failed.",
                         orderId = order.OrderId,
                         paymentId = payment.PaymentId,
                         paymentStatus = payment.PaymentStatus,
@@ -718,13 +729,18 @@ namespace GrabnBite.Controllers
                     "cancelled",
                     StringComparison.OrdinalIgnoreCase))
                 {
-                    payment.PaymentStatus = "FAILED";
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "FAILED"));
 
-                    await _context.SaveChangesAsync();
+                    await _context.Entry(payment).ReloadAsync();
 
                     return Ok(new
                     {
-                        message = "Yoco payment was cancelled.",
+                        message = payment.PaymentStatus == "PAID"
+                            ? "Payment was already confirmed successfully."
+                            : "Yoco payment was cancelled.",
                         orderId = order.OrderId,
                         paymentId = payment.PaymentId,
                         paymentStatus = payment.PaymentStatus,

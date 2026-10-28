@@ -515,8 +515,9 @@ namespace GrabnBite.Controllers
 
                 if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    var orderWasCancelled = string.Equals(
-                        payment.Order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase);
+                    // Re-read order status inside the payment transaction so a cancellation
+                    // that wins a race cannot be missed by this webhook.
+                    var orderWasCancelled = await RecordVerifiedYocoPaymentAsync(payment, checkout.Id);
 
                     if (orderWasCancelled)
                     {
@@ -525,10 +526,6 @@ namespace GrabnBite.Controllers
                             payment.PaymentId,
                             payment.OrderId);
                     }
-
-                    // Persist the provider-confirmed payment and, when the order was
-                    // cancelled, create a durable refund/reconciliation record atomically.
-                    await RecordVerifiedYocoPaymentAsync(payment, checkout.Id, orderWasCancelled);
                 }
                 else if (string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
@@ -637,12 +634,22 @@ namespace GrabnBite.Controllers
             return null;
         }
 
-        private async Task RecordVerifiedYocoPaymentAsync(
+        private async Task<bool> RecordVerifiedYocoPaymentAsync(
             Payment payment,
-            string providerCheckoutReference,
-            bool orderWasCancelled)
+            string providerCheckoutReference)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var currentOrderStatus = await _context.Orders
+                .Where(o => o.OrderId == payment.OrderId)
+                .Select(o => o.Status)
+                .SingleOrDefaultAsync();
+
+            if (currentOrderStatus == null)
+                throw new InvalidOperationException("The order for the verified payment no longer exists.");
+
+            var orderWasCancelled = string.Equals(
+                currentOrderStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase);
 
             if (orderWasCancelled)
             {
@@ -704,6 +711,7 @@ namespace GrabnBite.Controllers
             }
 
             await transaction.CommitAsync();
+            return orderWasCancelled;
         }
 
         [Authorize(Roles = "Customer")]
@@ -772,8 +780,9 @@ namespace GrabnBite.Controllers
                 {
                     // The provider may confirm payment after a cancellation race.
                     // Never reopen/fulfil a cancelled order; persist refund tracking.
-                    var orderWasCancelled = string.Equals(
-                        order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase);
+                    // The helper re-reads order status within a serializable transaction,
+                    // records any required refund, and never changes the order status.
+                    var orderWasCancelled = await RecordVerifiedYocoPaymentAsync(payment, checkout.Id);
 
                     if (orderWasCancelled)
                     {
@@ -783,9 +792,6 @@ namespace GrabnBite.Controllers
                             order.OrderId);
                     }
 
-                    // A verified provider result may win over a prior FAILED status,
-                    // but it must never reset the order lifecycle.
-                    await RecordVerifiedYocoPaymentAsync(payment, checkout.Id, orderWasCancelled);
                     await _context.Entry(payment).ReloadAsync();
 
                     return Ok(new

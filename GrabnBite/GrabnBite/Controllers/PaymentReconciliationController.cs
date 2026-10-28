@@ -163,6 +163,12 @@ namespace GrabnBite.Controllers
             if (refundAmount <= 0 || refundAmount > payment.Amount)
                 return BadRequest("Refund amount must be greater than zero and cannot exceed the original payment amount.");
 
+            // This single-record model tracks one full refund. Partial or multiple
+            // refunds need a separate Refunds table so successful partial refunds
+            // cannot incorrectly close the entire reconciliation case.
+            if (refundAmount != payment.Amount)
+                return BadRequest("Partial refunds are not supported yet. The recorded refund amount must equal the original payment amount.");
+
             var previousStatus = payment.RefundStatus;
             payment.RefundStatus = nextStatus;
             payment.RefundAmount = refundAmount;

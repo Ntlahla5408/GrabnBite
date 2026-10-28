@@ -696,7 +696,7 @@ namespace GrabnBite.Controllers
                 return false;
 
             var nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (timestampSeconds < nowSeconds - 300 || timestampSeconds > nowSeconds + 300)
+            if (timestampSeconds < nowSeconds - 180 || timestampSeconds > nowSeconds + 180)
                 return false;
 
             try

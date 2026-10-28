@@ -69,6 +69,34 @@ namespace GrabnBite.Services
             return new StripeIntentResult(intentId, clientSecret, returnedAmount, currency);
         }
 
+        public async Task<StripeIntentResult> GetPaymentIntentAsync(string intentId, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(_settings.SecretKey))
+                throw new InvalidOperationException("Stripe secret key is not configured.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                $"https://api.stripe.com/v1/payment_intents/{Uri.EscapeDataString(intentId)}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _settings.SecretKey);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+                throw new StripeProviderException((int)response.StatusCode, responseBody);
+
+            using var document = JsonDocument.Parse(responseBody);
+            var root = document.RootElement;
+            var id = root.TryGetProperty("id", out var idElement) ? idElement.GetString() : null;
+            var clientSecret = root.TryGetProperty("client_secret", out var secretElement) ? secretElement.GetString() : null;
+            var amount = root.TryGetProperty("amount", out var amountElement) ? amountElement.GetInt64() : -1;
+            var currency = root.TryGetProperty("currency", out var currencyElement) ? currencyElement.GetString() : null;
+
+            if (!string.Equals(id, intentId, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(clientSecret) || amount <= 0 ||
+                !string.Equals(currency, "zar", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Stripe returned an unexpected PaymentIntent.");
+
+            return new StripeIntentResult(id!, clientSecret!, amount, currency);
+        }
         public bool VerifyWebhookSignature(string payload, string signatureHeader)
         {
             if (string.IsNullOrWhiteSpace(_settings.WebhookSecret) ||

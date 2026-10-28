@@ -571,6 +571,10 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("PaymentId", "CreatedAt");
 
+                    b.HasIndex("PaymentId", "EventType", "ProviderReference")
+                        .IsUnique()
+                        .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')");
+
                     b.ToTable("PaymentReconciliationEvents", t =>
                         {
                             t.HasCheckConstraint("CK_PaymentReconciliationEvents_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");

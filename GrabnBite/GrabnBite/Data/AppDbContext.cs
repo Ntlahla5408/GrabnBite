@@ -25,6 +25,7 @@ namespace GrabnBite.Data
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
 
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<PaymentReconciliationEvent> PaymentReconciliationEvents { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -370,6 +371,19 @@ namespace GrabnBite.Data
             modelBuilder.Entity<Payment>()
                 .Property(p => p.Amount)
                 .HasPrecision(10, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RefundAmount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasOne(e => e.Payment)
+                .WithMany(p => p.ReconciliationEvents)
+                .HasForeignKey(e => e.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => new { e.PaymentId, e.CreatedAt });
 
 
             // ============================================================

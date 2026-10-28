@@ -1,4 +1,5 @@
-﻿using GrabnBite.Data;
+using Npgsql;
+using GrabnBite.Data;
 using GrabnBite.DTOs.Payment;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -965,23 +966,24 @@ namespace GrabnBite.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (
+                ex.InnerException is PostgresException postgresException &&
+                postgresException.SqlState == PostgresErrorCodes.UniqueViolation &&
+                postgresException.ConstraintName == "IX_PaymentReconciliationEvents_YocoEventIdempotency")
             {
                 _context.Entry(reconciliationEvent).State = EntityState.Detached;
-
-                var duplicateExists = await _context.PaymentReconciliationEvents
-                    .AsNoTracking()
-                    .AnyAsync(e => e.PaymentId == paymentId &&
-                                   e.EventType == eventType &&
-                                   e.ProviderReference == providerCheckoutReference);
-
-                if (!duplicateExists)
-                    throw;
 
                 if (transaction != null)
                     await transaction.RollbackAsync();
 
+                // A concurrent delivery already recorded this exact event. Do not reopen
+                // reconciliation or mutate payment state in response to the duplicate.
                 return;
+            }
+            catch
+            {
+                _context.Entry(reconciliationEvent).State = EntityState.Detached;
+                throw;
             }
 
             var updated = await _context.Payments

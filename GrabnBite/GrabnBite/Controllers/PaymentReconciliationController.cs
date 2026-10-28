@@ -153,12 +153,18 @@ namespace GrabnBite.Controllers
                 !string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
                 return Conflict("This payment is not an unresolved no-refund checkout reconciliation. Use the refund workflow when a refund is required.");
 
-            var staleCheckoutEventExists = await _context.PaymentReconciliationEvents
-                .AnyAsync(e => e.PaymentId == paymentId &&
-                               e.EventType == "YOCO_STALE_CHECKOUT_COMPLETED");
+            var relevantCheckoutEvents = await _context.PaymentReconciliationEvents
+                .AsNoTracking()
+                .Where(e => e.PaymentId == paymentId &&
+                    (e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" ||
+                     e.EventType == "YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED" ||
+                     e.EventType == "YOCO_STALE_CHECKOUT_COMPLETED"))
+                .Select(e => e.ProviderReference)
+                .ToListAsync();
 
-            if (!staleCheckoutEventExists)
-                return Conflict("This resolution route only applies to delayed checkout completions recorded by the system.");
+            var hasRelevantCheckoutEvent = relevantCheckoutEvents.Any(reference => !string.IsNullOrWhiteSpace(reference));
+            if (!hasRelevantCheckoutEvent)
+                return Conflict("This resolution route only applies to checkout reconciliation cases recorded by the system.");
 
             var multipleCheckoutCompletions = await _context.PaymentReconciliationEvents
                 .AnyAsync(e => e.PaymentId == paymentId &&
@@ -167,30 +173,50 @@ namespace GrabnBite.Controllers
             if (multipleCheckoutCompletions)
                 return Conflict("Multiple completed checkouts were recorded. Refund/reconciliation review is required; this route cannot close that case.");
 
-            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
-                return Conflict("The active Yoco checkout is not recorded yet. Verify its status before resolving this case.");
+            if (string.IsNullOrWhiteSpace(payment.TransactionReference))
+                return Conflict("The successful checkout reference is missing. Verify the payment manually before resolving this case.");
+
+            // Verify every recorded checkout except the one already recorded as paid.
+            // This includes checkout IDs detached by a retry and any checkout created
+            // while another request changed the payment state.
+            var checkoutIds = relevantCheckoutEvents
+                .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                .Select(reference => reference!)
+                .Append(payment.YocoCheckoutId ?? string.Empty)
+                .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            if (!checkoutIds.Contains(payment.TransactionReference, StringComparer.Ordinal))
+                checkoutIds.Add(payment.TransactionReference);
 
             try
             {
-                var activeCheckout = await _yocoPaymentService.GetCheckoutStatusAsync(payment.YocoCheckoutId);
-                if (!string.Equals(activeCheckout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
-                    activeCheckout.Amount != (int)Math.Round(payment.Amount * 100) ||
-                    !string.Equals(activeCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                foreach (var checkoutId in checkoutIds)
                 {
-                    return Conflict("The active Yoco checkout could not be matched to this payment.");
-                }
+                    if (string.Equals(checkoutId, payment.TransactionReference, StringComparison.Ordinal))
+                        continue;
 
-                if (!string.Equals(activeCheckout.Status, "failed", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(activeCheckout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
-                {
-                    return Conflict("The active checkout is not confirmed failed or cancelled. Keep reconciliation open until its outcome is clear.");
+                    var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);
+                    if (!string.Equals(checkout.Id, checkoutId, StringComparison.Ordinal) ||
+                        checkout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                        !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Conflict("A recorded Yoco checkout could not be matched to this payment.");
+                    }
+
+                    if (!string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Conflict("Another recorded checkout is not confirmed failed or cancelled. Keep reconciliation open until every checkout outcome is clear.");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Could not verify active Yoco checkout while resolving payment {PaymentId}", paymentId);
+                _logger.LogWarning(ex, "Could not verify all recorded Yoco checkouts while resolving payment {PaymentId}", paymentId);
                 return StatusCode(StatusCodes.Status502BadGateway,
-                    new { message = "Unable to verify the active Yoco checkout. Reconciliation remains open." });
+                    new { message = "Unable to verify every recorded Yoco checkout. Reconciliation remains open." });
             }
 
             var now = DateTime.UtcNow;
@@ -214,7 +240,7 @@ namespace GrabnBite.Controllers
                 EventType = "RECONCILIATION_RESOLVED",
                 RefundStatus = payment.RefundStatus,
                 ProviderReference = evidenceReference,
-                Details = $"Administrator resolved delayed Yoco checkout reconciliation after verifying the active checkout was terminal. {details}",
+                Details = $"Administrator resolved Yoco checkout reconciliation after verifying all recorded checkout attempts. {details}",
                 CreatedAt = now
             });
 

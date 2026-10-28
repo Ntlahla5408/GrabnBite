@@ -413,7 +413,8 @@ namespace GrabnBite.Data
             modelBuilder.Entity<PaymentReconciliationEvent>()
                 .HasIndex(e => new { e.PaymentId, e.EventType, e.ProviderReference })
                 .IsUnique()
-                .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')");
+                .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')")
+                .HasDatabaseName("IX_PaymentReconciliationEvents_YocoEventIdempotency");
 
             // Preserve the existing actor lookup index used by the audit trail.
             modelBuilder.Entity<PaymentReconciliationEvent>()

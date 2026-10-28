@@ -26,7 +26,6 @@ namespace GrabnBite.Data
 
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentReconciliationEvent> PaymentReconciliationEvents { get; set; }
-        public DbSet<ProcessedPaymentProviderEvent> ProcessedPaymentProviderEvents { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -34,9 +33,6 @@ namespace GrabnBite.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ProcessedPaymentProviderEvent>()
-                .HasIndex(e => new { e.Provider, e.EventId })
-                .IsUnique();
             base.OnModelCreating(modelBuilder);
 
             // ============================================================
@@ -337,6 +333,10 @@ namespace GrabnBite.Data
             // MENU ITEM → CART ITEM
             // ============================================================
 
+            // Preserve the existing CartId index alongside the composite uniqueness index.
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => ci.CartId);
+
             modelBuilder.Entity<CartItem>()
                 .HasIndex(ci => new { ci.CartId, ci.MenuItemId })
                 .IsUnique();
@@ -406,6 +406,10 @@ namespace GrabnBite.Data
 
             modelBuilder.Entity<PaymentReconciliationEvent>()
                 .HasIndex(e => new { e.PaymentId, e.CreatedAt });
+
+            // Preserve the existing actor lookup index used by the audit trail.
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => e.ActorUserId);
 
 
             // ============================================================

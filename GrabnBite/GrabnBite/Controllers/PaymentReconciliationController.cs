@@ -243,89 +243,6 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // PATCH: /api/payment-reconciliation/{paymentId}/resolve
-        // Resolves a non-refund reconciliation after an administrator verifies
-        // that no refund is required (for example, a delayed checkout notification).
-        [HttpPatch("{paymentId:int}/resolve")]
-        public async Task<IActionResult> ResolveReconciliation(
-            int paymentId,
-            [FromBody] ResolvePaymentReconciliationRequest request)
-        {
-            if (paymentId <= 0)
-                return BadRequest("A valid payment ID is required.");
-
-            if (request == null || string.IsNullOrWhiteSpace(request.Details))
-                return BadRequest("Resolution details are required for the audit trail.");
-
-            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-
-            var payment = await _context.Payments
-                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
-
-            if (payment == null)
-                return NotFound("Payment not found.");
-
-            if (!string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
-                return Conflict("Only a provider-confirmed PAID payment can have its reconciliation resolved.");
-
-            if (!payment.RequiresReconciliation)
-                return Conflict("This payment has no open reconciliation case.");
-
-            // Do not let this endpoint close an actual refund workflow. Refund
-            // cases must be resolved through the refund-status endpoint instead.
-            if (!string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
-                return Conflict("This payment has a refund workflow. Resolve the refund outcome through the refund-status endpoint.");
-
-            var now = DateTime.UtcNow;
-            payment.RequiresReconciliation = false;
-            payment.ReconciliationResolvedAt = now;
-            payment.ReconciliationResolutionNotes = request.Details.Trim();
-
-            var actorClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var actorUserId = int.TryParse(actorClaim, out var parsedActorId)
-                ? parsedActorId
-                : (int?)null;
-            var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Admin";
-
-            _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
-            {
-                PaymentId = payment.PaymentId,
-                ActorUserId = actorUserId,
-                ActorRole = actorRole,
-                EventType = "RECONCILIATION_RESOLVED",
-                RefundStatus = payment.RefundStatus,
-                ProviderReference = payment.TransactionReference,
-                Details = request.Details.Trim(),
-                CreatedAt = now
-            });
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch (Exception ex) when (ex is DbUpdateException ||
-                                       ex is PostgresException postgresException &&
-                                           postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogWarning(ex, "Concurrent payment reconciliation resolution for payment {PaymentId}", paymentId);
-                return Conflict("The reconciliation record changed while it was being resolved. Refresh the record and try again.");
-            }
-
-            return Ok(new
-            {
-                message = "Reconciliation resolved. No refund was recorded or initiated.",
-                paymentId = payment.PaymentId,
-                orderId = payment.OrderId,
-                paymentStatus = payment.PaymentStatus,
-                refundStatus = payment.RefundStatus,
-                requiresReconciliation = payment.RequiresReconciliation,
-                reconciliationResolvedAt = payment.ReconciliationResolvedAt,
-                reconciliationResolutionNotes = payment.ReconciliationResolutionNotes
-            });
-        }
-
         // PATCH: /api/payment-reconciliation/{paymentId}/refund-status
         // This records a provider/manual outcome; it does not initiate a refund.
         [HttpPatch("{paymentId:int}/refund-status")]
@@ -496,11 +413,6 @@ namespace GrabnBite.Controllers
     {
         public string ProviderReference { get; set; } = string.Empty;
 
-        public string Details { get; set; } = string.Empty;
-    }
-
-    public class ResolvePaymentReconciliationRequest
-    {
         public string Details { get; set; } = string.Empty;
     }
 

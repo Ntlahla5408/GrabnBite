@@ -1092,6 +1092,10 @@ namespace GrabnBite.Controllers
                     }
 
                     await _context.Entry(payment).ReloadAsync();
+                    // The payment helper checks cancellation using a fresh database read.
+                    // Refresh the tracked order too so the response cannot claim an order
+                    // is active when cancellation won the concurrent transaction.
+                    await _context.Entry(order).ReloadAsync();
 
                     return Ok(new
                     {

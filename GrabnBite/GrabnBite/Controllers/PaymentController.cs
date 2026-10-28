@@ -867,6 +867,16 @@ namespace GrabnBite.Controllers
             string details,
             DateTime now)
         {
+            // A repeated delivery for an already-audited checkout must not reopen a
+            // reconciliation case that an administrator has legitimately resolved.
+            var eventExists = await _context.PaymentReconciliationEvents
+                .AnyAsync(e => e.PaymentId == paymentId &&
+                               e.EventType == eventType &&
+                               e.ProviderReference == providerCheckoutReference);
+
+            if (eventExists)
+                return;
+
             await _context.Payments
                 .Where(p => p.PaymentId == paymentId)
                 .ExecuteUpdateAsync(setters => setters
@@ -876,27 +886,19 @@ namespace GrabnBite.Controllers
                     .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
                     .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
 
-            var eventExists = await _context.PaymentReconciliationEvents
-                .AnyAsync(e => e.PaymentId == paymentId &&
-                               e.EventType == eventType &&
-                               e.ProviderReference == providerCheckoutReference);
-
-            if (!eventExists)
+            _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
             {
-                _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
-                {
-                    PaymentId = paymentId,
-                    ActorUserId = null,
-                    ActorRole = "YOCO_WEBHOOK",
-                    EventType = eventType,
-                    RefundStatus = refundStatus,
-                    ProviderReference = providerCheckoutReference,
-                    Details = details,
-                    CreatedAt = now
-                });
+                PaymentId = paymentId,
+                ActorUserId = null,
+                ActorRole = "YOCO_WEBHOOK",
+                EventType = eventType,
+                RefundStatus = refundStatus,
+                ProviderReference = providerCheckoutReference,
+                Details = details,
+                CreatedAt = now
+            });
 
-                await _context.SaveChangesAsync();
-            }
+            await _context.SaveChangesAsync();
         }
 
         private async Task RequireYocoRefundAsync(

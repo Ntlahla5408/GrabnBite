@@ -177,6 +177,12 @@ namespace GrabnBite.Controllers
                     "Restaurant profile not found.");
             }
 
+            // Serialize restaurant status transitions with customer cancellation and
+            // verified payment recording. This prevents a stale read from accepting an
+            // order that was cancelled, or advancing it twice, during a concurrent request.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+
             var order = await _context.Orders
                 .Include(o => o.StatusHistory)
                 .Include(o => o.Payment)
@@ -242,12 +248,19 @@ namespace GrabnBite.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
-            catch (DbUpdateException)
+            catch (Exception ex) when (
+                ex is DbUpdateException ||
+                ex.GetType().Name == "SerializationFailureException" ||
+                ex.GetType().Name == "PostgresException")
             {
-                // A concurrent request may have created the one-to-one delivery.
-                // The unique OrderId index remains the final duplicate guard.
-                return Conflict("The order could not be updated because a delivery may already exist. Refresh and try again.");
+                await transaction.RollbackAsync();
+
+                // The order/payment state or one-to-one delivery may have changed
+                // while this request was in flight. Refresh instead of reporting a
+                // successful transition based on stale state.
+                return Conflict("The order or payment changed while this update was being processed. Refresh and check the latest status.");
             }
 
             // Notify the customer that the order status changed.

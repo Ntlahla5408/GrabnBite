@@ -113,17 +113,18 @@ namespace GrabnBite.Controllers
             if (string.IsNullOrWhiteSpace(payment.PaymentReference))
                 return Conflict("The payment idempotency reference is missing. Contact support before retrying.");
 
-            if (!string.IsNullOrWhiteSpace(payment.StripePaymentIntentId))
-                return Conflict("A Stripe PaymentIntent already exists for this order. Resume that payment rather than creating another.");
-
             try
             {
-                var intent = await _stripePaymentService.CreatePaymentIntentAsync(
-                    payment.PaymentId,
-                    order.OrderId,
-                    payment.Amount,
-                    payment.PaymentReference,
-                    cancellationToken);
+                // If a previous API response was lost, retrieve the same intent
+                // rather than creating another provider-side payment.
+                var intent = !string.IsNullOrWhiteSpace(payment.StripePaymentIntentId)
+                    ? await _stripePaymentService.GetPaymentIntentAsync(payment.StripePaymentIntentId, cancellationToken)
+                    : await _stripePaymentService.CreatePaymentIntentAsync(
+                        payment.PaymentId,
+                        order.OrderId,
+                        payment.Amount,
+                        payment.PaymentReference,
+                        cancellationToken);
 
                 payment.StripePaymentIntentId = intent.Id;
                 await _context.SaveChangesAsync(cancellationToken);

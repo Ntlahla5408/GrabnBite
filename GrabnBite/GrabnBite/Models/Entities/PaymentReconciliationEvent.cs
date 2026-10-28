@@ -7,6 +7,11 @@ namespace GrabnBite.Models.Entities
 
         public int PaymentId { get; set; }
 
+        // Null for provider/system-generated events; populated for authenticated user actions.
+        public int? ActorUserId { get; set; }
+
+        public string ActorRole { get; set; } = "SYSTEM";
+
         public string EventType { get; set; } = string.Empty;
 
         public string RefundStatus { get; set; } = string.Empty;

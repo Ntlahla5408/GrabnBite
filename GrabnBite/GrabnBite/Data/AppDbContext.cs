@@ -26,6 +26,7 @@ namespace GrabnBite.Data
 
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentReconciliationEvent> PaymentReconciliationEvents { get; set; }
+        public DbSet<ProcessedPaymentProviderEvent> ProcessedPaymentProviderEvents { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -33,6 +34,9 @@ namespace GrabnBite.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<ProcessedPaymentProviderEvent>()
+                .HasIndex(e => new { e.Provider, e.EventId })
+                .IsUnique();
             base.OnModelCreating(modelBuilder);
 
             // ============================================================

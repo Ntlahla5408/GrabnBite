@@ -137,15 +137,13 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("MyPolicy");
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-
-app.UseSwagger();
-app.UseSwaggerUI();
+// Keep interactive API documentation available locally, but do not expose
+// the Swagger UI and API schema publicly in production by default.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 

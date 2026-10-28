@@ -117,7 +117,7 @@ namespace GrabnBite.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
                 // The unique OrderId index protects against concurrent create requests.
                 // Convert that race into a predictable conflict instead of a server error.

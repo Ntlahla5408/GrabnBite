@@ -468,6 +468,9 @@ namespace GrabnBite.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<DateTime?>("RefundRequiredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RefundProvider")
                         .HasColumnType("text");
 
@@ -479,6 +482,7 @@ namespace GrabnBite.Migrations
 
                     b.Property<string>("RefundStatus")
                         .IsRequired()
+                        .HasDefaultValue("NOT_REQUIRED")
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("ReconciliationOpenedAt")
@@ -494,6 +498,7 @@ namespace GrabnBite.Migrations
                         .HasColumnType("text");
 
                     b.Property<bool>("RequiresReconciliation")
+                        .HasDefaultValue(false)
                         .HasColumnType("boolean");
 
                     b.Property<string>("PaymentMethod")

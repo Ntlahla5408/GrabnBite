@@ -24,6 +24,12 @@ namespace GrabnBite.Migrations
                 scale: 2,
                 nullable: true);
 
+            migrationBuilder.AddColumn<DateTime>(
+                name: "RefundRequiredAt",
+                table: "Payments",
+                type: "timestamp with time zone",
+                nullable: true);
+
             migrationBuilder.AddColumn<string>(
                 name: "RefundProvider",
                 table: "Payments",
@@ -133,6 +139,7 @@ namespace GrabnBite.Migrations
 
             migrationBuilder.DropColumn(name: "RefundStatus", table: "Payments");
             migrationBuilder.DropColumn(name: "RefundAmount", table: "Payments");
+            migrationBuilder.DropColumn(name: "RefundRequiredAt", table: "Payments");
             migrationBuilder.DropColumn(name: "RefundProvider", table: "Payments");
             migrationBuilder.DropColumn(name: "RefundProviderReference", table: "Payments");
             migrationBuilder.DropColumn(name: "RefundRequestedAt", table: "Payments");

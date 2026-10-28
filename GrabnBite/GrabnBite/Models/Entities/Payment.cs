@@ -16,6 +16,8 @@
 
         public string? YocoCheckoutId { get; set; }
 
+        public string? StripePaymentIntentId { get; set; }
+
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
 
         // Durable refund lifecycle. NOT_REQUIRED is the default for payments

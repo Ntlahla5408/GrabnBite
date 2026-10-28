@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Security.Claims;
+using GrabnBite.Services;
 
 namespace GrabnBite.Controllers
 {
@@ -34,13 +35,16 @@ namespace GrabnBite.Controllers
         };
 
         private readonly AppDbContext _context;
+        private readonly YocoPaymentService _yocoPaymentService;
         private readonly ILogger<PaymentReconciliationController> _logger;
 
         public PaymentReconciliationController(
             AppDbContext context,
+            YocoPaymentService yocoPaymentService,
             ILogger<PaymentReconciliationController> logger)
         {
             _context = context;
+            _yocoPaymentService = yocoPaymentService;
             _logger = logger;
         }
 
@@ -116,6 +120,127 @@ namespace GrabnBite.Controllers
                 .ToListAsync();
 
             return Ok(events);
+        }
+
+        // PATCH: /api/payment-reconciliation/{paymentId}/resolve
+        // Resolve a delayed old-checkout success only after the active retry is verified terminal.
+        [HttpPatch("{paymentId:int}/resolve")]
+        public async Task<IActionResult> ResolveDelayedCheckoutReconciliation(
+            int paymentId,
+            [FromBody] ResolvePaymentReconciliationRequest request)
+        {
+            if (paymentId <= 0)
+                return BadRequest("A valid payment ID is required.");
+
+            if (request == null || string.IsNullOrWhiteSpace(request.Details))
+                return BadRequest("Resolution details are required.");
+
+            if (string.IsNullOrWhiteSpace(request.ProviderReference))
+                return BadRequest("Record the Yoco dashboard reference used during reconciliation.");
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var payment = await _context.Payments
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+
+            if (payment == null)
+                return NotFound("Payment not found.");
+
+            if (!string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+                return Conflict("Only a provider-confirmed paid payment can be reconciled this way.");
+
+            if (!payment.RequiresReconciliation ||
+                !string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
+                return Conflict("This payment is not an unresolved no-refund checkout reconciliation. Use the refund workflow when a refund is required.");
+
+            var staleCheckoutEventExists = await _context.PaymentReconciliationEvents
+                .AnyAsync(e => e.PaymentId == paymentId &&
+                               e.EventType == "YOCO_STALE_CHECKOUT_COMPLETED");
+
+            if (!staleCheckoutEventExists)
+                return Conflict("This resolution route only applies to delayed checkout completions recorded by the system.");
+
+            var multipleCheckoutCompletions = await _context.PaymentReconciliationEvents
+                .AnyAsync(e => e.PaymentId == paymentId &&
+                               e.EventType == "YOCO_MULTIPLE_CHECKOUTS_COMPLETED");
+
+            if (multipleCheckoutCompletions)
+                return Conflict("Multiple completed checkouts were recorded. Refund/reconciliation review is required; this route cannot close that case.");
+
+            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                return Conflict("The active Yoco checkout is not recorded yet. Verify its status before resolving this case.");
+
+            try
+            {
+                var activeCheckout = await _yocoPaymentService.GetCheckoutStatusAsync(payment.YocoCheckoutId);
+                if (!string.Equals(activeCheckout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
+                    activeCheckout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                    !string.Equals(activeCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict("The active Yoco checkout could not be matched to this payment.");
+                }
+
+                if (!string.Equals(activeCheckout.Status, "failed", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(activeCheckout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict("The active checkout is not confirmed failed or cancelled. Keep reconciliation open until its outcome is clear.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not verify active Yoco checkout while resolving payment {PaymentId}", paymentId);
+                return StatusCode(StatusCodes.Status502BadGateway,
+                    new { message = "Unable to verify the active Yoco checkout. Reconciliation remains open." });
+            }
+
+            var now = DateTime.UtcNow;
+            var evidenceReference = request.ProviderReference.Trim();
+            var details = request.Details.Trim();
+
+            payment.RequiresReconciliation = false;
+            payment.ReconciliationResolvedAt = now;
+            payment.ReconciliationResolutionNotes = details;
+
+            var actorClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var actorUserId = int.TryParse(actorClaim, out var parsedActorId)
+                ? parsedActorId
+                : (int?)null;
+
+            _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+            {
+                PaymentId = payment.PaymentId,
+                ActorUserId = actorUserId,
+                ActorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Admin",
+                EventType = "RECONCILIATION_RESOLVED",
+                RefundStatus = payment.RefundStatus,
+                ProviderReference = evidenceReference,
+                Details = $"Administrator resolved delayed Yoco checkout reconciliation after verifying the active checkout was terminal. {details}",
+                CreatedAt = now
+            });
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (ex is DbUpdateException ||
+                                       ex is PostgresException postgresException &&
+                                           postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogWarning(ex, "Concurrent reconciliation resolution for payment {PaymentId}", paymentId);
+                return Conflict("The reconciliation record changed while being resolved. Refresh and review the latest status.");
+            }
+
+            return Ok(new
+            {
+                message = "Delayed checkout reconciliation was resolved. No refund was issued by this endpoint.",
+                paymentId = payment.PaymentId,
+                orderId = payment.OrderId,
+                paymentStatus = payment.PaymentStatus,
+                requiresReconciliation = payment.RequiresReconciliation,
+                reconciliationResolvedAt = payment.ReconciliationResolvedAt
+            });
         }
 
         // PATCH: /api/payment-reconciliation/{paymentId}/refund-status
@@ -282,6 +407,13 @@ namespace GrabnBite.Controllers
                 reconciliationResolvedAt = payment.ReconciliationResolvedAt
             });
         }
+    }
+
+    public class ResolvePaymentReconciliationRequest
+    {
+        public string ProviderReference { get; set; } = string.Empty;
+
+        public string Details { get; set; } = string.Empty;
     }
 
     public class UpdateRefundStatusRequest

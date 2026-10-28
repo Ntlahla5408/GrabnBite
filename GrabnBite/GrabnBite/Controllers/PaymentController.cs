@@ -664,7 +664,9 @@ namespace GrabnBite.Controllers
                         .SetProperty(p => p.RefundStatus, "REQUIRED")
                         .SetProperty(p => p.RefundAmount, p => p.Amount)
                         .SetProperty(p => p.RefundProvider, "YOCO")
-                        .SetProperty(p => p.RefundProviderReference, providerCheckoutReference)
+                        // The checkout ID identifies the original payment, not a refund.
+                        // RefundProviderReference stays empty until a refund is actually initiated.
+                        .SetProperty(p => p.RefundProviderReference, (string?)null)
                         .SetProperty(p => p.RefundRequiredAt, now)
                         .SetProperty(p => p.RefundRequestedAt, (DateTime?)null)
                         .SetProperty(p => p.RefundCompletedAt, (DateTime?)null)

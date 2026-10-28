@@ -227,7 +227,7 @@ namespace GrabnBite.Controllers
             }
 
             restaurant.Name = dto.Name.Trim();
-            restaurant.Description = dto.Description?.Trim();
+            restaurant.Description = dto.Description?.Trim() ?? string.Empty;
             restaurant.PhoneNumber = dto.PhoneNumber.Trim();
             restaurant.Email = dto.Email.Trim();
             restaurant.Address = dto.Address.Trim();
@@ -291,7 +291,7 @@ namespace GrabnBite.Controllers
             }
 
             restaurant.Name = dto.Name.Trim();
-            restaurant.Description = dto.Description?.Trim();
+            restaurant.Description = dto.Description?.Trim() ?? string.Empty;
             restaurant.PhoneNumber = dto.PhoneNumber.Trim();
             restaurant.Email = dto.Email.Trim();
             restaurant.Address = dto.Address.Trim();

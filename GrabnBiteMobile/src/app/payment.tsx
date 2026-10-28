@@ -51,6 +51,15 @@ export default function PaymentScreen() {
       return;
     }
 
+    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+      setLoading(false);
+      setError("Please sign in and open a valid order to continue payment.");
+      return;
+    }
+
+    void startPayment();
+  }, [authLoading, token, orderId, startPayment]);
+
   async function openPayment() {
     if (!checkoutUrl) {
       setError("The payment link is missing. Please try again.");

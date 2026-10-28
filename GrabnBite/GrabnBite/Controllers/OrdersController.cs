@@ -143,12 +143,24 @@ namespace GrabnBite.Controllers
             // Cancellation is safe only if no payment exists or the provider has
             // authoritatively confirmed that the payment failed. PENDING/INITIATED
             // outcomes are ambiguous; PAID requires the refund workflow.
-            if (order.Payment != null &&
-                !string.Equals(order.Payment.PaymentStatus, "FAILED", StringComparison.OrdinalIgnoreCase))
+            if (order.Payment != null)
             {
-                return Conflict(order.Payment.PaymentStatus == "PAID"
-                    ? "This order has been paid. Cancellation must be handled through the refund process."
-                    : "Payment is still pending or has not been reconciled. Check the payment status before cancelling.");
+                var paymentIsPaid = string.Equals(
+                    order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase);
+                var isCashOnDelivery = string.Equals(
+                    order.Payment.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase);
+                var paymentIsUnresolved = !string.Equals(
+                    order.Payment.PaymentStatus, "FAILED", StringComparison.OrdinalIgnoreCase);
+
+                // Cash-on-delivery has no external payment to reconcile before
+                // collection. It may be cancelled while the order is still pending,
+                // but a recorded PAID result must still go through refund handling.
+                if (paymentIsPaid || (!isCashOnDelivery && paymentIsUnresolved))
+                {
+                    return Conflict(paymentIsPaid
+                        ? "This order has been paid. Cancellation must be handled through the refund process."
+                        : "Payment is still pending or has not been reconciled. Check the payment status before cancelling.");
+                }
             }
 
             order.Status = "CANCELLED";

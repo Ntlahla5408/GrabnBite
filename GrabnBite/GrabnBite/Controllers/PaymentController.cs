@@ -261,14 +261,68 @@ namespace GrabnBite.Controllers
                     try
                     {
                         var previousCheckout = await _yocoPaymentService.GetCheckoutStatusAsync(payment.YocoCheckoutId);
+                        if (!string.Equals(previousCheckout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
+                            previousCheckout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                            !string.Equals(previousCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                            return Conflict("The previous Yoco checkout does not match this order. Contact support before retrying.");
+
                         var terminalFailure =
                             string.Equals(previousCheckout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
                             string.Equals(previousCheckout.Status, "cancelled", StringComparison.OrdinalIgnoreCase);
+
+                        if (string.Equals(previousCheckout.Status, "completed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var orderWasCancelled = await RecordVerifiedYocoPaymentAsync(payment, previousCheckout.Id);
+                            await _context.Entry(payment).ReloadAsync();
+
+                            if (orderWasCancelled)
+                            {
+                                _logger.LogCritical(
+                                    "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Refund tracking was opened; do not fulfil the order.",
+                                    payment.PaymentId,
+                                    payment.OrderId);
+                                return Conflict("Yoco confirmed payment after the order was cancelled. Refund review is required; do not retry payment.");
+                            }
+
+                            return Ok(new PaymentResponseDto
+                            {
+                                PaymentId = payment.PaymentId,
+                                OrderId = payment.OrderId,
+                                Amount = payment.Amount,
+                                PaymentStatus = payment.PaymentStatus,
+                                PaymentMethod = payment.PaymentMethod,
+                                PaymentReference = payment.PaymentReference,
+                                TransactionReference = payment.TransactionReference,
+                                PaymentDate = payment.PaymentDate,
+                                YocoCheckoutId = payment.YocoCheckoutId
+                            });
+                        }
+
                         if (!terminalFailure)
-                            return Conflict("A Yoco checkout already exists for this order. Check its status before trying again.");
-                        if (previousCheckout.Amount != (int)Math.Round(payment.Amount * 100) ||
-                            !string.Equals(previousCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
-                            return Conflict("The previous Yoco checkout does not match this order. Contact support before retrying.");
+                        {
+                            // A retry after a lost HTTP response should resume the same
+                            // checkout, not create a second charge or leave the customer
+                            // stuck at a conflict screen.
+                            if (Uri.TryCreate(previousCheckout.RedirectUrl, UriKind.Absolute, out var existingRedirectUri) &&
+                                existingRedirectUri.Scheme == Uri.UriSchemeHttps)
+                            {
+                                return Ok(new PaymentResponseDto
+                                {
+                                    PaymentId = payment.PaymentId,
+                                    OrderId = payment.OrderId,
+                                    Amount = payment.Amount,
+                                    PaymentStatus = payment.PaymentStatus,
+                                    PaymentMethod = payment.PaymentMethod,
+                                    PaymentReference = payment.PaymentReference,
+                                    TransactionReference = payment.TransactionReference,
+                                    PaymentDate = payment.PaymentDate,
+                                    YocoCheckoutId = payment.YocoCheckoutId,
+                                    RedirectUrl = previousCheckout.RedirectUrl
+                                });
+                            }
+
+                            return Conflict("A Yoco checkout is still active, but its secure redirect URL could not be recovered. Check payment status before trying again.");
+                        }
                     }
                     catch (Exception ex)
                     {

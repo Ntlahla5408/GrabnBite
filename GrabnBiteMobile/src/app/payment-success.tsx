@@ -13,6 +13,7 @@ export default function PaymentSuccessScreen() {
   const [checking, setChecking] = useState(true);
   const [verified, setVerified] = useState(false);
   const [requiresRefundReview, setRequiresRefundReview] = useState(false);
+  const [requiresPaymentReview, setRequiresPaymentReview] = useState(false);
   const [message, setMessage] = useState("Checking your payment with Yoco...");
 
   const verifyPayment = useCallback(async () => {
@@ -21,6 +22,7 @@ export default function PaymentSuccessScreen() {
     if (!token || !orderId || !Number.isInteger(Number(orderId)) || Number(orderId) <= 0) {
       setVerified(false);
       setRequiresRefundReview(false);
+      setRequiresPaymentReview(false);
       setMessage("We could not verify this payment. Sign in and open your order to check its current status.");
       setChecking(false);
       return;
@@ -32,19 +34,24 @@ export default function PaymentSuccessScreen() {
       const isPaid = result.paymentStatus?.toUpperCase() === "PAID";
       const orderWasCancelled = result.orderStatus?.toUpperCase() === "CANCELLED";
       const refundReviewRequired = isPaid && orderWasCancelled;
+      const paymentReviewRequired = isPaid && !orderWasCancelled && result.requiresReconciliation === true;
 
       setRequiresRefundReview(refundReviewRequired);
-      setVerified(isPaid && !orderWasCancelled);
+      setRequiresPaymentReview(paymentReviewRequired);
+      setVerified(isPaid && !orderWasCancelled && !paymentReviewRequired);
       setMessage(
         refundReviewRequired
           ? "Yoco confirmed the payment, but this order was cancelled. Refund review has been opened; the order will not be fulfilled. Please contact support for an update."
-          : isPaid
-            ? "Yoco has confirmed your payment."
-            : "Yoco has not confirmed this payment yet. You can check again shortly."
+          : paymentReviewRequired
+            ? "Yoco confirmed a payment, but this transaction needs further review before the order can proceed. Do not make another payment. Please contact support for an update."
+            : isPaid
+              ? "Yoco has confirmed your payment."
+              : "Yoco has not confirmed this payment yet. You can check again shortly."
       );
     } catch {
       setVerified(false);
       setRequiresRefundReview(false);
+      setRequiresPaymentReview(false);
       setMessage("We could not verify your payment right now. This screen has not marked your order as paid. Please try checking again.");
     } finally {
       setChecking(false);
@@ -69,7 +76,9 @@ export default function PaymentSuccessScreen() {
             ? "Verifying Payment"
             : requiresRefundReview
               ? "Order Cancelled — Refund Review"
-              : verified
+              : requiresPaymentReview
+                ? "Payment Review Required"
+                : verified
                 ? "Payment Successful"
                 : "Payment Not Yet Verified"}
         </Text>
@@ -78,7 +87,7 @@ export default function PaymentSuccessScreen() {
 
         {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
-        {!verified && !checking && !requiresRefundReview ? (
+        {!verified && !checking && !requiresRefundReview && !requiresPaymentReview ? (
           <Pressable style={styles.button} onPress={() => void verifyPayment()}>
             <Text style={styles.buttonText}>Check Payment Again</Text>
           </Pressable>

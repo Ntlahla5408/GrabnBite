@@ -683,6 +683,8 @@ namespace GrabnBite.Controllers
                     _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
                     {
                         PaymentId = payment.PaymentId,
+                        ActorUserId = null,
+                        ActorRole = "YOCO_WEBHOOK",
                         EventType = "REFUND_REQUIRED",
                         RefundStatus = "REQUIRED",
                         ProviderReference = providerCheckoutReference,

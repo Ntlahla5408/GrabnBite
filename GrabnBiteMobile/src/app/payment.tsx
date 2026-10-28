@@ -40,6 +40,18 @@ export default function PaymentScreen() {
     try {
       const result = await createYocoPayment(orderId, token);
 
+      if (result.paymentStatus?.toUpperCase() === "PAID") {
+        router.replace({
+          pathname: "/payment-success",
+          params: { orderId: String(orderId) },
+        });
+        return;
+      }
+
+      if (!result.redirectUrl) {
+        throw new Error("Yoco did not return a secure checkout URL.");
+      }
+
       setCheckoutUrl(result.redirectUrl);
     } catch {
       console.error("Failed to create Yoco payment.");

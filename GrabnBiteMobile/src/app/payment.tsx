@@ -28,6 +28,12 @@ export default function PaymentScreen() {
   const [openingPayment, setOpeningPayment] = useState(false);
 
   const startPayment = useCallback(async () => {
+    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+      setError("Please sign in and open a valid order to continue payment.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await createYocoPayment(orderId, token);
 
@@ -44,9 +50,9 @@ export default function PaymentScreen() {
       }
 
       setCheckoutUrl(result.redirectUrl);
+      setError("");
     } catch {
       console.error("Failed to create Yoco payment.");
-
       setError("Unable to start payment. Please try again.");
     } finally {
       setLoading(false);
@@ -63,8 +69,48 @@ export default function PaymentScreen() {
       return;
     }
 
-    void startPayment();
-  }, [authLoading, token, orderId, startPayment]);
+    let cancelled = false;
+
+    async function initializePayment() {
+      try {
+        const result = await createYocoPayment(orderId, token);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (result.paymentStatus?.toUpperCase() === "PAID") {
+          router.replace({
+            pathname: "/payment-success",
+            params: { orderId: String(orderId) },
+          });
+          return;
+        }
+
+        if (!result.redirectUrl) {
+          throw new Error("Yoco did not return a secure checkout URL.");
+        }
+
+        setCheckoutUrl(result.redirectUrl);
+        setError("");
+      } catch {
+        if (!cancelled) {
+          console.error("Failed to create Yoco payment.");
+          setError("Unable to start payment. Please try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void initializePayment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, token, orderId]);
 
   async function openPayment() {
     if (!checkoutUrl) {

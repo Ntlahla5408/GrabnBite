@@ -69,11 +69,12 @@ export default function PaymentScreen() {
       return;
     }
 
+    const paymentToken = token;
     let cancelled = false;
 
     async function initializePayment() {
       try {
-        const result = await createYocoPayment(orderId, token);
+        const result = await createYocoPayment(orderId, paymentToken);
 
         if (cancelled) {
           return;

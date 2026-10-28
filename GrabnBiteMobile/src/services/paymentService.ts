@@ -8,7 +8,7 @@ export interface YocoPaymentResponse {
   amount: number;
   paymentStatus: string;
   paymentMethod: string;
-  paymentReference: string;
+  paymentReference: string | null;
   transactionReference: string | null;
   paymentDate: string;
   yocoCheckoutId: string;

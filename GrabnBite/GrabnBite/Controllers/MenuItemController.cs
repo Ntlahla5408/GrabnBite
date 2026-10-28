@@ -292,7 +292,7 @@ namespace GrabnBite.Controllers
             }
 
             menuItem.Name = dto.Name.Trim();
-            menuItem.Description = dto.Description?.Trim();
+            menuItem.Description = dto.Description?.Trim() ?? string.Empty;
             menuItem.Price = dto.Price;
             menuItem.IsAvailable = dto.IsAvailable;
 

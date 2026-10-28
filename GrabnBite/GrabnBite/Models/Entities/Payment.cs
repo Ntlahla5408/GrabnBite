@@ -24,6 +24,8 @@
 
         public decimal? RefundAmount { get; set; }
 
+        public DateTime? RefundRequiredAt { get; set; }
+
         public string? RefundProvider { get; set; }
 
         public string? RefundProviderReference { get; set; }

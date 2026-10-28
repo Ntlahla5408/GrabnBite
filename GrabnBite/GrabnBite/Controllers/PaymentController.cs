@@ -515,6 +515,17 @@ namespace GrabnBite.Controllers
 
                 if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
                 {
+                    // Provider-confirmed money must be recorded even if the order was
+                    // cancelled in a race. Never reopen the order; flag it for urgent
+                    // reconciliation because a refund may now be required.
+                    if (string.Equals(payment.Order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogCritical(
+                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Do not fulfil the order; review refund handling.",
+                            payment.PaymentId,
+                            payment.OrderId);
+                    }
+
                     // The provider's verified completion is authoritative. Update only
                     // the payment row: payment confirmation must never reset an order
                     // that the restaurant has already moved forward.
@@ -695,6 +706,17 @@ namespace GrabnBite.Controllers
                     "completed",
                     StringComparison.OrdinalIgnoreCase))
                 {
+                    // The provider may confirm payment after a cancellation race.
+                    // Record the real payment, never reopen/fulfil the order, and
+                    // emit an urgent reconciliation signal for refund review.
+                    if (string.Equals(order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogCritical(
+                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Do not fulfil the order; review refund handling.",
+                            payment.PaymentId,
+                            order.OrderId);
+                    }
+
                     // Confirm the payment without mutating the order lifecycle.
                     // A verified payment must not move ACCEPTED/PREPARING/etc. back
                     // to PENDING. A completed provider result may safely win over a

@@ -71,11 +71,21 @@ namespace GrabnBite.Controllers
                 if (order.Payment.PaymentMethod == "FAKE" &&
                     order.Payment.PaymentStatus == "FAILED")
                 {
-                    order.Payment.PaymentStatus = "PENDING";
-                    order.Payment.PaymentReference = $"GNB-FAKE-{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
-                    order.Payment.TransactionReference = null;
-                    order.Payment.PaymentDate = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
+                    var retryReference = $"GNB-FAKE-{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+                    var retryStarted = await _context.Payments
+                        .Where(p => p.PaymentId == order.Payment.PaymentId &&
+                                    p.PaymentMethod == "FAKE" &&
+                                    p.PaymentStatus == "FAILED")
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "PENDING")
+                            .SetProperty(p => p.PaymentReference, retryReference)
+                            .SetProperty(p => p.TransactionReference, (string?)null)
+                            .SetProperty(p => p.PaymentDate, DateTime.UtcNow));
+
+                    if (retryStarted == 0)
+                        return Conflict("A fake payment retry is already in progress. Refresh and check its status.");
+
+                    await _context.Entry(order.Payment).ReloadAsync();
 
                     return Ok(new
                     {
@@ -103,7 +113,16 @@ namespace GrabnBite.Controllers
             };
 
             _context.Payments.Add(payment);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // The unique OrderId index protects against concurrent create requests.
+                // Convert that race into a predictable conflict instead of a server error.
+                return Conflict("A payment was created for this order by another request. Refresh and check its status.");
+            }
 
             return Ok(new
             {
@@ -159,11 +178,31 @@ namespace GrabnBite.Controllers
                 request.Succeed,
                 payment.PaymentReference ?? $"PAY-{payment.PaymentId}");
 
-            payment.PaymentStatus = result.Succeeded ? "PAID" : "FAILED";
-            payment.TransactionReference = result.TransactionReference;
-            payment.PaymentDate = DateTime.UtcNow;
+            // Only one concurrent completion may change a pending fake payment.
+            // A second request cannot flip PAID to FAILED (or vice versa).
+            var completed = await _context.Payments
+                .Where(p => p.PaymentId == payment.PaymentId &&
+                            p.PaymentMethod == "FAKE" &&
+                            p.PaymentStatus == "PENDING")
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.PaymentStatus, result.Succeeded ? "PAID" : "FAILED")
+                    .SetProperty(p => p.TransactionReference, result.TransactionReference)
+                    .SetProperty(p => p.PaymentDate, DateTime.UtcNow));
 
-            await _context.SaveChangesAsync();
+            await _context.Entry(payment).ReloadAsync();
+
+            if (completed == 0)
+            {
+                return Ok(new
+                {
+                    message = "This fake payment was completed by another request; its final result was preserved.",
+                    paymentId = payment.PaymentId,
+                    orderId = payment.OrderId,
+                    paymentStatus = payment.PaymentStatus,
+                    transactionReference = payment.TransactionReference,
+                    orderStatus = payment.Order.Status
+                });
+            }
 
             return Ok(new
             {

@@ -986,11 +986,13 @@ namespace GrabnBite.Controllers
 
             var payment = order.Payment;
 
-            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
-                return BadRequest("Yoco checkout ID is missing.");
+            if (!string.Equals(payment.PaymentMethod, "YOCO", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("This payment was not created through Yoco.");
 
-            // Already confirmed
-            if (payment.PaymentStatus == "PAID")
+            // A verified historical checkout can be the recorded transaction even
+            // when a retry detached the current checkout ID. Preserve that verified
+            // result rather than requiring a current redirect/checkout reference.
+            if (string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
             {
                 return Ok(new
                 {
@@ -1001,6 +1003,9 @@ namespace GrabnBite.Controllers
                     orderStatus = order.Status
                 });
             }
+
+            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                return BadRequest("Yoco checkout ID is missing.");
 
             try
             {

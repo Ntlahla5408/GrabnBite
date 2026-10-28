@@ -28,13 +28,17 @@ export default function PaymentScreen() {
   const [openingPayment, setOpeningPayment] = useState(false);
 
   const startPayment = useCallback(async () => {
-    if (!token || !orderId) {
+    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+      setLoading(false);
+      setError("Please sign in and open a valid order to continue payment.");
       return;
     }
 
+    setLoading(true);
+    setError("");
+
     try {
       const result = await createYocoPayment(orderId, token);
-      setError("");
 
       setCheckoutUrl(result.redirectUrl);
     } catch {

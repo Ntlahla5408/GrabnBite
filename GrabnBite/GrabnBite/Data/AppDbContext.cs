@@ -376,6 +376,16 @@ namespace GrabnBite.Data
                 .Property(p => p.RefundAmount)
                 .HasPrecision(10, 2);
 
+            modelBuilder.Entity<Payment>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_Payments_RefundStatus",
+                    "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')"));
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_PaymentReconciliationEvents_RefundStatus",
+                    "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')"));
+
             modelBuilder.Entity<PaymentReconciliationEvent>()
                 .HasOne(e => e.Payment)
                 .WithMany(p => p.ReconciliationEvents)

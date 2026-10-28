@@ -65,6 +65,12 @@ namespace GrabnBite.Controllers
                 return BadRequest("Invalid delivery address ID.");
             }
 
+            // Prevent two concurrent checkout requests from creating two orders
+            // from the same cart. This transaction also keeps order creation and
+            // cart clearing atomic.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+
             // --------------------------------------------------------
             // Find the authenticated customer's cart
             // --------------------------------------------------------
@@ -239,7 +245,19 @@ namespace GrabnBite.Controllers
 
             _context.CartItems.RemoveRange(cart.CartItems);
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException ||
+                ex.GetType().Name == "SerializationFailureException" ||
+                ex.GetType().Name == "PostgresException")
+            {
+                await transaction.RollbackAsync();
+                return Conflict("The cart changed while checkout was being processed. Refresh your cart before trying again.");
+            }
 
             // --------------------------------------------------------
             // Return result

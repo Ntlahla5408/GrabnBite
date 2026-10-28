@@ -33,6 +33,8 @@ export interface YocoPaymentConfirmation {
   paymentId?: number;
   paymentStatus: string;
   orderStatus?: string;
+  requiresReconciliation?: boolean;
+  refundStatus?: string;
 }
 
 export async function confirmYocoPayment(

@@ -407,6 +407,14 @@ namespace GrabnBite.Data
             modelBuilder.Entity<PaymentReconciliationEvent>()
                 .HasIndex(e => new { e.PaymentId, e.CreatedAt });
 
+            // Provider webhook retries must not create duplicate reconciliation cases.
+            // Limit uniqueness to system-generated Yoco event types so the admin audit
+            // trail can still record repeated status transitions using the same reference.
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => new { e.PaymentId, e.EventType, e.ProviderReference })
+                .IsUnique()
+                .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')");
+
             // Preserve the existing actor lookup index used by the audit trail.
             modelBuilder.Entity<PaymentReconciliationEvent>()
                 .HasIndex(e => e.ActorUserId);

@@ -285,6 +285,9 @@ namespace GrabnBite.Controllers
                     var previousCheckoutId = payment.YocoCheckoutId;
                     var previousPaymentReference = payment.PaymentReference;
                     var newPaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                    // Keep the old checkout ID in the append-only reconciliation trail
+                    // before detaching it. A delayed success webhook must still be resolvable.
+                    await using var retryTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
                     var claimedRetry = await _context.Payments
                         .Where(p => p.PaymentId == payment.PaymentId &&
                                     p.PaymentStatus != "PAID" &&
@@ -299,9 +302,24 @@ namespace GrabnBite.Controllers
 
                     if (claimedRetry != 1)
                     {
+                        await retryTransaction.RollbackAsync();
                         return Conflict("Another request has already started a payment retry. Refresh and check the latest payment status.");
                     }
 
+                    _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+                    {
+                        PaymentId = payment.PaymentId,
+                        ActorUserId = userId.Value,
+                        ActorRole = "CUSTOMER",
+                        EventType = "YOCO_CHECKOUT_RETRY_STARTED",
+                        RefundStatus = payment.RefundStatus,
+                        ProviderReference = previousCheckoutId,
+                        Details = "The previous Yoco checkout was verified as failed/cancelled and detached for retry. Retain this checkout reference to reconcile any delayed provider notification.",
+                        CreatedAt = DateTime.UtcNow
+                    });
+
+                    await _context.SaveChangesAsync();
+                    await retryTransaction.CommitAsync();
                     await _context.Entry(payment).ReloadAsync();
                 }
 
@@ -514,19 +532,36 @@ namespace GrabnBite.Controllers
                     .Include(p => p.Order)
                     .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
 
-                // A webhook may arrive before the checkout ID has been saved.
-                // Return a retryable response so Yoco can deliver it again.
+                // Retries detach the old checkout from the active payment row. Resolve
+                // that checkout through the durable retry event so a delayed success is
+                // reconciled instead of being retried forever or silently discarded.
+                if (payment == null)
+                {
+                    var retryEvent = await _context.PaymentReconciliationEvents
+                        .AsNoTracking()
+                        .Where(e => e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" &&
+                                    e.ProviderReference == checkoutId)
+                        .OrderByDescending(e => e.CreatedAt)
+                        .FirstOrDefaultAsync();
+
+                    if (retryEvent != null)
+                    {
+                        payment = await _context.Payments
+                            .Include(p => p.Order)
+                            .FirstOrDefaultAsync(p => p.PaymentId == retryEvent.PaymentId);
+                    }
+                }
+
+                // A webhook may arrive before the checkout ID has been saved, or it may
+                // refer to a checkout for which no retry history exists. Ask Yoco to retry.
                 if (payment == null)
                 {
                     _logger.LogWarning("Received Yoco webhook for an unknown checkout; asking Yoco to retry.");
                     return StatusCode(StatusCodes.Status503ServiceUnavailable);
                 }
 
-                if (payment.PaymentStatus == "PAID")
-                    return Ok(new { received = true, alreadyProcessed = true });
-
                 var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);
-                if (!string.Equals(checkout.Id, payment.YocoCheckoutId, StringComparison.Ordinal) ||
+                if (!string.Equals(checkout.Id, checkoutId, StringComparison.Ordinal) ||
                     checkout.Amount != (int)Math.Round(payment.Amount * 100) ||
                     !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
                 {
@@ -553,8 +588,12 @@ namespace GrabnBite.Controllers
                 {
                     // Conditional update makes PAID terminal even if a failure callback
                     // races with a successful confirmation in another request.
+                    // A delayed failure from a detached checkout must not fail the
+                    // currently active retry. Only mutate state when IDs still match.
                     await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .Where(p => p.PaymentId == payment.PaymentId &&
+                                    p.YocoCheckoutId == checkoutId &&
+                                    p.PaymentStatus != "PAID")
                         .ExecuteUpdateAsync(setters => setters
                             .SetProperty(p => p.PaymentStatus, "FAILED"));
                 }
@@ -669,74 +708,171 @@ namespace GrabnBite.Controllers
             if (currentOrderStatus == null)
                 throw new InvalidOperationException("The order for the verified payment no longer exists.");
 
+            var currentPayment = await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.PaymentId == payment.PaymentId)
+                .Select(p => new
+                {
+                    p.PaymentStatus,
+                    p.YocoCheckoutId,
+                    p.TransactionReference,
+                    p.RefundStatus
+                })
+                .SingleOrDefaultAsync();
+
+            if (currentPayment == null)
+                throw new InvalidOperationException("The payment for the verified checkout no longer exists.");
+
+            var now = DateTime.UtcNow;
             var orderWasCancelled = string.Equals(
                 currentOrderStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase);
+            var isActiveCheckout = string.Equals(
+                currentPayment.YocoCheckoutId, providerCheckoutReference, StringComparison.Ordinal);
+            var alreadyPaid = string.Equals(
+                currentPayment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase);
 
-            if (orderWasCancelled)
+            if (alreadyPaid)
             {
-                var now = DateTime.UtcNow;
-                var refundRecordCreated = await _context.Payments
-                    .Where(p => p.PaymentId == payment.PaymentId &&
-                                p.RefundStatus == "NOT_REQUIRED")
-                    .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(p => p.PaymentStatus, "PAID")
-                        .SetProperty(p => p.TransactionReference, providerCheckoutReference)
-                        .SetProperty(p => p.RefundStatus, "REQUIRED")
-                        .SetProperty(p => p.RefundAmount, p => p.Amount)
-                        .SetProperty(p => p.RefundProvider, "YOCO")
-                        // The checkout ID identifies the original payment, not a refund.
-                        // RefundProviderReference stays empty until a refund is actually initiated.
-                        .SetProperty(p => p.RefundProviderReference, (string?)null)
-                        .SetProperty(p => p.RefundRequiredAt, now)
-                        .SetProperty(p => p.RefundRequestedAt, (DateTime?)null)
-                        .SetProperty(p => p.RefundCompletedAt, (DateTime?)null)
-                        .SetProperty(p => p.RefundFailedAt, (DateTime?)null)
-                        .SetProperty(p => p.RequiresReconciliation, true)
-                        .SetProperty(p => p.ReconciliationReason,
-                            "Yoco confirmed payment after the order was cancelled; refund required.")
-                        .SetProperty(p => p.ReconciliationOpenedAt, now)
-                        .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
-                        .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
-
-                if (refundRecordCreated > 0)
+                // If a second checkout completed, do not replace the first recorded
+                // transaction reference. Open a durable review item for a possible
+                // duplicate charge, including when the second completion arrives late.
+                if (!string.Equals(currentPayment.TransactionReference, providerCheckoutReference, StringComparison.Ordinal))
                 {
-                    _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
-                    {
-                        PaymentId = payment.PaymentId,
-                        ActorUserId = null,
-                        ActorRole = "YOCO_WEBHOOK",
-                        EventType = "REFUND_REQUIRED",
-                        RefundStatus = "REQUIRED",
-                        ProviderReference = providerCheckoutReference,
-                        Details = "Provider-confirmed Yoco payment arrived after order cancellation. Refund review is required; no automatic refund was issued.",
-                        CreatedAt = now
-                    });
-
-                    await _context.SaveChangesAsync();
+                    await OpenYocoReconciliationAsync(
+                        payment.PaymentId,
+                        providerCheckoutReference,
+                        currentPayment.RefundStatus,
+                        "YOCO_MULTIPLE_CHECKOUTS_COMPLETED",
+                        "Yoco confirmed more than one checkout for this payment. Verify the provider records for a possible duplicate charge; do not assume a refund has been issued.",
+                        now);
                 }
-                else
+
+                if (orderWasCancelled && !string.Equals(currentPayment.RefundStatus, "SUCCEEDED", StringComparison.OrdinalIgnoreCase))
                 {
-                    // A duplicate webhook/confirmation may arrive after another
-                    // request has already opened the refund record. Keep the payment
-                    // fact current without duplicating the initial transition event.
-                    await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(p => p.PaymentStatus, "PAID")
-                            .SetProperty(p => p.TransactionReference, providerCheckoutReference));
+                    await RequireYocoRefundAsync(payment.PaymentId, providerCheckoutReference, now);
                 }
             }
-            else
+            else if (!isActiveCheckout)
             {
+                // The provider has confirmed a checkout that was detached during retry.
+                // Record the charge fact, but force reconciliation because another checkout
+                // may also have completed and the payment row can only hold one transaction.
                 await _context.Payments
                     .Where(p => p.PaymentId == payment.PaymentId)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(p => p.PaymentStatus, "PAID")
                         .SetProperty(p => p.TransactionReference, providerCheckoutReference));
+
+                await OpenYocoReconciliationAsync(
+                    payment.PaymentId,
+                    providerCheckoutReference,
+                    currentPayment.RefundStatus,
+                    "YOCO_STALE_CHECKOUT_COMPLETED",
+                    "A detached Yoco checkout completed after a retry began. Verify all checkout attempts for duplicate charges and reconcile the order before further action.",
+                    now);
+
+                if (orderWasCancelled)
+                    await RequireYocoRefundAsync(payment.PaymentId, providerCheckoutReference, now);
+            }
+            else
+            {
+                await _context.Payments
+                    .Where(p => p.PaymentId == payment.PaymentId &&
+                                p.YocoCheckoutId == providerCheckoutReference &&
+                                p.PaymentStatus != "PAID")
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.PaymentStatus, "PAID")
+                        .SetProperty(p => p.TransactionReference, providerCheckoutReference));
+
+                if (orderWasCancelled)
+                    await RequireYocoRefundAsync(payment.PaymentId, providerCheckoutReference, now);
             }
 
             await transaction.CommitAsync();
             return orderWasCancelled;
+        }
+
+        private async Task OpenYocoReconciliationAsync(
+            int paymentId,
+            string providerCheckoutReference,
+            string refundStatus,
+            string eventType,
+            string details,
+            DateTime now)
+        {
+            await _context.Payments
+                .Where(p => p.PaymentId == paymentId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.RequiresReconciliation, true)
+                    .SetProperty(p => p.ReconciliationReason, details)
+                    .SetProperty(p => p.ReconciliationOpenedAt, p => p.ReconciliationOpenedAt ?? now)
+                    .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
+                    .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
+
+            var eventExists = await _context.PaymentReconciliationEvents
+                .AnyAsync(e => e.PaymentId == paymentId &&
+                               e.EventType == eventType &&
+                               e.ProviderReference == providerCheckoutReference);
+
+            if (!eventExists)
+            {
+                _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+                {
+                    PaymentId = paymentId,
+                    ActorUserId = null,
+                    ActorRole = "YOCO_WEBHOOK",
+                    EventType = eventType,
+                    RefundStatus = refundStatus,
+                    ProviderReference = providerCheckoutReference,
+                    Details = details,
+                    CreatedAt = now
+                });
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task RequireYocoRefundAsync(
+            int paymentId,
+            string providerCheckoutReference,
+            DateTime now)
+        {
+            var refundRecordCreated = await _context.Payments
+                .Where(p => p.PaymentId == paymentId && p.RefundStatus == "NOT_REQUIRED")
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.PaymentStatus, "PAID")
+                    .SetProperty(p => p.TransactionReference, providerCheckoutReference)
+                    .SetProperty(p => p.RefundStatus, "REQUIRED")
+                    .SetProperty(p => p.RefundAmount, p => p.Amount)
+                    .SetProperty(p => p.RefundProvider, "YOCO")
+                    .SetProperty(p => p.RefundProviderReference, (string?)null)
+                    .SetProperty(p => p.RefundRequiredAt, now)
+                    .SetProperty(p => p.RefundRequestedAt, (DateTime?)null)
+                    .SetProperty(p => p.RefundCompletedAt, (DateTime?)null)
+                    .SetProperty(p => p.RefundFailedAt, (DateTime?)null)
+                    .SetProperty(p => p.RequiresReconciliation, true)
+                    .SetProperty(p => p.ReconciliationReason,
+                        "Yoco confirmed payment after the order was cancelled; refund required.")
+                    .SetProperty(p => p.ReconciliationOpenedAt, now)
+                    .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
+                    .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
+
+            if (refundRecordCreated > 0)
+            {
+                _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+                {
+                    PaymentId = paymentId,
+                    ActorUserId = null,
+                    ActorRole = "YOCO_WEBHOOK",
+                    EventType = "REFUND_REQUIRED",
+                    RefundStatus = "REQUIRED",
+                    ProviderReference = providerCheckoutReference,
+                    Details = "Provider-confirmed Yoco payment arrived after order cancellation. Refund review is required; no automatic refund was issued.",
+                    CreatedAt = now
+                });
+
+                await _context.SaveChangesAsync();
+            }
         }
 
         [Authorize(Roles = "Customer")]

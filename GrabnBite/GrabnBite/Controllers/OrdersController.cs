@@ -1,4 +1,5 @@
-﻿using GrabnBite.Data;
+﻿using Npgsql;
+using GrabnBite.Data;
 using GrabnBite.DTOs.Order;
 using GrabnBite.Hubs;
 using GrabnBite.Models.Entities;
@@ -178,8 +179,9 @@ namespace GrabnBite.Controllers
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
-            catch (Exception ex) when (ex is DbUpdateException || ex.GetType().Name == "SerializationFailureException" ||
-                                       ex.GetType().Name == "PostgresException")
+            catch (Exception ex) when (ex is DbUpdateException ||
+                                       ex is PostgresException postgresException &&
+                                           postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
             {
                 await transaction.RollbackAsync();
                 // A payment confirmation or another cancellation may have won the race.

@@ -1048,7 +1048,9 @@ namespace GrabnBite.Controllers
                     orderId = order.OrderId,
                     paymentId = payment.PaymentId,
                     paymentStatus = payment.PaymentStatus,
-                    orderStatus = order.Status
+                    orderStatus = order.Status,
+                    requiresReconciliation = payment.RequiresReconciliation,
+                    refundStatus = payment.RefundStatus
                 });
             }
 
@@ -1104,7 +1106,9 @@ namespace GrabnBite.Controllers
                         paymentId = payment.PaymentId,
                         paymentStatus = payment.PaymentStatus,
                         orderStatus = order.Status,
-                        yocoCheckoutId = payment.YocoCheckoutId
+                        yocoCheckoutId = payment.YocoCheckoutId,
+                        requiresReconciliation = payment.RequiresReconciliation,
+                        refundStatus = payment.RefundStatus
                     });
                 }
 

@@ -279,10 +279,30 @@ namespace GrabnBite.Controllers
 
                 if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
                 {
-                    // A terminal checkout is a new payment attempt, so use a new
-                    // idempotency key. For an ambiguous attempt with no saved
-                    // checkout ID, keep the same key to avoid duplicate sessions.
-                    payment.PaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                    // Claim the retry atomically. Two requests can both observe the
+                    // same failed checkout at Yoco, but only one may rotate the
+                    // idempotency key and detach that checkout from this payment.
+                    var previousCheckoutId = payment.YocoCheckoutId;
+                    var previousPaymentReference = payment.PaymentReference;
+                    var newPaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                    var claimedRetry = await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId &&
+                                    p.PaymentStatus != "PAID" &&
+                                    p.YocoCheckoutId == previousCheckoutId &&
+                                    p.PaymentReference == previousPaymentReference)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentReference, newPaymentReference)
+                            .SetProperty(p => p.PaymentStatus, "INITIATED")
+                            .SetProperty(p => p.YocoCheckoutId, (string?)null)
+                            .SetProperty(p => p.TransactionReference, (string?)null)
+                            .SetProperty(p => p.PaymentDate, DateTime.UtcNow));
+
+                    if (claimedRetry != 1)
+                    {
+                        return Conflict("Another request has already started a payment retry. Refresh and check the latest payment status.");
+                    }
+
+                    await _context.Entry(payment).ReloadAsync();
                 }
 
                 payment.PaymentStatus = "INITIATED";

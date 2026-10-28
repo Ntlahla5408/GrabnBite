@@ -22,21 +22,12 @@ export default function PaymentScreen() {
 
   const orderId = Number(params.orderId);
 
-  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
+  const [loading, setLoading] = useState(true);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
+  const [error, setError] = useState("");
   const [openingPayment, setOpeningPayment] = useState(false);
 
   const startPayment = useCallback(async () => {
-    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
-      setLoading(false);
-      setError("Please sign in and open a valid order to continue payment.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
     try {
       const result = await createYocoPayment(orderId, token);
 
@@ -63,10 +54,17 @@ export default function PaymentScreen() {
   }, [token, orderId]);
 
   useEffect(() => {
-    if (!authLoading) {
-      void startPayment();
+    if (
+      authLoading ||
+      !token ||
+      !Number.isInteger(orderId) ||
+      orderId <= 0
+    ) {
+      return;
     }
-  }, [authLoading, startPayment]);
+
+    void startPayment();
+  }, [authLoading, token, orderId, startPayment]);
 
   async function openPayment() {
     if (!checkoutUrl) {
@@ -88,7 +86,10 @@ export default function PaymentScreen() {
     }
   }
 
-  if (loading) {
+  const invalidPaymentInput =
+    !authLoading && (!token || !Number.isInteger(orderId) || orderId <= 0);
+
+  if (authLoading || (loading && !invalidPaymentInput)) {
     return (
       <View style={styles.center}>
         <View style={styles.loadingIconContainer}>
@@ -106,7 +107,7 @@ export default function PaymentScreen() {
     );
   }
 
-  if (error) {
+  if (invalidPaymentInput || error) {
     return (
       <View style={styles.center}>
         <View style={styles.errorIconContainer}>
@@ -115,14 +116,27 @@ export default function PaymentScreen() {
 
         <Text style={styles.errorTitle}>Payment could not start</Text>
 
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {invalidPaymentInput
+            ? "Please sign in and open a valid order to continue payment."
+            : error}
+        </Text>
 
         <Pressable
           style={({ pressed }) => [
             styles.retryButton,
             pressed && styles.buttonPressed,
           ]}
-          onPress={startPayment}
+          onPress={() => {
+            if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+              setError("Please sign in and open a valid order to continue payment.");
+              return;
+            }
+
+            setLoading(true);
+            setError("");
+            void startPayment();
+          }}
         >
           <Text style={styles.retryText}>Try Again</Text>
         </Pressable>

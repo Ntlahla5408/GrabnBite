@@ -109,6 +109,16 @@ namespace GrabnBite.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.AddCheckConstraint(
+                name: "CK_Payments_RefundStatus",
+                table: "Payments",
+                sql: "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+
+            migrationBuilder.AddCheckConstraint(
+                name: "CK_PaymentReconciliationEvents_RefundStatus",
+                table: "PaymentReconciliationEvents",
+                sql: "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+
             migrationBuilder.CreateIndex(
                 name: "IX_PaymentReconciliationEvents_PaymentId_CreatedAt",
                 table: "PaymentReconciliationEvents",
@@ -117,6 +127,8 @@ namespace GrabnBite.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropCheckConstraint(name: "CK_PaymentReconciliationEvents_RefundStatus", table: "PaymentReconciliationEvents");
+            migrationBuilder.DropCheckConstraint(name: "CK_Payments_RefundStatus", table: "Payments");
             migrationBuilder.DropTable(name: "PaymentReconciliationEvents");
 
             migrationBuilder.DropColumn(name: "RefundStatus", table: "Payments");

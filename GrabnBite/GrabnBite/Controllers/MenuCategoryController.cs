@@ -79,7 +79,7 @@ namespace GrabnBite.Controllers
             var category = new MenuCategory
             {
                 Name = dto.Name.Trim(),
-                Description = dto.Description?.Trim(),
+                Description = dto.Description?.Trim() ?? string.Empty,
                 RestaurantId = restaurant.RestaurantId
             };
 
@@ -91,7 +91,7 @@ namespace GrabnBite.Controllers
             {
                 MenuCategoryId = category.MenuCategoryId,
                 Name = category.Name,
-                Description = category.Description,
+                Description = category.Description ?? string.Empty,
                 RestaurantId = category.RestaurantId
             };
 
@@ -145,7 +145,7 @@ namespace GrabnBite.Controllers
             {
                 MenuCategoryId = category.MenuCategoryId,
                 Name = category.Name,
-                Description = category.Description,
+                Description = category.Description ?? string.Empty,
                 RestaurantId = category.RestaurantId
             };
 
@@ -192,7 +192,7 @@ namespace GrabnBite.Controllers
             {
                 MenuCategoryId = category.MenuCategoryId,
                 Name = category.Name,
-                Description = category.Description,
+                Description = category.Description ?? string.Empty,
                 RestaurantId = category.RestaurantId
             };
 

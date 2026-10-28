@@ -250,11 +250,27 @@ namespace GrabnBite.Controllers
             if (order.Payment != null)
             {
                 payment = order.Payment;
-                if (payment.PaymentStatus == "PAID")
-                    return BadRequest("This order has already been paid.");
 
                 if (!string.Equals(payment.PaymentMethod, "YOCO", StringComparison.OrdinalIgnoreCase))
                     return BadRequest("A different payment method is already recorded for this order.");
+
+                if (string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+                {
+                    // The mobile client can move to its verification screen after a
+                    // lost response without creating or replacing another checkout.
+                    return Ok(new PaymentResponseDto
+                    {
+                        PaymentId = payment.PaymentId,
+                        OrderId = payment.OrderId,
+                        Amount = payment.Amount,
+                        PaymentStatus = payment.PaymentStatus,
+                        PaymentMethod = payment.PaymentMethod,
+                        PaymentReference = payment.PaymentReference,
+                        TransactionReference = payment.TransactionReference,
+                        PaymentDate = payment.PaymentDate,
+                        YocoCheckoutId = payment.YocoCheckoutId
+                    });
+                }
 
                 if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
                 {

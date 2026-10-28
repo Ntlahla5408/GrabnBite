@@ -106,21 +106,29 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        // Always verify database connectivity, but never seed demo accounts
+        // outside Development. Production databases must be provisioned through
+        // controlled deployment/migration processes.
         await db.Database.OpenConnectionAsync();
-        Console.WriteLine("DATABASE CONNECTION: True");
-
-        // Close the probe connection before running the idempotent development seeder.
+        app.Logger.LogInformation("Database connectivity check succeeded.");
         await db.Database.CloseConnectionAsync();
 
-        await DbSeeder.SeedAsync(db);
-        app.Logger.LogInformation("Development database seeding completed.");
+        if (app.Environment.IsDevelopment())
+        {
+            await DbSeeder.SeedAsync(db);
+            app.Logger.LogInformation("Development database seeding completed.");
+        }
+        else
+        {
+            app.Logger.LogInformation(
+                "Database seeding skipped because the application is not running in Development.");
+        }
     }
     catch (Exception ex)
     {
-        Console.WriteLine("DATABASE CONNECTION / STARTUP SEEDING: False");
         app.Logger.LogCritical(
             ex,
-            "Application startup stopped because the database connection or startup seeding failed.");
+            "Application startup stopped because the database connection or development seeding failed.");
 
         // Never continue into a partially usable API after a failed DB probe/seed.
         throw;

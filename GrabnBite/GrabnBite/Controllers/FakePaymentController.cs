@@ -183,7 +183,8 @@ namespace GrabnBite.Controllers
             var completed = await _context.Payments
                 .Where(p => p.PaymentId == payment.PaymentId &&
                             p.PaymentMethod == "FAKE" &&
-                            p.PaymentStatus == "PENDING")
+                            p.PaymentStatus == "PENDING" &&
+                            p.Order.Status != "CANCELLED")
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(p => p.PaymentStatus, result.Succeeded ? "PAID" : "FAILED")
                     .SetProperty(p => p.TransactionReference, result.TransactionReference)
@@ -193,6 +194,11 @@ namespace GrabnBite.Controllers
 
             if (completed == 0)
             {
+                if (payment.Order.Status == "CANCELLED" && payment.PaymentStatus == "PENDING")
+                {
+                    return Conflict("The order was cancelled before the fake payment could complete. No payment result was recorded.");
+                }
+
                 return Ok(new
                 {
                     message = "This fake payment was completed by another request; its final result was preserved.",

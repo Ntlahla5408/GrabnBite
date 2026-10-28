@@ -71,6 +71,38 @@ namespace GrabnBite.Controllers
             return Ok(items);
         }
 
+        // GET: /api/payment-reconciliation/{paymentId}/events
+        // Return the append-only audit trail for a single payment.
+        [HttpGet("{paymentId:int}/events")]
+        public async Task<IActionResult> GetPaymentEvents(int paymentId)
+        {
+            if (paymentId <= 0)
+                return BadRequest("A valid payment ID is required.");
+
+            var paymentExists = await _context.Payments
+                .AnyAsync(p => p.PaymentId == paymentId);
+
+            if (!paymentExists)
+                return NotFound("Payment not found.");
+
+            var events = await _context.PaymentReconciliationEvents
+                .AsNoTracking()
+                .Where(e => e.PaymentId == paymentId)
+                .OrderBy(e => e.CreatedAt)
+                .Select(e => new
+                {
+                    e.PaymentReconciliationEventId,
+                    e.EventType,
+                    e.RefundStatus,
+                    e.ProviderReference,
+                    e.Details,
+                    e.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(events);
+        }
+
         // PATCH: /api/payment-reconciliation/{paymentId}/refund-status
         // This records a provider/manual outcome; it does not initiate a refund.
         [HttpPatch("{paymentId:int}/refund-status")]
@@ -126,7 +158,10 @@ namespace GrabnBite.Controllers
 
             if (nextStatus is "REQUIRED" or "PENDING")
             {
-                payment.RefundRequestedAt ??= now;
+                payment.RefundRequiredAt ??= now;
+                if (nextStatus == "PENDING")
+                    payment.RefundRequestedAt ??= now;
+
                 payment.RefundCompletedAt = null;
                 payment.RefundFailedAt = null;
                 payment.RequiresReconciliation = true;
@@ -137,6 +172,7 @@ namespace GrabnBite.Controllers
             }
             else if (nextStatus == "FAILED")
             {
+                payment.RefundRequiredAt ??= now;
                 payment.RefundRequestedAt ??= now;
                 payment.RefundFailedAt = now;
                 payment.RefundCompletedAt = null;
@@ -148,6 +184,7 @@ namespace GrabnBite.Controllers
             }
             else if (nextStatus == "MANUAL_REVIEW")
             {
+                payment.RefundRequiredAt ??= now;
                 payment.RequiresReconciliation = true;
                 payment.ReconciliationReason = request.Details.Trim();
                 payment.ReconciliationOpenedAt ??= now;
@@ -156,6 +193,7 @@ namespace GrabnBite.Controllers
             }
             else // SUCCEEDED
             {
+                payment.RefundRequiredAt ??= now;
                 payment.RefundRequestedAt ??= now;
                 payment.RefundCompletedAt = now;
                 payment.RefundFailedAt = null;

@@ -972,7 +972,9 @@ namespace GrabnBite.Controllers
                     StringComparison.OrdinalIgnoreCase))
                 {
                     await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .Where(p => p.PaymentId == payment.PaymentId &&
+                                    p.YocoCheckoutId == checkout.Id &&
+                                    p.PaymentStatus != "PAID")
                         .ExecuteUpdateAsync(setters => setters
                             .SetProperty(p => p.PaymentStatus, "FAILED"));
 
@@ -996,7 +998,9 @@ namespace GrabnBite.Controllers
                     StringComparison.OrdinalIgnoreCase))
                 {
                     await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId && p.PaymentStatus != "PAID")
+                        .Where(p => p.PaymentId == payment.PaymentId &&
+                                    p.YocoCheckoutId == checkout.Id &&
+                                    p.PaymentStatus != "PAID")
                         .ExecuteUpdateAsync(setters => setters
                             .SetProperty(p => p.PaymentStatus, "FAILED"));
 

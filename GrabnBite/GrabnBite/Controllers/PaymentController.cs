@@ -515,25 +515,20 @@ namespace GrabnBite.Controllers
 
                 if (string.Equals(checkout.Status, "completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Provider-confirmed money must be recorded even if the order was
-                    // cancelled in a race. Never reopen the order; flag it for urgent
-                    // reconciliation because a refund may now be required.
-                    if (string.Equals(payment.Order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    var orderWasCancelled = string.Equals(
+                        payment.Order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase);
+
+                    if (orderWasCancelled)
                     {
                         _logger.LogCritical(
-                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Do not fulfil the order; review refund handling.",
+                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Refund tracking was opened; do not fulfil the order.",
                             payment.PaymentId,
                             payment.OrderId);
                     }
 
-                    // The provider's verified completion is authoritative. Update only
-                    // the payment row: payment confirmation must never reset an order
-                    // that the restaurant has already moved forward.
-                    await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(p => p.PaymentStatus, "PAID")
-                            .SetProperty(p => p.TransactionReference, checkout.Id));
+                    // Persist the provider-confirmed payment and, when the order was
+                    // cancelled, create a durable refund/reconciliation record atomically.
+                    await RecordVerifiedYocoPaymentAsync(payment, checkout.Id, orderWasCancelled);
                 }
                 else if (string.Equals(checkout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
                          string.Equals(checkout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
@@ -642,6 +637,74 @@ namespace GrabnBite.Controllers
             return null;
         }
 
+        private async Task RecordVerifiedYocoPaymentAsync(
+            Payment payment,
+            string providerCheckoutReference,
+            bool orderWasCancelled)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            if (orderWasCancelled)
+            {
+                var now = DateTime.UtcNow;
+                var refundRecordCreated = await _context.Payments
+                    .Where(p => p.PaymentId == payment.PaymentId &&
+                                p.RefundStatus == "NOT_REQUIRED")
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.PaymentStatus, "PAID")
+                        .SetProperty(p => p.TransactionReference, providerCheckoutReference)
+                        .SetProperty(p => p.RefundStatus, "REQUIRED")
+                        .SetProperty(p => p.RefundAmount, p => p.Amount)
+                        .SetProperty(p => p.RefundProvider, "YOCO")
+                        .SetProperty(p => p.RefundProviderReference, providerCheckoutReference)
+                        .SetProperty(p => p.RefundRequestedAt, now)
+                        .SetProperty(p => p.RefundCompletedAt, (DateTime?)null)
+                        .SetProperty(p => p.RefundFailedAt, (DateTime?)null)
+                        .SetProperty(p => p.RequiresReconciliation, true)
+                        .SetProperty(p => p.ReconciliationReason,
+                            "Yoco confirmed payment after the order was cancelled; refund required.")
+                        .SetProperty(p => p.ReconciliationOpenedAt, now)
+                        .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
+                        .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
+
+                if (refundRecordCreated > 0)
+                {
+                    _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+                    {
+                        PaymentId = payment.PaymentId,
+                        EventType = "REFUND_REQUIRED",
+                        RefundStatus = "REQUIRED",
+                        ProviderReference = providerCheckoutReference,
+                        Details = "Provider-confirmed Yoco payment arrived after order cancellation. Refund review is required; no automatic refund was issued.",
+                        CreatedAt = now
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    // A duplicate webhook/confirmation may arrive after another
+                    // request has already opened the refund record. Keep the payment
+                    // fact current without duplicating the initial transition event.
+                    await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentStatus, "PAID")
+                            .SetProperty(p => p.TransactionReference, providerCheckoutReference));
+                }
+            }
+            else
+            {
+                await _context.Payments
+                    .Where(p => p.PaymentId == payment.PaymentId)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.PaymentStatus, "PAID")
+                        .SetProperty(p => p.TransactionReference, providerCheckoutReference));
+            }
+
+            await transaction.CommitAsync();
+        }
+
         [Authorize(Roles = "Customer")]
         [HttpPost("yoco/{orderId}/confirm")]
         public async Task<IActionResult> ConfirmYocoPayment(int orderId)
@@ -707,26 +770,21 @@ namespace GrabnBite.Controllers
                     StringComparison.OrdinalIgnoreCase))
                 {
                     // The provider may confirm payment after a cancellation race.
-                    // Record the real payment, never reopen/fulfil the order, and
-                    // emit an urgent reconciliation signal for refund review.
-                    if (string.Equals(order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    // Never reopen/fulfil a cancelled order; persist refund tracking.
+                    var orderWasCancelled = string.Equals(
+                        order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase);
+
+                    if (orderWasCancelled)
                     {
                         _logger.LogCritical(
-                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Do not fulfil the order; review refund handling.",
+                            "RECONCILIATION REQUIRED: Yoco confirmed payment {PaymentId} for cancelled order {OrderId}. Refund tracking was opened; do not fulfil the order.",
                             payment.PaymentId,
                             order.OrderId);
                     }
 
-                    // Confirm the payment without mutating the order lifecycle.
-                    // A verified payment must not move ACCEPTED/PREPARING/etc. back
-                    // to PENDING. A completed provider result may safely win over a
-                    // previously recorded FAILED result after reconciliation.
-                    await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(p => p.PaymentStatus, "PAID")
-                            .SetProperty(p => p.TransactionReference, checkout.Id));
-
+                    // A verified provider result may win over a prior FAILED status,
+                    // but it must never reset the order lifecycle.
+                    await RecordVerifiedYocoPaymentAsync(payment, checkout.Id, orderWasCancelled);
                     await _context.Entry(payment).ReloadAsync();
 
                     return Ok(new

@@ -63,18 +63,10 @@ export default function PaymentScreen() {
   }, [token, orderId]);
 
   useEffect(() => {
-    if (authLoading) {
-      return;
+    if (!authLoading) {
+      void startPayment();
     }
-
-    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
-      setLoading(false);
-      setError("Please sign in and open a valid order to continue payment.");
-      return;
-    }
-
-    void startPayment();
-  }, [authLoading, token, orderId, startPayment]);
+  }, [authLoading, startPayment]);
 
   async function openPayment() {
     if (!checkoutUrl) {

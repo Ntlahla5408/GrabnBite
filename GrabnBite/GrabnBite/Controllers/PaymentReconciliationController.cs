@@ -123,7 +123,7 @@ namespace GrabnBite.Controllers
         }
 
         // PATCH: /api/payment-reconciliation/{paymentId}/resolve
-        // Resolve a delayed old-checkout success only after the active retry is verified terminal.
+        // Resolve checkout-race cases only after every other recorded attempt is verified terminal.
         [HttpPatch("{paymentId:int}/resolve")]
         public async Task<IActionResult> ResolveDelayedCheckoutReconciliation(
             int paymentId,
@@ -173,7 +173,8 @@ namespace GrabnBite.Controllers
             if (multipleCheckoutCompletions)
                 return Conflict("Multiple completed checkouts were recorded. Refund/reconciliation review is required; this route cannot close that case.");
 
-            if (string.IsNullOrWhiteSpace(payment.TransactionReference))
+            var successfulCheckoutReference = payment.TransactionReference;
+            if (string.IsNullOrWhiteSpace(successfulCheckoutReference))
                 return Conflict("The successful checkout reference is missing. Verify the payment manually before resolving this case.");
 
             // Verify every recorded checkout except the one already recorded as paid.
@@ -187,14 +188,14 @@ namespace GrabnBite.Controllers
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            if (!checkoutIds.Contains(payment.TransactionReference, StringComparer.Ordinal))
-                checkoutIds.Add(payment.TransactionReference);
+            if (!checkoutIds.Contains(successfulCheckoutReference, StringComparer.Ordinal))
+                checkoutIds.Add(successfulCheckoutReference);
 
             try
             {
                 foreach (var checkoutId in checkoutIds)
                 {
-                    if (string.Equals(checkoutId, payment.TransactionReference, StringComparison.Ordinal))
+                    if (string.Equals(checkoutId, successfulCheckoutReference, StringComparison.Ordinal))
                         continue;
 
                     var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);

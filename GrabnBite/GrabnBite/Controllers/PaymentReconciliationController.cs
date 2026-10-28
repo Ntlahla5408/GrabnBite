@@ -138,22 +138,23 @@ namespace GrabnBite.Controllers
             if (string.IsNullOrWhiteSpace(request.ProviderReference))
                 return BadRequest("Record the Yoco dashboard reference used during reconciliation.");
 
-            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-
-            var payment = await _context.Payments
+            // Read a snapshot first and verify provider state without holding a database
+            // transaction open across network requests.
+            var paymentSnapshot = await _context.Payments
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
 
-            if (payment == null)
+            if (paymentSnapshot == null)
                 return NotFound("Payment not found.");
 
-            if (!string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(paymentSnapshot.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
                 return Conflict("Only a provider-confirmed paid payment can be reconciled this way.");
 
-            if (!payment.RequiresReconciliation ||
-                !string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
+            if (!paymentSnapshot.RequiresReconciliation ||
+                !string.Equals(paymentSnapshot.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
                 return Conflict("This payment is not an unresolved no-refund checkout reconciliation. Use the refund workflow when a refund is required.");
 
-            var relevantCheckoutEvents = await _context.PaymentReconciliationEvents
+            var checkoutEventReferences = await _context.PaymentReconciliationEvents
                 .AsNoTracking()
                 .Where(e => e.PaymentId == paymentId &&
                     (e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" ||
@@ -162,28 +163,25 @@ namespace GrabnBite.Controllers
                 .Select(e => e.ProviderReference)
                 .ToListAsync();
 
-            var hasRelevantCheckoutEvent = relevantCheckoutEvents.Any(reference => !string.IsNullOrWhiteSpace(reference));
-            if (!hasRelevantCheckoutEvent)
+            if (!checkoutEventReferences.Any(reference => !string.IsNullOrWhiteSpace(reference)))
                 return Conflict("This resolution route only applies to checkout reconciliation cases recorded by the system.");
 
             var multipleCheckoutCompletions = await _context.PaymentReconciliationEvents
+                .AsNoTracking()
                 .AnyAsync(e => e.PaymentId == paymentId &&
                                e.EventType == "YOCO_MULTIPLE_CHECKOUTS_COMPLETED");
 
             if (multipleCheckoutCompletions)
                 return Conflict("Multiple completed checkouts were recorded. Refund/reconciliation review is required; this route cannot close that case.");
 
-            var successfulCheckoutReference = payment.TransactionReference;
+            var successfulCheckoutReference = paymentSnapshot.TransactionReference;
             if (string.IsNullOrWhiteSpace(successfulCheckoutReference))
                 return Conflict("The successful checkout reference is missing. Verify the payment manually before resolving this case.");
 
-            // Verify every recorded checkout except the one already recorded as paid.
-            // This includes checkout IDs detached by a retry and any checkout created
-            // while another request changed the payment state.
-            var checkoutIds = relevantCheckoutEvents
+            var checkoutIds = checkoutEventReferences
                 .Where(reference => !string.IsNullOrWhiteSpace(reference))
                 .Select(reference => reference!)
-                .Append(payment.YocoCheckoutId ?? string.Empty)
+                .Append(paymentSnapshot.YocoCheckoutId ?? string.Empty)
                 .Where(reference => !string.IsNullOrWhiteSpace(reference))
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
@@ -200,7 +198,7 @@ namespace GrabnBite.Controllers
 
                     var checkout = await _yocoPaymentService.GetCheckoutStatusAsync(checkoutId);
                     if (!string.Equals(checkout.Id, checkoutId, StringComparison.Ordinal) ||
-                        checkout.Amount != (int)Math.Round(payment.Amount * 100) ||
+                        checkout.Amount != (int)Math.Round(paymentSnapshot.Amount * 100) ||
                         !string.Equals(checkout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
                     {
                         return Conflict("A recorded Yoco checkout could not be matched to this payment.");
@@ -218,6 +216,64 @@ namespace GrabnBite.Controllers
                 _logger.LogWarning(ex, "Could not verify all recorded Yoco checkouts while resolving payment {PaymentId}", paymentId);
                 return StatusCode(StatusCodes.Status502BadGateway,
                     new { message = "Unable to verify every recorded Yoco checkout. Reconciliation remains open." });
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            var payment = await _context.Payments
+                .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
+
+            if (payment == null)
+                return NotFound("Payment not found.");
+
+            // Revalidate every state assumption after the network calls. If a webhook,
+            // retry or refund update changed the record while verification was in flight,
+            // leave the case open for a fresh review.
+            if (!string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase) ||
+                !payment.RequiresReconciliation ||
+                !string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(payment.TransactionReference, successfulCheckoutReference, StringComparison.Ordinal) ||
+                payment.Amount != paymentSnapshot.Amount ||
+                !string.Equals(payment.YocoCheckoutId, paymentSnapshot.YocoCheckoutId, StringComparison.Ordinal))
+            {
+                await transaction.RollbackAsync();
+                return Conflict("Payment state changed during provider verification. Refresh the reconciliation queue and verify again.");
+            }
+
+            var latestCheckoutEventReferences = await _context.PaymentReconciliationEvents
+                .AsNoTracking()
+                .Where(e => e.PaymentId == paymentId &&
+                    (e.EventType == "YOCO_CHECKOUT_RETRY_STARTED" ||
+                     e.EventType == "YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED" ||
+                     e.EventType == "YOCO_STALE_CHECKOUT_COMPLETED"))
+                .Select(e => e.ProviderReference)
+                .ToListAsync();
+
+            var originalReferenceSet = checkoutEventReferences
+                .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(reference => reference, StringComparer.Ordinal)
+                .ToArray();
+            var latestReferenceSet = latestCheckoutEventReferences
+                .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(reference => reference, StringComparer.Ordinal)
+                .ToArray();
+
+            if (!originalReferenceSet.SequenceEqual(latestReferenceSet, StringComparer.Ordinal))
+            {
+                await transaction.RollbackAsync();
+                return Conflict("Checkout history changed during provider verification. Refresh and verify every recorded attempt.");
+            }
+
+            var newMultipleCompletion = await _context.PaymentReconciliationEvents
+                .AsNoTracking()
+                .AnyAsync(e => e.PaymentId == paymentId &&
+                               e.EventType == "YOCO_MULTIPLE_CHECKOUTS_COMPLETED");
+
+            if (newMultipleCompletion)
+            {
+                await transaction.RollbackAsync();
+                return Conflict("Multiple completed checkouts were recorded during verification. Keep reconciliation open for refund review.");
             }
 
             var now = DateTime.UtcNow;

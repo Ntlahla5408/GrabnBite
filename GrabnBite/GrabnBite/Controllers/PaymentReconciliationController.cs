@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -19,6 +20,16 @@ namespace GrabnBite.Controllers
             "SUCCEEDED",
             "FAILED",
             "MANUAL_REVIEW"
+        };
+
+        private static readonly Dictionary<string, string[]> AllowedTransitions = new()
+        {
+            ["NOT_REQUIRED"] = new[] { "REQUIRED", "MANUAL_REVIEW" },
+            ["REQUIRED"] = new[] { "PENDING", "FAILED", "MANUAL_REVIEW" },
+            ["PENDING"] = new[] { "SUCCEEDED", "FAILED", "MANUAL_REVIEW" },
+            ["FAILED"] = new[] { "REQUIRED", "PENDING", "MANUAL_REVIEW" },
+            ["MANUAL_REVIEW"] = new[] { "REQUIRED", "PENDING", "SUCCEEDED", "FAILED" },
+            ["SUCCEEDED"] = Array.Empty<string>()
         };
 
         private readonly AppDbContext _context;
@@ -93,6 +104,8 @@ namespace GrabnBite.Controllers
                 .Select(e => new
                 {
                     e.PaymentReconciliationEventId,
+                    e.ActorUserId,
+                    e.ActorRole,
                     e.EventType,
                     e.RefundStatus,
                     e.ProviderReference,
@@ -139,8 +152,11 @@ namespace GrabnBite.Controllers
             if (!string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
                 return Conflict("A refund status can only be recorded for a provider-confirmed PAID payment.");
 
-            if (payment.RefundStatus == "SUCCEEDED")
-                return Conflict("A successful refund is terminal and cannot be overwritten.");
+            if (!AllowedTransitions.TryGetValue(payment.RefundStatus, out var allowedNextStatuses) ||
+                !allowedNextStatuses.Contains(nextStatus))
+            {
+                return Conflict($"Refund status cannot transition from {payment.RefundStatus} to {nextStatus}. Refresh the record and follow an allowed refund transition.");
+            }
 
             var now = DateTime.UtcNow;
             var refundAmount = request.RefundAmount ?? payment.RefundAmount ?? payment.Amount;
@@ -203,9 +219,17 @@ namespace GrabnBite.Controllers
                 payment.ReconciliationResolutionNotes = request.Details.Trim();
             }
 
+            var actorClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var actorUserId = int.TryParse(actorClaim, out var parsedActorId)
+                ? parsedActorId
+                : (int?)null;
+            var actorRole = User.FindFirstValue(ClaimTypes.Role) ?? "Admin";
+
             _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
             {
                 PaymentId = payment.PaymentId,
+                ActorUserId = actorUserId,
+                ActorRole = actorRole,
                 EventType = "REFUND_STATUS_CHANGED",
                 RefundStatus = nextStatus,
                 ProviderReference = payment.RefundProviderReference,

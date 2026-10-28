@@ -211,6 +211,16 @@ namespace GrabnBite.Controllers
                 return BadRequest("A payment method must be selected before the restaurant can accept this order.");
             }
 
+            // Do not accept an order while the payment is flagged for reconciliation
+            // or has entered any refund state. A PAID status alone is insufficient when
+            // a delayed/duplicate provider checkout has made the payment inconsistent.
+            if (newStatus == "ACCEPTED" && order.Payment != null &&
+                (order.Payment.RequiresReconciliation ||
+                 !string.Equals(order.Payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase)))
+            {
+                return Conflict("This payment needs reconciliation or refund review before the restaurant can accept the order.");
+            }
+
             if (newStatus == "ACCEPTED" &&
                 !string.Equals(order.Payment!.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))

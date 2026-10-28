@@ -22,19 +22,296 @@ namespace GrabnBite.Controllers
     {
         private readonly AppDbContext _context;
         private readonly YocoPaymentService _yocoPaymentService;
+        private readonly StripePaymentService _stripePaymentService;
         private readonly YocoSettings _yocoSettings;
         private readonly ILogger<PaymentController> _logger;
 
         public PaymentController(
             AppDbContext context,
             YocoPaymentService yocoPaymentService,
+            StripePaymentService stripePaymentService,
             IOptions<YocoSettings> yocoSettings,
             ILogger<PaymentController> logger)
         {
             _context = context;
             _yocoPaymentService = yocoPaymentService;
+            _stripePaymentService = stripePaymentService;
             _yocoSettings = yocoSettings.Value;
             _logger = logger;
+        }
+
+
+        // ============================================================
+        // CREATE STRIPE PAYMENT INTENT
+        // POST: /api/Payment/stripe/{orderId}
+        // The amount and metadata are derived exclusively from the stored order/payment.
+        // ============================================================
+        [Authorize(Roles = "Customer")]
+        [HttpPost("stripe/{orderId:int}")]
+        public async Task<IActionResult> CreateStripePayment(int orderId, CancellationToken cancellationToken)
+        {
+            if (orderId <= 0)
+                return BadRequest("Invalid order ID.");
+
+            var userId = GetCurrentUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            if (!_stripePaymentService.IsConfigured)
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    new { message = "Stripe payments are not configured yet." });
+
+            var order = await _context.Orders
+                .Include(o => o.Payment)
+                .FirstOrDefaultAsync(o => o.OrderId == orderId && o.UserId == userId.Value, cancellationToken);
+
+            if (order == null)
+                return NotFound("Order not found.");
+
+            if (string.Equals(order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                return Conflict("A cancelled order cannot be paid.");
+
+            if (order.TotalAmount <= 0)
+                return BadRequest("Order amount must be greater than zero.");
+
+            var payment = order.Payment;
+            if (payment != null)
+            {
+                if (string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+                    return Conflict("This order has already been paid.");
+
+                if (!string.Equals(payment.PaymentMethod, "STRIPE", StringComparison.OrdinalIgnoreCase))
+                    return Conflict("A different payment method is already recorded for this order.");
+
+                if (payment.Amount != order.TotalAmount)
+                    return Conflict("The recorded payment amount no longer matches the order. Contact support.");
+            }
+            else
+            {
+                payment = new Payment
+                {
+                    OrderId = order.OrderId,
+                    Amount = order.TotalAmount,
+                    PaymentStatus = "INITIATED",
+                    PaymentMethod = "STRIPE",
+                    PaymentReference = $"GNB-STRIPE-{Guid.NewGuid():N}".Substring(0, 24).ToUpperInvariant(),
+                    PaymentDate = DateTime.UtcNow
+                };
+                _context.Payments.Add(payment);
+
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException ex)
+                {
+                    _logger.LogWarning(ex, "Concurrent Stripe payment creation for order {OrderId}", orderId);
+                    return Conflict("A payment was created for this order by another request. Refresh and check its status.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(payment.PaymentReference))
+                return Conflict("The payment idempotency reference is missing. Contact support before retrying.");
+
+            if (!string.IsNullOrWhiteSpace(payment.StripePaymentIntentId))
+                return Conflict("A Stripe PaymentIntent already exists for this order. Resume that payment rather than creating another.");
+
+            try
+            {
+                var intent = await _stripePaymentService.CreatePaymentIntentAsync(
+                    payment.PaymentId,
+                    order.OrderId,
+                    payment.Amount,
+                    payment.PaymentReference,
+                    cancellationToken);
+
+                payment.StripePaymentIntentId = intent.Id;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return Ok(new
+                {
+                    paymentId = payment.PaymentId,
+                    orderId = payment.OrderId,
+                    amount = payment.Amount,
+                    currency = "ZAR",
+                    paymentStatus = payment.PaymentStatus,
+                    paymentMethod = payment.PaymentMethod,
+                    stripePaymentIntentId = intent.Id,
+                    clientSecret = intent.ClientSecret
+                });
+            }
+            catch (StripeProviderException ex)
+            {
+                _logger.LogError(ex, "Stripe could not confirm PaymentIntent creation for payment {PaymentId}", payment.PaymentId);
+                return StatusCode(StatusCodes.Status502BadGateway,
+                    new { message = "Stripe could not create or confirm the payment session. The payment remains unconfirmed; retry safely or check its status." });
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Stripe network failure for payment {PaymentId}", payment.PaymentId);
+                return StatusCode(StatusCodes.Status502BadGateway,
+                    new { message = "Stripe could not be reached. The payment remains unconfirmed; retry safely or check its status." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Stripe PaymentIntent processing failed for payment {PaymentId}", payment.PaymentId);
+                return StatusCode(StatusCodes.Status502BadGateway,
+                    new { message = "Stripe payment setup could not be confirmed. Do not assume payment succeeded." });
+            }
+        }
+
+        // ============================================================
+        // STRIPE WEBHOOK
+        // POST: /api/Payment/stripe/webhook
+        // Only signature-verified events can alter payment state.
+        // ============================================================
+        [AllowAnonymous]
+        [HttpPost("stripe/webhook")]
+        public async Task<IActionResult> StripeWebhook(CancellationToken cancellationToken)
+        {
+            if (!_stripePaymentService.IsConfigured)
+                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+
+            Request.EnableBuffering();
+            string rawBody;
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true))
+            {
+                rawBody = await reader.ReadToEndAsync(cancellationToken);
+                Request.Body.Position = 0;
+            }
+
+            if (!_stripePaymentService.VerifyWebhookSignature(rawBody, Request.Headers["Stripe-Signature"].ToString()))
+                return Unauthorized();
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawBody);
+                var root = document.RootElement;
+                var eventId = root.TryGetProperty("id", out var eventIdElement) ? eventIdElement.GetString() : null;
+                var eventType = root.TryGetProperty("type", out var typeElement) ? typeElement.GetString() : null;
+
+                if (string.IsNullOrWhiteSpace(eventId) || string.IsNullOrWhiteSpace(eventType))
+                    return BadRequest("Stripe event ID or type is missing.");
+
+                if (eventType is not ("payment_intent.succeeded" or "payment_intent.payment_failed"))
+                    return Ok(new { received = true, ignored = true });
+
+                if (!root.TryGetProperty("data", out var data) ||
+                    !data.TryGetProperty("object", out var intent))
+                    return BadRequest("Stripe event payload is missing its object.");
+
+                var intentId = intent.TryGetProperty("id", out var intentIdElement) ? intentIdElement.GetString() : null;
+                if (string.IsNullOrWhiteSpace(intentId))
+                    return BadRequest("Stripe PaymentIntent ID is missing.");
+
+                var payment = await _context.Payments
+                    .Include(p => p.Order)
+                    .FirstOrDefaultAsync(p => p.StripePaymentIntentId == intentId, cancellationToken);
+
+                // Stripe retries non-2xx responses. Unknown IDs may indicate that
+                // the provider response was lost before our PaymentIntent ID was saved.
+                if (payment == null)
+                {
+                    _logger.LogWarning("Stripe webhook references unknown PaymentIntent {PaymentIntentId}; requesting retry.", intentId);
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable);
+                }
+
+                await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+                var alreadyProcessed = await _context.ProcessedPaymentProviderEvents
+                    .AnyAsync(e => e.Provider == "STRIPE" && e.EventId == eventId, cancellationToken);
+                if (alreadyProcessed)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return Ok(new { received = true, alreadyProcessed = true });
+                }
+
+                var now = DateTime.UtcNow;
+                _context.ProcessedPaymentProviderEvents.Add(new ProcessedPaymentProviderEvent
+                {
+                    Provider = "STRIPE",
+                    EventId = eventId,
+                    ProcessedAt = now
+                });
+
+                if (eventType == "payment_intent.succeeded")
+                {
+                    var amountReceived = intent.TryGetProperty("amount_received", out var amountElement)
+                        ? amountElement.GetInt64()
+                        : -1;
+                    var currency = intent.TryGetProperty("currency", out var currencyElement)
+                        ? currencyElement.GetString()
+                        : null;
+                    var expectedAmount = payment.Amount * 100m;
+
+                    if (expectedAmount != decimal.Truncate(expectedAmount) ||
+                        amountReceived != decimal.ToInt64(expectedAmount) ||
+                        !string.Equals(currency, "zar", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                        _logger.LogCritical("Stripe amount/currency mismatch for payment {PaymentId}; event {EventId} requires investigation.", payment.PaymentId, eventId);
+                        return Conflict("Stripe payment details do not match the recorded order amount and currency.");
+                    }
+
+                    if (payment.PaymentStatus != "PAID")
+                    {
+                        payment.PaymentStatus = "PAID";
+                        payment.TransactionReference = intentId;
+
+                        if (string.Equals(payment.Order.Status, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                        {
+                            payment.RefundStatus = "REQUIRED";
+                            payment.RefundAmount = payment.Amount;
+                            payment.RefundRequiredAt ??= now;
+                            payment.RefundProvider = "STRIPE";
+                            payment.RequiresReconciliation = true;
+                            payment.ReconciliationReason = "Stripe confirmed payment after the order had been cancelled. A full refund is required; do not fulfil the order.";
+                            payment.ReconciliationOpenedAt ??= now;
+                            payment.ReconciliationResolvedAt = null;
+                            payment.ReconciliationResolutionNotes = null;
+
+                            _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+                            {
+                                PaymentId = payment.PaymentId,
+                                ActorRole = "STRIPE_WEBHOOK",
+                                EventType = "LATE_PAYMENT_AFTER_CANCELLATION",
+                                RefundStatus = "REQUIRED",
+                                ProviderReference = intentId,
+                                Details = payment.ReconciliationReason,
+                                CreatedAt = now
+                            });
+                        }
+                    }
+                }
+                else if (payment.PaymentStatus != "PAID")
+                {
+                    payment.PaymentStatus = "FAILED";
+                }
+
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                }
+                catch (DbUpdateException ex)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    // A unique (Provider, EventId) constraint protects concurrent
+                    // duplicate deliveries as well as ordinary webhook retries.
+                    if (await _context.ProcessedPaymentProviderEvents
+                        .AnyAsync(e => e.Provider == "STRIPE" && e.EventId == eventId, cancellationToken))
+                        return Ok(new { received = true, alreadyProcessed = true });
+
+                    _logger.LogError(ex, "Could not persist Stripe webhook event {EventId}", eventId);
+                    return StatusCode(StatusCodes.Status503ServiceUnavailable);
+                }
+
+                return Ok(new { received = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Invalid Stripe webhook JSON.");
+                return BadRequest("Invalid webhook payload.");
+            }
         }
 
         // ============================================================

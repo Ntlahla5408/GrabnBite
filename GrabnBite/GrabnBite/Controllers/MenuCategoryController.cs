@@ -184,7 +184,7 @@ namespace GrabnBite.Controllers
             }
 
             category.Name = dto.Name.Trim();
-            category.Description = dto.Description?.Trim();
+            category.Description = dto.Description?.Trim() ?? string.Empty;
 
             await _context.SaveChangesAsync();
 

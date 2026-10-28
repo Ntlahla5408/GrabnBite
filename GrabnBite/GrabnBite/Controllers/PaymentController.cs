@@ -931,8 +931,8 @@ namespace GrabnBite.Controllers
             string details,
             DateTime now)
         {
-            // A repeated delivery for an already-audited checkout must not reopen a
-            // reconciliation case that an administrator has legitimately resolved.
+            // Fast path for ordinary webhook retries. The unique partial index below is
+            // the authoritative guard against two concurrent deliveries passing this check.
             var eventExists = await _context.PaymentReconciliationEvents
                 .AnyAsync(e => e.PaymentId == paymentId &&
                                e.EventType == eventType &&
@@ -941,16 +941,12 @@ namespace GrabnBite.Controllers
             if (eventExists)
                 return;
 
-            await _context.Payments
-                .Where(p => p.PaymentId == paymentId)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(p => p.RequiresReconciliation, true)
-                    .SetProperty(p => p.ReconciliationReason, details)
-                    .SetProperty(p => p.ReconciliationOpenedAt, p => p.ReconciliationOpenedAt ?? now)
-                    .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
-                    .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
+            var ownsTransaction = _context.Database.CurrentTransaction == null;
+            await using var transaction = ownsTransaction
+                ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+                : null;
 
-            _context.PaymentReconciliationEvents.Add(new PaymentReconciliationEvent
+            var reconciliationEvent = new PaymentReconciliationEvent
             {
                 PaymentId = paymentId,
                 ActorUserId = null,
@@ -960,9 +956,48 @@ namespace GrabnBite.Controllers
                 ProviderReference = providerCheckoutReference,
                 Details = details,
                 CreatedAt = now
-            });
+            };
 
-            await _context.SaveChangesAsync();
+            // Insert the idempotency record before changing the payment. If a concurrent
+            // webhook won the unique-index race, no state is reopened by this delivery.
+            _context.PaymentReconciliationEvents.Add(reconciliationEvent);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                _context.Entry(reconciliationEvent).State = EntityState.Detached;
+
+                var duplicateExists = await _context.PaymentReconciliationEvents
+                    .AsNoTracking()
+                    .AnyAsync(e => e.PaymentId == paymentId &&
+                                   e.EventType == eventType &&
+                                   e.ProviderReference == providerCheckoutReference);
+
+                if (!duplicateExists)
+                    throw;
+
+                if (transaction != null)
+                    await transaction.RollbackAsync();
+
+                return;
+            }
+
+            var updated = await _context.Payments
+                .Where(p => p.PaymentId == paymentId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.RequiresReconciliation, true)
+                    .SetProperty(p => p.ReconciliationReason, details)
+                    .SetProperty(p => p.ReconciliationOpenedAt, p => p.ReconciliationOpenedAt ?? now)
+                    .SetProperty(p => p.ReconciliationResolvedAt, (DateTime?)null)
+                    .SetProperty(p => p.ReconciliationResolutionNotes, (string?)null));
+
+            if (updated != 1)
+                throw new InvalidOperationException($"Payment {paymentId} was not found while opening Yoco reconciliation.");
+
+            if (transaction != null)
+                await transaction.CommitAsync();
         }
 
         private async Task RequireYocoRefundAsync(

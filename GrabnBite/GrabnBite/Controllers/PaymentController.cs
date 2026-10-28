@@ -162,7 +162,17 @@ namespace GrabnBite.Controllers
 
             _context.Payments.Add(payment);
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // The unique OrderId index is the final guard if two requests
+                // try to create the payment at the same time.
+                _logger.LogWarning(ex, "Concurrent payment creation detected for order {OrderId}", orderId);
+                return Conflict("A payment was created for this order by another request. Refresh and check its status.");
+            }
 
             return Ok(new PaymentResponseDto
             {
@@ -293,7 +303,15 @@ namespace GrabnBite.Controllers
                 _context.Payments.Add(payment);
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogWarning(ex, "Concurrent Yoco payment creation detected for order {OrderId}", orderId);
+                return Conflict("A payment was created or changed for this order by another request. Refresh and check its status.");
+            }
 
             var successUrl = _yocoSettings.SuccessUrl;
             var cancelUrl = _yocoSettings.CancelUrl;
@@ -348,11 +366,11 @@ namespace GrabnBite.Controllers
             }
             catch (Exception ex)
             {
-                // Preserve a failed attempt for reconciliation. If Yoco created
-                // a checkout but the response was lost, do not assume no charge.
-                payment.PaymentStatus = "FAILED";
-                await _context.SaveChangesAsync();
-                _logger.LogError(ex, "Yoco checkout creation failed for order {OrderId}", orderId);
+                // The provider may have created the checkout even if the response
+                // was lost. Keep this attempt INITIATED and retain its idempotency
+                // key so a retry can safely reconcile/replay the same request.
+                // Do not label an ambiguous provider outcome as a confirmed failure.
+                _logger.LogError(ex, "Yoco checkout creation could not be confirmed for order {OrderId}", orderId);
 
                 return StatusCode(
                     StatusCodes.Status502BadGateway,

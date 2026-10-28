@@ -518,7 +518,10 @@ namespace GrabnBite.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+                        });
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.PaymentReconciliationEvent", b =>
@@ -554,7 +557,10 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("PaymentId", "CreatedAt");
 
-                    b.ToTable("PaymentReconciliationEvents");
+                    b.ToTable("PaymentReconciliationEvents", t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentReconciliationEvents_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+                        });
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>

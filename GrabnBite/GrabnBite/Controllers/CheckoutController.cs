@@ -177,7 +177,11 @@ namespace GrabnBite.Controllers
                 UserId = userId.Value,
                 RestaurantId = cart.RestaurantId,
                 DeliveryAddressId = dto.DeliveryAddressId,
-                DeliveryAddressLabel = address.Label,
+                // Older address records may have a missing/blank label even though
+                // the Orders snapshot column is required by PostgreSQL.
+                DeliveryAddressLabel = string.IsNullOrWhiteSpace(address.Label)
+                    ? "Delivery address"
+                    : address.Label.Trim(),
                 DeliveryStreetAddress = address.StreetAddress,
                 DeliveryCity = address.City,
                 DeliveryProvince = address.Province,

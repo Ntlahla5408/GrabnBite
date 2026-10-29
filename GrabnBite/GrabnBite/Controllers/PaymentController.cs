@@ -600,7 +600,7 @@ namespace GrabnBite.Controllers
             // follow an HTTP redirect directly to a custom app scheme, so provide
             // an automatic app-link attempt plus a visible fallback link.
             // The app still verifies payment with Yoco before showing order details.
-            var appUrl = $"grabnbitemobile://payment-success?orderId={orderId}";
+            var appUrl = $"grabnbitemobile:///payment-success?orderId={orderId}";
             var html = $$"""
                 <!doctype html>
                 <html lang="en">

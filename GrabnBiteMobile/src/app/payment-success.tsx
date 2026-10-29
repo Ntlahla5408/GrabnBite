@@ -36,6 +36,16 @@ export default function PaymentSuccessScreen() {
       const refundReviewRequired = isPaid && orderWasCancelled;
       const paymentReviewRequired = isPaid && !orderWasCancelled && result.requiresReconciliation === true;
 
+      // Once the backend has verified payment, take the customer straight to
+      // the order-tracking screen instead of leaving them on a success screen.
+      if (isPaid && !orderWasCancelled && !paymentReviewRequired) {
+        router.replace({
+          pathname: "/order",
+          params: { orderId: String(orderId) },
+        });
+        return;
+      }
+
       setRequiresRefundReview(refundReviewRequired);
       setRequiresPaymentReview(paymentReviewRequired);
       setVerified(isPaid && !orderWasCancelled && !paymentReviewRequired);

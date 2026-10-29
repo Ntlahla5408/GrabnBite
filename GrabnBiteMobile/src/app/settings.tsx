@@ -19,12 +19,12 @@ export default function SettingsScreen() {
             <Text style={[styles.backText, { color: colors.headerText }]}>‹</Text>
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: colors.headerText }]}>Settings</Text>
+            <Text style={[styles.title, { color: colors.accent }]}>Settings</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Personalise your GrabnBite experience</Text>
           </View>
         </View>
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Appearance</Text>
           <View style={[styles.preferenceCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <View style={styles.preferenceIcon}><Text style={styles.preferenceEmoji}>{isDark ? "🌙" : "☀️"}</Text></View>
             <View style={styles.preferenceCopy}>
@@ -35,7 +35,7 @@ export default function SettingsScreen() {
             </View>
             <Switch accessibilityRole="switch" accessibilityLabel="Toggle dark navy theme" value={isDark}
               onValueChange={() => void toggleTheme()}
-              trackColor={{ false: "#CBD5E1", true: "#F97316" }} thumbColor="#FFFFFF" />
+              trackColor={{ false: "#CBD5E1", true: colors.accent }} thumbColor="#FFFFFF" />
           </View>
           <Text style={[styles.helpText, { color: colors.textSecondary }]}>
             Your choice is saved on this device and restored when you reopen GrabnBite.
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { paddingBottom: 40 },
   header: { paddingTop: 24, paddingBottom: 24, paddingHorizontal: 20, flexDirection: "row", alignItems: "center" },
-  backButton: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(249, 115, 22, 0.12)", marginRight: 12 },
+  backButton: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF1E6", marginRight: 12 },
   backText: { fontSize: 34, lineHeight: 38, marginTop: -4 },
   headerCopy: { flex: 1 },
   title: { fontSize: 28, fontWeight: "800" },
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 20, paddingTop: 24 },
   sectionTitle: { fontSize: 18, fontWeight: "800", marginBottom: 12 },
   preferenceCard: { borderWidth: 1, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center" },
-  preferenceIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#FFF7ED", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  preferenceIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: "#FFF1E6", alignItems: "center", justifyContent: "center", marginRight: 12 },
   preferenceEmoji: { fontSize: 22 },
   preferenceCopy: { flex: 1, marginRight: 10 },
   preferenceTitle: { fontSize: 15, fontWeight: "800" },

@@ -127,10 +127,10 @@ export default function RestaurantScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerScreen}>
-        <ActivityIndicator size="large" color="#F97316" />
+      <View style={[styles.centerScreen, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
 
-        <Text style={styles.loadingText}>Loading restaurant...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading restaurant...</Text>
       </View>
     );
   }
@@ -138,11 +138,11 @@ export default function RestaurantScreen() {
   if (error || !restaurant) {
     return (
       <View style={styles.centerScreen}>
-        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={[styles.errorTitle, { color: colors.text }]}>Something went wrong</Text>
 
-        <Text style={styles.errorText}>{error || "Restaurant not found."}</Text>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error || "Restaurant not found."}</Text>
 
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Pressable style={[styles.backButton, { backgroundColor: colors.accent }]} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </Pressable>
       </View>
@@ -157,16 +157,17 @@ export default function RestaurantScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Restaurant Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
           <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [
               styles.backIconButton,
+              { backgroundColor: colors.surface, borderColor: colors.border },
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.backIcon}>‹</Text>
+            <Text style={[styles.backIcon, { color: colors.text }]}>‹</Text>
           </Pressable>
 
           {restaurant.imageUrl ? (
@@ -176,17 +177,17 @@ export default function RestaurantScreen() {
               resizeMode="cover"
             />
           ) : (
-            <View style={styles.restaurantImagePlaceholder}>
+            <View style={[styles.restaurantImagePlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={styles.restaurantEmoji}>🍽️</Text>
             </View>
           )}
 
           <View style={styles.headerInfo}>
-            <Text style={styles.restaurantName} numberOfLines={1}>
+            <Text style={[styles.restaurantName, { color: colors.text }]} numberOfLines={1}>
               {restaurant.name}
             </Text>
 
-            <Text style={styles.restaurantDescription} numberOfLines={2}>
+            <Text style={[styles.restaurantDescription, { color: colors.textSecondary }]} numberOfLines={2}>
               {restaurant.description}
             </Text>
 
@@ -206,6 +207,7 @@ export default function RestaurantScreen() {
                 <Text
                   style={[
                     styles.metaText,
+                    { color: colors.textSecondary },
                     restaurant.isOpen ? styles.openText : styles.closedText,
                   ]}
                 >
@@ -215,9 +217,9 @@ export default function RestaurantScreen() {
 
               {restaurant.isOpen && (
                 <>
-                  <Text style={styles.metaDivider}>•</Text>
+                  <Text style={[styles.metaDivider, { color: colors.textSecondary }]}>•</Text>
 
-                  <Text style={styles.metaText}>20–35 min</Text>
+                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>20–35 min</Text>
                 </>
               )}
             </View>
@@ -231,9 +233,9 @@ export default function RestaurantScreen() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.menuHeader}>
-          <Text style={styles.menuTitle}>Menu</Text>
+          <Text style={[styles.menuTitle, { color: colors.text }]}>Menu</Text>
 
-          <Text style={styles.menuSubtitle}>Choose something delicious</Text>
+          <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>Choose something delicious</Text>
         </View>
 
         {cartMessage !== "" && (
@@ -249,22 +251,22 @@ export default function RestaurantScreen() {
 
           return (
             <View key={categoryId} style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>
+              <Text style={[styles.categoryTitle, { color: colors.accent }]}>
                 {getCategoryName(categoryId)}
               </Text>
 
               {categoryItems.map((item) => (
-                <View key={item.menuItemId} style={styles.menuCard}>
+                <View key={item.menuItemId} style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.menuInfo}>
-                    <Text style={styles.itemName} numberOfLines={1}>
+                    <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
                       {item.name}
                     </Text>
 
-                    <Text style={styles.itemDescription} numberOfLines={2}>
+                    <Text style={[styles.itemDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                       {item.description}
                     </Text>
 
-                    <Text style={styles.itemPrice}>
+                    <Text style={[styles.itemPrice, { color: colors.accent }]}>
                       R{item.price.toFixed(2)}
                     </Text>
                   </View>
@@ -290,12 +292,12 @@ export default function RestaurantScreen() {
         })}
 
         {menuItems.length === 0 && (
-          <View style={styles.emptyMenu}>
+          <View style={[styles.emptyMenu, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={styles.emptyMenuIcon}>🍽️</Text>
 
-            <Text style={styles.emptyMenuTitle}>No menu items available</Text>
+            <Text style={[styles.emptyMenuTitle, { color: colors.text }]}>No menu items available</Text>
 
-            <Text style={styles.emptyMenuText}>
+            <Text style={[styles.emptyMenuText, { color: colors.textSecondary }]}>
               This restaurant currently has no available items.
             </Text>
           </View>
@@ -303,7 +305,7 @@ export default function RestaurantScreen() {
       </ScrollView>
 
       {/* Cart Bar */}
-      <View style={styles.cartBar}>
+      <View style={[styles.cartBar, { backgroundColor: colors.header, borderTopColor: colors.border }]}>
         <Pressable
           style={({ pressed }) => [
             styles.cartButton,
@@ -327,7 +329,7 @@ export default function RestaurantScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#071B2C",
+    backgroundColor: "#F7F9FC",
   },
 
   centerScreen: {
@@ -335,12 +337,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#071B2C",
+    backgroundColor: "#F7F9FC",
   },
 
   loadingText: {
     marginTop: 12,
-    color: "#AFC0CC",
+    color: "#627487",
     fontSize: 14,
   },
 
@@ -371,12 +373,12 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: "#071B2C",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 22,
     borderBottomWidth: 1,
-    borderBottomColor: "#18384D",
+    borderBottomColor: "#E1E8EF",
   },
 
   headerContent: {
@@ -393,7 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     backgroundColor: "#0D2638",
     borderWidth: 1,
-    borderColor: "#18384D",
+    borderColor: "#E1E8EF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -439,8 +441,8 @@ const styles = StyleSheet.create({
   },
 
   restaurantName: {
-    color: "#FFFFFF",
-    fontSize: 22,
+    color: "#102A43",
+    fontSize: 23,
     fontWeight: "800",
     marginBottom: 4,
   },
@@ -470,7 +472,7 @@ const styles = StyleSheet.create({
   },
 
   metaText: {
-    color: "#CBD5E1",
+    color: "#627487",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -502,8 +504,8 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    color: "#FFFFFF",
-    fontSize: 28,
+    color: "#102A43",
+    fontSize: 30,
     fontWeight: "800",
   },
 
@@ -534,16 +536,16 @@ const styles = StyleSheet.create({
   },
 
   categoryTitle: {
-    color: "#FFFFFF",
-    fontSize: 19,
+    color: "#102A43",
+    fontSize: 20,
     fontWeight: "800",
     marginBottom: 12,
   },
 
   menuCard: {
-    backgroundColor: "#0D2638",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
+    padding: 17,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#18384D",
@@ -557,8 +559,8 @@ const styles = StyleSheet.create({
   },
 
   itemName: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: "#102A43",
+    fontSize: 17,
     fontWeight: "700",
     marginBottom: 5,
   },
@@ -571,8 +573,8 @@ const styles = StyleSheet.create({
   },
 
   itemPrice: {
-    color: "#F97316",
-    fontSize: 16,
+    color: "#F47721",
+    fontSize: 17,
     fontWeight: "800",
   },
 
@@ -604,7 +606,7 @@ const styles = StyleSheet.create({
   emptyMenu: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0D2638",
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 45,

@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function CustomerBottomNav() {
   const pathname = usePathname();
-  const { theme, isDark } = useThemePreference();
+  const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
 
   const tabs = [
@@ -46,7 +46,7 @@ export default function CustomerBottomNav() {
               <View
                 style={[
                   styles.iconContainer,
-                  active && styles.activeIconContainer,
+                  active && { backgroundColor: colors.accentSoft },
                 ]}
               >
                 <Text style={[styles.icon, { color: active ? colors.accent : colors.textSecondary }]}>

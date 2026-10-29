@@ -99,7 +99,7 @@ export default function HomeScreen() {
             subtitle="Find something you're in the mood for"
           />
 
-          <CategoryList />
+          <CategoryList onSelectCategory={setSearch} />
         </View>
 
         {/* Restaurants */}

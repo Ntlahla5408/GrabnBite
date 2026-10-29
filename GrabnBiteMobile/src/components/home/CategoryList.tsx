@@ -1,6 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
+interface CategoryListProps {
+  onSelectCategory: (category: string) => void;
+}
+
 const categories = [
   { name: "Burgers", icon: "🍔" },
   { name: "Pizza", icon: "🍕" },
@@ -10,9 +14,10 @@ const categories = [
   { name: "Drinks", icon: "🥤" },
 ];
 
-export default function CategoryList() {
+export default function CategoryList({ onSelectCategory }: CategoryListProps) {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+
   return (
     <ScrollView
       horizontal
@@ -22,6 +27,9 @@ export default function CategoryList() {
       {categories.map((category) => (
         <Pressable
           key={category.name}
+          accessibilityRole="button"
+          accessibilityLabel={`Search for ${category.name}`}
+          onPress={() => onSelectCategory(category.name)}
           style={({ pressed }) => [
             styles.category,
             pressed && styles.categoryPressed,

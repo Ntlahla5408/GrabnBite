@@ -77,13 +77,15 @@ export function useThemePreference() {
 
 export const AppThemeColors = {
   light: {
-    background: "#FFFFFF", surface: "#F8FAFC", surfaceElevated: "#FFFFFF",
-    text: "#172033", textSecondary: "#64748B", border: "#E2E8F0",
-    header: "#FFFFFF", headerText: "#172033",
+    background: "#F7F9FC", surface: "#FFFFFF", surfaceElevated: "#FFFFFF",
+    text: "#102A43", textSecondary: "#627487", border: "#E1E8EF",
+    header: "#FFFFFF", headerText: "#102A43",
+    accent: "#F47721", accentSoft: "#FFF1E6", navy: "#102A43",
   },
   dark: {
     background: "#071B2C", surface: "#0D2638", surfaceElevated: "#123247",
-    text: "#FFFFFF", textSecondary: "#CBD5E1", border: "#24465B",
+    text: "#F7FAFC", textSecondary: "#B7C7D6", border: "#24465B",
     header: "#071B2C", headerText: "#FFFFFF",
+    accent: "#FF984D", accentSoft: "#3B2A20", navy: "#071B2C",
   },
 } as const;

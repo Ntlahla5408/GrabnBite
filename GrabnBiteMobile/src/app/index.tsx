@@ -80,7 +80,7 @@ export default function HomeScreen() {
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: colors.header }]}>
           <View style={styles.heroContent}>
-            <Text style={styles.eyebrow}>DELIVERING GREAT FOOD</Text>
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>DELIVERING GREAT FOOD</Text>
 
             <Text style={[styles.heroTitle, { color: colors.headerText }]}>What are you craving today?</Text>
 
@@ -121,7 +121,7 @@ export default function HomeScreen() {
 
           {!loading && error !== "" && (
             <View style={styles.center}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={[styles.errorText, { color: colors.accent }]}>{error}</Text>
             </View>
           )}
 
@@ -129,7 +129,7 @@ export default function HomeScreen() {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🍽️</Text>
 
-              <Text style={styles.emptyTitle}>No restaurants found</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No restaurants found</Text>
 
               <Text style={styles.emptyText}>
                 Try searching for another restaurant or type of food.

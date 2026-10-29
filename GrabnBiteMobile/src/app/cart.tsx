@@ -144,7 +144,7 @@ export default function CartScreen() {
       >
         {error !== "" && (
           <View style={[styles.errorBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.errorText, { color: colors.danger ?? "#DC2626" }]}>{error}</Text>
+            <Text style={[styles.errorText, { color: theme === "dark" ? "#FCA5A5" : "#B91C1C" }]}>{error}</Text>
           </View>
         )}
 
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   },
 
   checkoutLabel: {
-    color: "rgba(255,255,255,0.72)",
+    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1,

@@ -13,7 +13,7 @@ export default function HomeHeader() {
         <Image source={logo} style={styles.logoImage} />
 
         <View>
-          <Text style={[styles.logoText, { color: "#F97316" }]}>GrabnBite</Text>
+          <Text style={[styles.logoText, { color: colors.accent }]}>GrabnBite</Text>
 
           <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
         </View>
@@ -23,11 +23,12 @@ export default function HomeHeader() {
         <Pressable
           style={({ pressed }) => [
             styles.cartButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
             pressed && styles.buttonPressed,
           ]}
           onPress={() => router.push("/cart")}
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Text style={[styles.cartIcon, { color: colors.text }]}>🛒</Text>
         </Pressable>
 
         <Pressable
@@ -52,7 +53,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 12,
-    backgroundColor: "#071B2C",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -93,9 +93,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#0D2638",
     borderWidth: 1,
-    borderColor: "#18384D",
     justifyContent: "center",
     alignItems: "center",
   },

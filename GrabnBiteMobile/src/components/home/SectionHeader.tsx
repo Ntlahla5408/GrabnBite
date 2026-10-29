@@ -11,7 +11,7 @@ export default function SectionHeader({ title, subtitle }: SectionHeaderProps) {
   const colors = AppThemeColors[theme];
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.title, { color: colors.accent }]}>{title}</Text>
 
       {subtitle && <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
     </View>
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#FFFFFF",
+    color: "#F47721",
     fontSize: 22,
     fontWeight: "800",
   },

@@ -601,7 +601,7 @@ namespace GrabnBite.Controllers
             // an automatic app-link attempt plus a visible fallback link.
             // The app still verifies payment with Yoco before showing order details.
             var appUrl = $"grabnbitemobile://payment-success?orderId={orderId}";
-            var html = $"""
+            var html = $$"""
                 <!doctype html>
                 <html lang="en">
                 <head>
@@ -609,21 +609,21 @@ namespace GrabnBite.Controllers
                   <meta name="viewport" content="width=device-width, initial-scale=1">
                   <title>Return to GrabnBite</title>
                   <style>
-                    body {{ font-family: Arial, sans-serif; background: #f7f8fa; color: #071b2c; display: flex; min-height: 100vh; align-items: center; justify-content: center; margin: 0; padding: 24px; box-sizing: border-box; }}
-                    main {{ max-width: 420px; background: #fff; border-radius: 18px; padding: 28px; text-align: center; box-shadow: 0 8px 28px rgba(7,27,44,.08); }}
-                    a {{ display: inline-block; margin-top: 18px; background: #f28c28; color: #fff; text-decoration: none; font-weight: 700; padding: 14px 20px; border-radius: 10px; }}
-                    p {{ color: #5f6b75; line-height: 1.5; }}
+                    body { font-family: Arial, sans-serif; background: #f7f8fa; color: #071b2c; display: flex; min-height: 100vh; align-items: center; justify-content: center; margin: 0; padding: 24px; box-sizing: border-box; }
+                    main { max-width: 420px; background: #fff; border-radius: 18px; padding: 28px; text-align: center; box-shadow: 0 8px 28px rgba(7,27,44,.08); }
+                    a { display: inline-block; margin-top: 18px; background: #f28c28; color: #fff; text-decoration: none; font-weight: 700; padding: 14px 20px; border-radius: 10px; }
+                    p { color: #5f6b75; line-height: 1.5; }
                   </style>
                 </head>
                 <body>
                   <main>
                     <h1>Payment submitted</h1>
                     <p>Return to GrabnBite to verify your payment and view your order status.</p>
-                    <a href="{appUrl}">Open GrabnBite</a>
+                    <a href="{{appUrl}}">Open GrabnBite</a>
                     <p>If the app does not open automatically, tap the button above.</p>
                   </main>
                   <script>
-                    window.location.href = "{appUrl}";
+                    window.location.href = "{{appUrl}}";
                   </script>
                 </body>
                 </html>

@@ -120,7 +120,7 @@ export default function RestaurantDashboardScreen() {
 
   if (authLoading || loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={ORANGE} />
 
         <Text style={styles.loadingText}>Loading restaurant dashboard...</Text>
@@ -130,7 +130,7 @@ export default function RestaurantDashboardScreen() {
 
   if (!token) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Text style={styles.errorTitle}>Restaurant login required</Text>
 
         <Pressable
@@ -299,7 +299,7 @@ function OrderSection({
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>{title}</Text>
 
-        <Text style={styles.sectionCount}>{orders.length}</Text>
+        <Text style={[styles.sectionCount, { backgroundColor: colors.surface, color: colors.accent }]}>{orders.length}</Text>
       </View>
 
       {orders.length === 0 ? (

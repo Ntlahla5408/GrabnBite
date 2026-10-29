@@ -105,10 +105,10 @@ export default function CartScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centerScreen}>
-        <ActivityIndicator size="large" color="#F97316" />
+      <View style={[styles.centerScreen, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
 
-        <Text style={styles.loadingText}>Loading your cart...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your cart...</Text>
       </View>
     );
   }
@@ -116,22 +116,22 @@ export default function CartScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
           <Pressable
             style={({ pressed }) => [
-              styles.backButton,
+              styles.backButton, { backgroundColor: colors.surface, borderColor: colors.border },
               pressed && styles.buttonPressed,
             ]}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>‹</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>‹</Text>
           </Pressable>
 
           <View>
-            <Text style={styles.headerTitle}>Your Cart</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Your Cart</Text>
 
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               Review your items before checkout
             </Text>
           </View>
@@ -143,26 +143,26 @@ export default function CartScreen() {
         contentContainerStyle={styles.content}
       >
         {error !== "" && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.errorText, { color: colors.danger ?? "#DC2626" }]}>{error}</Text>
           </View>
         )}
 
         {carts.length === 0 ? (
           <View style={styles.emptyCart}>
-            <View style={styles.emptyCartIconContainer}>
+            <View style={[styles.emptyCartIconContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={styles.emptyCartIcon}>🛒</Text>
             </View>
 
-            <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
+            <Text style={[styles.emptyCartTitle, { color: colors.text }]}>Your cart is empty</Text>
 
-            <Text style={styles.emptyCartText}>
+            <Text style={[styles.emptyCartText, { color: colors.textSecondary }]}>
               Add some delicious food from a restaurant to get started.
             </Text>
 
             <Pressable
               style={({ pressed }) => [
-                styles.browseButton,
+                styles.browseButton, { backgroundColor: colors.accent },
                 pressed && styles.browseButtonPressed,
               ]}
               onPress={() => router.replace("/")}
@@ -172,19 +172,19 @@ export default function CartScreen() {
           </View>
         ) : (
           carts.map((cart) => (
-            <View key={cart.cartId} style={styles.restaurantSection}>
+            <View key={cart.cartId} style={[styles.restaurantSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {/* Restaurant heading */}
-              <View style={styles.restaurantHeader}>
-                <View style={styles.restaurantIcon}>
+              <View style={[styles.restaurantHeader, { borderBottomColor: colors.border }]}>
+                <View style={[styles.restaurantIcon, { backgroundColor: colors.accentSoft }]}>
                   <Text style={styles.restaurantEmoji}>🍽️</Text>
                 </View>
 
                 <View style={styles.restaurantInfo}>
-                  <Text style={styles.restaurantName} numberOfLines={1}>
+                  <Text style={[styles.restaurantName, { color: colors.text }]} numberOfLines={1}>
                     {cart.restaurantName}
                   </Text>
 
-                  <Text style={styles.itemCount}>
+                  <Text style={[styles.itemCount, { color: colors.textSecondary }]}>
                     {cart.items.length}{" "}
                     {cart.items.length === 1 ? "item" : "items"}
                   </Text>
@@ -197,13 +197,13 @@ export default function CartScreen() {
                   const isUpdating = updatingItemId === item.cartItemId;
 
                   return (
-                    <View key={item.cartItemId} style={styles.cartItem}>
+                    <View key={item.cartItemId} style={[styles.cartItem, { borderBottomColor: colors.border }]}>
                       <View style={styles.itemInfo}>
-                        <Text style={styles.itemName} numberOfLines={2}>
+                        <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={2}>
                           {item.menuItemName}
                         </Text>
 
-                        <Text style={styles.itemPrice}>
+                        <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
                           R{item.unitPrice.toFixed(2)} each
                         </Text>
                       </View>
@@ -211,13 +211,13 @@ export default function CartScreen() {
                       <View style={styles.itemActions}>
                         <View
                           style={[
-                            styles.quantityControl,
+                            styles.quantityControl, { backgroundColor: colors.background, borderColor: colors.border },
                             isUpdating && styles.quantityControlDisabled,
                           ]}
                         >
                           <Pressable
                             style={({ pressed }) => [
-                              styles.quantityButton,
+                              styles.quantityButton, { backgroundColor: colors.surface },
                               pressed && styles.quantityButtonPressed,
                             ]}
                             disabled={isUpdating}
@@ -233,16 +233,16 @@ export default function CartScreen() {
                               }
                             }}
                           >
-                            <Text style={styles.quantityButtonText}>−</Text>
+                            <Text style={[styles.quantityButtonText, { color: colors.text }]}>−</Text>
                           </Pressable>
 
-                          <Text style={styles.quantityText}>
+                          <Text style={[styles.quantityText, { color: colors.text }]}>
                             {isUpdating ? "..." : item.quantity}
                           </Text>
 
                           <Pressable
                             style={({ pressed }) => [
-                              styles.quantityButton,
+                              styles.quantityButton, { backgroundColor: colors.surface },
                               pressed && styles.quantityButtonPressed,
                             ]}
                             disabled={isUpdating}
@@ -254,11 +254,11 @@ export default function CartScreen() {
                               )
                             }
                           >
-                            <Text style={styles.quantityButtonText}>+</Text>
+                            <Text style={[styles.quantityButtonText, { color: colors.text }]}>+</Text>
                           </Pressable>
                         </View>
 
-                        <Text style={styles.itemSubtotal}>
+                        <Text style={[styles.itemSubtotal, { color: colors.accent }]}>
                           R{item.subtotal.toFixed(2)}
                         </Text>
                       </View>
@@ -269,9 +269,9 @@ export default function CartScreen() {
 
               {/* Restaurant total */}
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Restaurant subtotal</Text>
+                <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Restaurant subtotal</Text>
 
-                <Text style={styles.totalAmount}>
+                <Text style={[styles.totalAmount, { color: colors.text }]}>
                   R{cart.totalAmount.toFixed(2)}
                 </Text>
               </View>
@@ -279,7 +279,7 @@ export default function CartScreen() {
               {/* Checkout */}
               <Pressable
                 style={({ pressed }) => [
-                  styles.checkoutButton,
+                  styles.checkoutButton, { backgroundColor: colors.accent },
                   pressed && styles.checkoutButtonPressed,
                 ]}
                 onPress={() =>
@@ -300,7 +300,7 @@ export default function CartScreen() {
                   </Text>
                 </View>
 
-                <Text style={styles.checkoutAmount}>
+                <Text style={[styles.checkoutAmount, { color: "#FFFFFF" }]}>
                   R{cart.totalAmount.toFixed(2)}
                 </Text>
               </Pressable>

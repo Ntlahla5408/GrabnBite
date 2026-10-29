@@ -21,9 +21,9 @@ export default function AccountScreen() {
         <View style={styles.loggedOutContainer}>
           <Text style={styles.icon}>👤</Text>
 
-          <Text style={styles.title}>Welcome to GrabnBite</Text>
+          <Text style={[styles.title, { color: colors.accent }]}>Welcome to GrabnBite</Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Sign in to manage your account, orders and addresses.
           </Text>
 
@@ -69,13 +69,13 @@ export default function AccountScreen() {
 
             <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
 
-            <Text style={styles.role}>Customer</Text>
+            <Text style={[styles.role, { color: colors.accent }]}>Customer</Text>
           </View>
         </View>
 
         {/* Account options */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>My GrabnBite</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>My GrabnBite</Text>
 
           <Pressable
             style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
@@ -92,11 +92,11 @@ export default function AccountScreen() {
               </Text>
             </View>
 
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
           </Pressable>
 
           <Pressable
-            style={styles.option}
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/addresses")}
           >
             <View style={styles.optionIcon}>
@@ -110,12 +110,12 @@ export default function AccountScreen() {
               </Text>
             </View>
 
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
           </Pressable>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Preferences</Text>
           <Pressable
             style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/settings")}
@@ -130,7 +130,7 @@ export default function AccountScreen() {
         </View>
 
         {/* Logout */}
-        <Pressable style={[styles.logoutButton, { backgroundColor: isDark ? "#F97316" : "#071B2C" }]} onPress={handleLogout}>
+        <Pressable style={[styles.logoutButton, { backgroundColor: colors.accent }]} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
       </ScrollView>
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#F97316",
+    backgroundColor: "#F47721",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   },
 
   role: {
-    color: "#F97316",
+    color: "#F47721",
     fontSize: 12,
     fontWeight: "700",
     marginTop: 5,
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 10,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#FFF1E6",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,

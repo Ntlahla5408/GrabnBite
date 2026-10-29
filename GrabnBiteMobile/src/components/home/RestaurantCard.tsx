@@ -32,14 +32,14 @@ export default function RestaurantCard({
           resizeMode="cover"
         />
       ) : (
-        <View style={styles.imagePlaceholder}>
+        <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface }]}>
           <Text style={styles.placeholderIcon}>🍽️</Text>
-          <Text style={styles.placeholderText}>No image available</Text>
+          <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>No image available</Text>
         </View>
       )}
 
       <View style={styles.content}>
-        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.accent }]} numberOfLines={1}>
           {name}
         </Text>
 
@@ -86,7 +86,7 @@ export default function RestaurantCard({
 const styles = StyleSheet.create({
   card: {
     width: 290,
-    backgroundColor: "#0D2638",
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     overflow: "hidden",
     marginRight: 14,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 165,
-    backgroundColor: "#18384D",
+    backgroundColor: "#EEF2F6",
   },
 
   imagePlaceholder: {
@@ -136,14 +136,14 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#FFFFFF",
+    color: "#102A43",
     fontSize: 18,
     fontWeight: "800",
   },
 
   cuisine: {
     marginTop: 5,
-    color: "#B8C7D3",
+    color: "#627487",
     fontSize: 13,
     lineHeight: 18,
   },

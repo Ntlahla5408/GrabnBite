@@ -233,15 +233,15 @@ export default function AddressesScreen() {
         contentContainerStyle={styles.content}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <Pressable onPress={() => router.back()}>
-            <Text style={styles.backButton}>‹</Text>
+            <Text style={[styles.backButton, { color: colors.accent }]}>‹</Text>
           </Pressable>
 
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>My Addresses</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My Addresses</Text>
 
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               Manage your delivery locations
             </Text>
           </View>
@@ -249,7 +249,7 @@ export default function AddressesScreen() {
 
         {/* Add Address */}
         <Pressable
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: colors.accent }]}
           onPress={() => {
             resetForm();
             setModalVisible(true);
@@ -261,23 +261,23 @@ export default function AddressesScreen() {
         {/* Loading */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#F97316" />
+            <ActivityIndicator size="large" color={colors.accent} />
 
-            <Text style={styles.loadingText}>Loading your addresses...</Text>
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your addresses...</Text>
           </View>
         ) : addresses.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
             <Text style={styles.emptyIcon}>📍</Text>
 
-            <Text style={styles.emptyTitle}>No saved addresses</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No saved addresses</Text>
 
-            <Text style={styles.emptySubtitle}>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               Add a delivery address so you can order your favourite meals
               faster.
             </Text>
 
             <Pressable
-              style={styles.emptyButton}
+              style={[styles.emptyButton, { backgroundColor: colors.accent }]}
               onPress={() => {
                 resetForm();
                 setModalVisible(true);
@@ -298,41 +298,41 @@ export default function AddressesScreen() {
               >
                 <View style={styles.addressHeader}>
                   <View style={styles.addressTitleContainer}>
-                    <Text style={styles.addressLabel}>
+                    <Text style={[styles.addressLabel, { color: colors.text }]}>
                       {address.label || "Delivery Address"}
                     </Text>
 
                     {address.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultBadgeText}>Default</Text>
+                      <View style={[styles.defaultBadge, { backgroundColor: colors.accentSoft }]}>
+                        <Text style={[styles.defaultBadgeText, { color: colors.accent }]}>Default</Text>
                       </View>
                     )}
                   </View>
                 </View>
 
-                <Text style={styles.addressText}>{address.streetAddress}</Text>
+                <Text style={[styles.addressText, { color: colors.textSecondary }]}>{address.streetAddress}</Text>
 
-                <Text style={styles.addressText}>
+                <Text style={[styles.addressText, { color: colors.textSecondary }]}>
                   {address.city}, {address.province}
                 </Text>
 
-                <Text style={styles.addressText}>{address.postalCode}</Text>
+                <Text style={[styles.addressText, { color: colors.textSecondary }]}>{address.postalCode}</Text>
 
                 <View style={styles.actions}>
                   {!address.isDefault && (
                     <Pressable
-                      style={styles.actionButton}
+                      style={[styles.actionButton, { borderColor: colors.accent }]}
                       onPress={() => handleSetDefault(address)}
                     >
-                      <Text style={styles.actionText}>Set Default</Text>
+                      <Text style={[styles.actionText, { color: colors.accent }]}>Set Default</Text>
                     </Pressable>
                   )}
 
                   <Pressable
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { borderColor: colors.border }]}
                     onPress={() => handleDelete(address)}
                   >
-                    <Text style={styles.deleteText}>Delete</Text>
+                    <Text style={[styles.deleteText, { color: colors.textSecondary }]}>Delete</Text>
                   </Pressable>
                 </View>
               </View>
@@ -350,26 +350,26 @@ export default function AddressesScreen() {
         transparent
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0,0,0,0.45)" }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add Address</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add Address</Text>
 
                 <Pressable onPress={() => setModalVisible(false)}>
-                  <Text style={styles.closeButton}>×</Text>
+                  <Text style={[styles.closeButton, { color: colors.textSecondary }]}>×</Text>
                 </Pressable>
               </View>
 
-              <Text style={styles.modalSubtitle}>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
                 Save a delivery address for your future orders.
               </Text>
 
               {/* Label */}
-              <Text style={styles.label}>Address Label</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Address Label</Text>
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. Home, Work"
                 placeholderTextColor="#94A3B8"
                 value={label}
@@ -377,10 +377,10 @@ export default function AddressesScreen() {
               />
 
               {/* Street */}
-              <Text style={styles.label}>Street Address *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Street Address *</Text>
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. 12 Main Street"
                 placeholderTextColor="#94A3B8"
                 value={streetAddress}
@@ -388,10 +388,10 @@ export default function AddressesScreen() {
               />
 
               {/* City */}
-              <Text style={styles.label}>City *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>City *</Text>
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. Gqeberha"
                 placeholderTextColor="#94A3B8"
                 value={city}
@@ -399,10 +399,10 @@ export default function AddressesScreen() {
               />
 
               {/* Province */}
-              <Text style={styles.label}>Province *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Province *</Text>
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. Eastern Cape"
                 placeholderTextColor="#94A3B8"
                 value={province}
@@ -410,10 +410,10 @@ export default function AddressesScreen() {
               />
 
               {/* Postal Code */}
-              <Text style={styles.label}>Postal Code *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Postal Code *</Text>
 
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. 6001"
                 placeholderTextColor="#94A3B8"
                 value={postalCode}
@@ -421,7 +421,7 @@ export default function AddressesScreen() {
                 keyboardType="number-pad"
               />
               <Pressable
-                style={[styles.saveButton, saving && styles.buttonDisabled]}
+                style={[styles.saveButton, { backgroundColor: colors.accent }, saving && styles.buttonDisabled]}
                 onPress={() => {
                   console.log("========== SAVE BUTTON PRESSED ==========");
                   console.log("saving:", saving);
@@ -451,7 +451,7 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F9FC",
   },
 
   content: {
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: "#071B2C",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingTop: 28,
     paddingBottom: 28,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
   addButton: {
     marginHorizontal: 20,
     marginTop: 20,
-    backgroundColor: "#F97316",
+    backgroundColor: "#F47721",
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   },
 
   loadingText: {
-    color: "#64748B",
+    color: "#627487",
     marginTop: 12,
     fontSize: 14,
   },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: "#172033",
+    color: "#102A43",
     fontSize: 20,
     fontWeight: "800",
   },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#E1E8EF",
     padding: 18,
     marginBottom: 14,
   },
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
 
   defaultBadge: {
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#FFF1E6",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   },
 
   defaultBadgeText: {
-    color: "#F97316",
+    color: "#F47721",
     fontSize: 11,
     fontWeight: "800",
   },
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
 
   deleteButton: {
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: "#E1E8EF",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,

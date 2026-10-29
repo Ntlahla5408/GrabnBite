@@ -230,7 +230,7 @@ function DashboardButton({
         <Text style={[styles.dashboardButtonSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
       </View>
 
-      <Text style={styles.arrow}>›</Text>
+      <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
     </Pressable>
   );
 }

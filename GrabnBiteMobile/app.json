@@ -4,18 +4,17 @@
     "slug": "GrabnBiteMobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/GrabnbiteLogo.jpg",
+    "icon": "./assets/images/android-icon.png",
     "scheme": "grabnbitemobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/grabnbiteLogo.jpg"
+      "icon": "./assets/images/android-icon.png"
     },
     "android": {
+      "icon": "./assets/images/android-icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/android-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.grubnbite.app"
@@ -30,7 +29,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0B1F33",
-          "image": "./assets/images/GrabnbiteLogo.jpg",
+          "image": "./assets/images/loadingscreen-icon.png",
           "imageWidth": 220,
           "resizeMode": "contain"
         }

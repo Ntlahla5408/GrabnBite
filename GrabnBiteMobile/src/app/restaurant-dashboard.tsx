@@ -242,6 +242,22 @@ export default function RestaurantDashboardScreen() {
           <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
         </Pressable>
 
+        <Pressable
+          style={[styles.menuManagementButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+          onPress={() => router.push("/restaurant-categories")}
+        >
+          <View style={styles.menuManagementIcon}>
+            <Text style={styles.menuManagementIconText}>▤</Text>
+          </View>
+          <View style={styles.menuManagementContent}>
+            <Text style={[styles.menuManagementTitle, { color: colors.accent }]}>Menu Categories</Text>
+            <Text style={[styles.menuManagementSubtitle, { color: colors.textSecondary }]}>
+              Create, rename and remove menu sections
+            </Text>
+          </View>
+          <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
+        </Pressable>
+
         <OrderSection
           title="New Orders"
           colors={colors}

@@ -64,31 +64,42 @@ export default function RestaurantProfileScreen() {
   }, [authLoading, token, user?.role, checkExistingProfile]);
 
   async function handleSubmit() {
-    if (!token) return;
+    if (!token) {
+      setError("Your session has expired. Please sign in again and retry.");
+      return;
+    }
 
-    if (!name.trim() || !phoneNumber.trim() || !email.trim() || !address.trim()) {
-      Alert.alert(
-        "Missing information",
-        "Restaurant name, phone number, email and address are required.",
+    const missingFields = [
+      !name.trim() ? "restaurant name" : null,
+      !phoneNumber.trim() ? "contact phone" : null,
+      !email.trim() ? "contact email" : null,
+      !address.trim() ? "physical address" : null,
+    ].filter((field): field is string => field !== null);
+
+    if (missingFields.length > 0) {
+      setError(
+        `Please complete the required fields: ${missingFields.join(", ")}.`,
       );
       return;
     }
+
+    setError("");
 
     const latitudeValue = latitude.trim() ? Number(latitude) : 0;
     const longitudeValue = longitude.trim() ? Number(longitude) : 0;
 
     if (!Number.isFinite(latitudeValue) || !Number.isFinite(longitudeValue)) {
-      Alert.alert("Invalid location", "Enter valid numeric latitude and longitude values.");
+      setError("Enter valid numbers for latitude and longitude, or leave both fields blank.");
       return;
     }
 
     if (latitudeValue < -90 || latitudeValue > 90) {
-      Alert.alert("Invalid latitude", "Latitude must be between -90 and 90.");
+      setError("Latitude must be between -90 and 90.");
       return;
     }
 
     if (longitudeValue < -180 || longitudeValue > 180) {
-      Alert.alert("Invalid longitude", "Longitude must be between -180 and 180.");
+      setError("Longitude must be between -180 and 180.");
       return;
     }
 

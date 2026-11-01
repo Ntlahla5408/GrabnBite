@@ -192,71 +192,11 @@ export default function RestaurantDashboardScreen() {
         ) : null}
 
         <View style={styles.summaryRow}>
-          <SummaryCard label="New" value={pendingOrders.length} colors={colors} />
-
-          <SummaryCard
-            label="Preparing"
-            value={acceptedOrders.length + preparingOrders.length}
-            colors={colors}
-          />
-
-          <SummaryCard label="Ready" value={readyOrders.length} colors={colors} />
+          <SummaryCard label="New Orders" value={pendingOrders.length} colors={colors} />
+          <SummaryCard label="Accepted" value={acceptedOrders.length} colors={colors} />
+          <SummaryCard label="Preparing" value={preparingOrders.length} colors={colors} />
+          <SummaryCard label="Ready for Pickup" value={readyOrders.length} colors={colors} />
         </View>
-
-        {/* Restaurant Profile */}
-        <Pressable
-          style={[styles.menuManagementButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-          onPress={() => router.push("/restaurant-profile")}
-        >
-          <View style={styles.menuManagementIcon}>
-            <Text style={styles.menuManagementIconText}>⌂</Text>
-          </View>
-
-          <View style={styles.menuManagementContent}>
-            <Text style={[styles.menuManagementTitle, { color: colors.accent }]}>Restaurant Profile</Text>
-            <Text style={[styles.menuManagementSubtitle, { color: colors.textSecondary }]}>
-              Create or check your restaurant profile and approval status
-            </Text>
-          </View>
-
-          <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
-        </Pressable>
-
-        {/* Menu Management */}
-        <Pressable
-          style={[styles.menuManagementButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-          onPress={() => router.push("/restaurant-menu")}
-        >
-          <View style={styles.menuManagementIcon}>
-            <Text style={styles.menuManagementIconText}>☰</Text>
-          </View>
-
-          <View style={styles.menuManagementContent}>
-            <Text style={[styles.menuManagementTitle, { color: colors.accent }]}>Manage Menu</Text>
-
-            <Text style={[styles.menuManagementSubtitle, { color: colors.textSecondary }]}>
-              Add, edit, or remove menu items
-            </Text>
-          </View>
-
-          <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.menuManagementButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
-          onPress={() => router.push("/restaurant-categories")}
-        >
-          <View style={styles.menuManagementIcon}>
-            <Text style={styles.menuManagementIconText}>▤</Text>
-          </View>
-          <View style={styles.menuManagementContent}>
-            <Text style={[styles.menuManagementTitle, { color: colors.accent }]}>Menu Categories</Text>
-            <Text style={[styles.menuManagementSubtitle, { color: colors.textSecondary }]}>
-              Create, rename and remove menu sections
-            </Text>
-          </View>
-          <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
-        </Pressable>
 
         <OrderSection
           title="New Orders"
@@ -519,12 +459,14 @@ const styles = StyleSheet.create({
 
   summaryRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginBottom: 24,
   },
 
   summaryCard: {
-    flex: 1,
+    flexBasis: "47%",
+    flexGrow: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,

@@ -50,6 +50,7 @@ export default function AdminRestaurantEditScreen() {
 
   const [loading, setLoading] = useState(Boolean(restaurantId));
   const [saving, setSaving] = useState(false);
+  const [approvalLoading, setApprovalLoading] = useState(false);
   const [error, setError] = useState(restaurantId ? "" : "Restaurant ID is missing.");
 
   const loadRestaurant = useCallback(async () => {
@@ -102,6 +103,48 @@ export default function AdminRestaurantEditScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     if (restaurantId) void loadRestaurant();
   }, [user, restaurantId, loadRestaurant]);
+
+  async function updateApproval(isApproved: boolean) {
+    if (!restaurantId || !restaurant) return;
+
+    const action = isApproved ? "approve" : "remove approval for";
+
+    Alert.alert(
+      isApproved ? "Approve restaurant?" : "Remove approval?",
+      "Are you sure you want to " + action + " " + restaurant.name + "?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isApproved ? "Approve" : "Remove approval",
+          style: isApproved ? "default" : "destructive",
+          onPress: async () => {
+            try {
+              setApprovalLoading(true);
+              const updatedRestaurant = await apiRequest(
+                "/api/Restaurant/admin/" + restaurantId + "/approval",
+                {
+                  method: "PUT",
+                  body: JSON.stringify({ isApproved }),
+                },
+                token,
+              );
+              setRestaurant(updatedRestaurant);
+              Alert.alert(
+                "Approval updated",
+                isApproved
+                  ? "The restaurant is now approved and can appear to customers."
+                  : "The restaurant is no longer approved and will be hidden from customers.",
+              );
+            } catch (err: any) {
+              Alert.alert("Unable to update approval", err?.message || "Please try again.");
+            } finally {
+              setApprovalLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   async function saveRestaurant() {
     if (!name.trim()) {
@@ -417,6 +460,24 @@ export default function AdminRestaurantEditScreen() {
             Approval is managed separately from restaurant details.
           </Text>
         </View>
+
+        <Pressable
+          style={[
+            styles.saveButton,
+            { backgroundColor: restaurant?.isApproved ? "#B91C1C" : "#15803D" },
+            approvalLoading && styles.saveButtonDisabled,
+          ]}
+          onPress={() => updateApproval(!restaurant?.isApproved)}
+          disabled={approvalLoading || saving}
+        >
+          {approvalLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>
+              {restaurant?.isApproved ? "Remove Approval" : "Approve Restaurant"}
+            </Text>
+          )}
+        </Pressable>
 
         {/* SAVE */}
         <Pressable

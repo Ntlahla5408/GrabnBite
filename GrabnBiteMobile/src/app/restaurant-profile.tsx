@@ -148,8 +148,17 @@ export default function RestaurantProfileScreen() {
               ? "Your restaurant profile is approved."
               : "Your profile has been submitted. An administrator must approve it before customers can see your restaurant."}
           </Text>
-          <Pressable style={styles.primaryButton} onPress={() => router.replace("/restaurant-dashboard")}>
-            <Text style={styles.primaryButtonText}>Back to dashboard</Text>
+          <Pressable
+            style={[styles.primaryButton, { marginTop: 18 }]}
+            onPress={() => router.push("/restaurant-profile-edit")}
+          >
+            <Text style={styles.primaryButtonText}>Edit restaurant profile</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.secondaryButton, { marginTop: 10 }]}
+            onPress={() => router.replace("/restaurant-dashboard")}
+          >
+            <Text style={styles.secondaryButtonText}>Back to dashboard</Text>
           </Pressable>
         </View>
       </View>
@@ -245,6 +254,8 @@ const styles = StyleSheet.create({
   noticeText: { color: "#7C2D12", fontSize: 13, lineHeight: 19, marginTop: 5 },
   primaryButton: { backgroundColor: "#F97316", minHeight: 50, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, paddingVertical: 13 },
   primaryButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
+  secondaryButton: { minHeight: 46, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
+  secondaryButtonText: { color: "#334155", fontSize: 14, fontWeight: "700" },
   disabled: { opacity: 0.6 },
   error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 15 },
   center: { flex: 1, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center", padding: 24 },

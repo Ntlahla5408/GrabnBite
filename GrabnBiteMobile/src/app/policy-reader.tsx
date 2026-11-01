@@ -1,6 +1,13 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { PdfView } from "react-native-better-pdf";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
@@ -43,28 +50,59 @@ export default function PolicyReaderScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
-      <View style={[styles.header, { backgroundColor: colors.header, borderBottomColor: colors.border }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Go back to policies" onPress={() => router.back()} style={styles.backButton}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.header, borderBottomColor: colors.border },
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back to policies"
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Text style={[styles.backText, { color: colors.headerText }]}>‹</Text>
         </Pressable>
         <View style={styles.headerCopy}>
-          <Text numberOfLines={2} style={[styles.title, { color: colors.text }]}>{policy?.title ?? "Policy document"}</Text>
+          <Text
+            numberOfLines={2}
+            style={[styles.title, { color: colors.text }]}
+          >
+            {policy?.title ?? "Policy document"}
+          </Text>
           {pageCount !== null ? (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{pageCount} pages</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {pageCount} pages
+            </Text>
           ) : null}
         </View>
       </View>
 
       {!policy ? (
         <View style={styles.message}>
-          <Text style={[styles.messageTitle, { color: colors.text }]}>Document not found</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>Return to Legal and Policies and select a document from the list.</Text>
+          <Text style={[styles.messageTitle, { color: colors.text }]}>
+            Document not found
+          </Text>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>
+            Return to Legal and Policies and select a document from the list.
+          </Text>
         </View>
       ) : loadError ? (
         <View style={styles.message}>
-          <Text style={[styles.messageTitle, { color: colors.text }]}>Unable to open this document</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{loadError}</Text>
-          <Pressable onPress={() => { setLoadError(null); setIsLoading(true); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.messageTitle, { color: colors.text }]}>
+            Unable to open this document
+          </Text>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>
+            {loadError}
+          </Text>
+          <Pressable
+            onPress={() => {
+              setLoadError(null);
+              setIsLoading(true);
+            }}
+            style={[styles.retryButton, { backgroundColor: colors.accent }]}
+          >
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </View>
@@ -88,9 +126,18 @@ export default function PolicyReaderScreen() {
             }}
           />
           {isLoading ? (
-            <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+            <View
+              style={[
+                styles.loadingOverlay,
+                { backgroundColor: colors.background },
+              ]}
+            >
               <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Opening document…</Text>
+              <Text
+                style={[styles.loadingText, { color: colors.textSecondary }]}
+              >
+                Opening document…
+              </Text>
             </View>
           ) : null}
         </View>
@@ -101,19 +148,53 @@ export default function PolicyReaderScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: { minHeight: 76, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", borderBottomWidth: 1 },
-  backButton: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF1E6", marginRight: 10 },
+  header: {
+    minHeight: 76,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF1E6",
+    marginRight: 10,
+  },
   backText: { fontSize: 34, lineHeight: 38, marginTop: -4 },
   headerCopy: { flex: 1 },
   title: { fontSize: 15, fontWeight: "800" },
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1 },
   viewer: { flex: 1, backgroundColor: "#E8EDF2" },
-  loadingOverlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   loadingText: { fontSize: 12, marginTop: 10 },
-  message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
+  message: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+  },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
-  messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8 },
-  retryButton: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 10, marginTop: 18 },
+  messageText: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+    marginTop: 8,
+  },
+  retryButton: {
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 18,
+  },
   retryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 13 },
 });

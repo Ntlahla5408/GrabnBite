@@ -38,7 +38,8 @@ export default function CartScreen() {
       const data = await getCart(token);
       setError("");
 
-      setCarts(data);
+      // Only show restaurants that have at least one item in the customer's cart.
+      setCarts(data.filter((cart) => cart.items.length > 0));
     } catch (error) {
       console.error("Failed to load cart:", error);
       setError("Unable to load your cart.");

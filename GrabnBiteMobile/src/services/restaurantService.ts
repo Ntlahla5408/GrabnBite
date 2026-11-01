@@ -1,5 +1,5 @@
 import { Restaurant } from "../types/restaurant";
-import { apiRequest } from "./api";
+import { apiRequest, createImageFormData } from "./api";
 
 export async function getRestaurants(): Promise<Restaurant[]> {
   return apiRequest("/api/Restaurant");
@@ -77,12 +77,7 @@ export async function uploadRestaurantImage(
   asset: ImageUploadAsset,
   token: string,
 ): Promise<Restaurant> {
-  const formData = new FormData();
-  formData.append("image", {
-    uri: asset.uri,
-    name: asset.name,
-    type: asset.type,
-  } as any);
+  const formData = await createImageFormData(asset);
 
   return apiRequest(
     `/api/Restaurant/${restaurantId}/image`,

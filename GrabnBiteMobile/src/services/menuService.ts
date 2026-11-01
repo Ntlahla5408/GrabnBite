@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, createImageFormData } from "./api";
 
 export interface MenuItem {
   menuItemId: number;
@@ -141,12 +141,7 @@ export async function uploadMenuItemImage(
   asset: { uri: string; name: string; type: string },
   token: string,
 ): Promise<MenuItem> {
-  const formData = new FormData();
-  formData.append("image", {
-    uri: asset.uri,
-    name: asset.name,
-    type: asset.type,
-  } as any);
+  const formData = await createImageFormData(asset);
 
   return apiRequest(
     `/api/MenuItem/restaurant/${restaurantId}/${menuItemId}/image`,

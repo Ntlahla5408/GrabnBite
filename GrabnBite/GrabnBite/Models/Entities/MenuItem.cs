@@ -12,6 +12,11 @@
 
         public bool IsAvailable { get; set; } = true;
 
+        // Cloudinary asset identifier used for safe replacement and deletion.
+        public string? ImageUrl { get; set; }
+
+        public string? ImagePublicId { get; set; }
+
         // Foreign Keys
         public int RestaurantId { get; set; }
 

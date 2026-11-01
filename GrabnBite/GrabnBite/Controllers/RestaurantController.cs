@@ -306,6 +306,38 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
+        // UPDATE RESTAURANT APPROVAL
+        // Admin only
+        // =========================================================
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id}/approval")]
+        public async Task<IActionResult> UpdateRestaurantApproval(
+            int id,
+            UpdateRestaurantApprovalDto dto)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            restaurant.IsApproved = dto.IsApproved;
+
+            // Approval is deliberately separate from editing restaurant details.
+            // Opening a restaurant remains a separate operational decision.
+            await _context.SaveChangesAsync();
+
+            return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
         // DELETE OWN RESTAURANT
         // Restaurant only
         // =========================================================

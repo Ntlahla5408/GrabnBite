@@ -441,7 +441,8 @@ namespace GrabnBite.Controllers
             {
                 uploaded = await _cloudinary.UploadImageAsync(
                     stream,
-                    $"restaurant-{id}-{Guid.NewGuid():N}",
+                    $"restaurant-{id}-{Guid.NewGuid():N}{GetImageExtension(image!.ContentType)}",
+                    image!.ContentType,
                     $"restaurants/{id}",
                     cancellationToken);
             }
@@ -541,6 +542,17 @@ namespace GrabnBite.Controllers
             }
 
             return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
+        private static string GetImageExtension(string contentType)
+        {
+            return contentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => ".jpg"
+            };
         }
 
         // =========================================================

@@ -38,3 +38,30 @@ export async function createRestaurant(
     token,
   );
 }
+
+export interface UpdateRestaurantRequest {
+  name: string;
+  description: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  imageUrl: string | null;
+  latitude: number;
+  longitude: number;
+  isOpen: boolean;
+}
+
+export async function updateMyRestaurant(
+  restaurantId: number,
+  restaurant: UpdateRestaurantRequest,
+  token: string,
+): Promise<Restaurant> {
+  return apiRequest(
+    `/api/Restaurant/${restaurantId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(restaurant),
+    },
+    token,
+  );
+}

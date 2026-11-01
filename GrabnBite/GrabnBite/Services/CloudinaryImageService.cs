@@ -40,6 +40,7 @@ namespace GrabnBite.Services
         public async Task<CloudinaryUploadResult> UploadImageAsync(
             Stream imageStream,
             string fileName,
+            string contentType,
             string folder,
             CancellationToken cancellationToken = default)
         {

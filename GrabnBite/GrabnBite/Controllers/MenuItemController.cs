@@ -326,6 +326,16 @@ namespace GrabnBite.Controllers
         }
 
 
+        private static string GetImageExtension(string contentType)
+        {
+            return contentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => ".jpg"
+            };
+        }
+
         // =========================================================
         // UPLOAD / REPLACE MENU ITEM IMAGE
         // Restaurant owner or Admin
@@ -388,7 +398,8 @@ namespace GrabnBite.Controllers
             {
                 uploaded = await _cloudinary.UploadImageAsync(
                     stream,
-                    $"menu-item-{id}-{Guid.NewGuid():N}",
+                    $"menu-item-{id}-{Guid.NewGuid():N}{GetImageExtension(image!.ContentType)}",
+                    image!.ContentType,
                     $"restaurants/{restaurantId}/menu-items/{id}",
                     cancellationToken);
             }

@@ -252,6 +252,12 @@ namespace GrabnBite.Migrations
                     b.Property<int>("MenuCategoryId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ImagePublicId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -603,6 +609,9 @@ namespace GrabnBite.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImagePublicId")
                         .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")

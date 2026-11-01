@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, createImageFormData } from "./api";
 
 export interface MenuItem {
   menuItemId: number;
@@ -6,6 +6,7 @@ export interface MenuItem {
   description: string;
   price: number;
   isAvailable: boolean;
+  imageUrl: string | null;
   restaurantId: number;
   menuCategoryId: number;
 }
@@ -83,6 +84,80 @@ export async function deleteMenuItem(
     {
       method: "DELETE",
     },
+    token,
+  );
+}
+
+export interface CreateMenuCategory {
+  name: string;
+  description: string;
+}
+
+export interface UpdateMenuCategory {
+  name: string;
+  description: string;
+}
+
+export async function createMenuCategory(
+  restaurantId: number,
+  data: CreateMenuCategory,
+  token: string,
+): Promise<MenuCategory> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}`,
+    { method: "POST", body: JSON.stringify(data) },
+    token,
+  );
+}
+
+export async function updateMenuCategory(
+  restaurantId: number,
+  categoryId: number,
+  data: UpdateMenuCategory,
+  token: string,
+): Promise<MenuCategory> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}/${categoryId}`,
+    { method: "PUT", body: JSON.stringify(data) },
+    token,
+  );
+}
+
+export async function deleteMenuCategory(
+  restaurantId: number,
+  categoryId: number,
+  token: string,
+): Promise<void> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}/${categoryId}`,
+    { method: "DELETE" },
+    token,
+  );
+}
+
+export async function uploadMenuItemImage(
+  restaurantId: number,
+  menuItemId: number,
+  asset: { uri: string; name: string; type: string },
+  token: string,
+): Promise<MenuItem> {
+  const formData = await createImageFormData(asset);
+
+  return apiRequest(
+    `/api/MenuItem/restaurant/${restaurantId}/${menuItemId}/image`,
+    { method: "POST", body: formData },
+    token,
+  );
+}
+
+export async function deleteMenuItemImage(
+  restaurantId: number,
+  menuItemId: number,
+  token: string,
+): Promise<MenuItem> {
+  return apiRequest(
+    `/api/MenuItem/restaurant/${restaurantId}/${menuItemId}/image`,
+    { method: "DELETE" },
     token,
   );
 }

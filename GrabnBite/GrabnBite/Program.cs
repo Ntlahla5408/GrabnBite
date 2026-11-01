@@ -17,6 +17,9 @@ if (!builder.Environment.IsDevelopment())
 
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
 builder.Services.AddHttpClient<YocoPaymentService>();
+
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
+builder.Services.AddHttpClient<ICloudinaryImageService, CloudinaryImageService>();
 builder.Services.AddScoped<FakePaymentGateway>();
 
 builder.Services.AddCors(options =>

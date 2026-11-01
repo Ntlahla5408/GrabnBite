@@ -16,6 +16,9 @@
 
         public string? ImageUrl { get; set; }
 
+        // Cloudinary asset identifier used for safe replacement and deletion.
+        public string? ImagePublicId { get; set; }
+
         public decimal Latitude { get; set; }
 
         public decimal Longitude { get; set; }

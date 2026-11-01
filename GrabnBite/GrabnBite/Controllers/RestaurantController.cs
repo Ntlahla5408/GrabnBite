@@ -1,6 +1,7 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Restaurant;
 using GrabnBite.Models.Entities;
+using GrabnBite.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,17 @@ namespace GrabnBite.Controllers
     public class RestaurantController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ICloudinaryImageService _cloudinary;
+        private readonly ILogger<RestaurantController> _logger;
 
-        public RestaurantController(AppDbContext context)
+        public RestaurantController(
+            AppDbContext context,
+            ICloudinaryImageService cloudinary,
+            ILogger<RestaurantController> logger)
         {
             _context = context;
+            _cloudinary = cloudinary;
+            _logger = logger;
         }
 
         // =========================================================
@@ -306,6 +314,38 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
+        // UPDATE RESTAURANT APPROVAL
+        // Admin only
+        // =========================================================
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id}/approval")]
+        public async Task<IActionResult> UpdateRestaurantApproval(
+            int id,
+            UpdateRestaurantApprovalDto dto)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            restaurant.IsApproved = dto.IsApproved;
+
+            // Approval is deliberately separate from editing restaurant details.
+            // Opening a restaurant remains a separate operational decision.
+            await _context.SaveChangesAsync();
+
+            return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
         // DELETE OWN RESTAURANT
         // Restaurant only
         // =========================================================
@@ -347,6 +387,172 @@ namespace GrabnBite.Controllers
             {
                 message = "Restaurant deleted successfully."
             });
+        }
+
+
+        // =========================================================
+        // UPLOAD / REPLACE RESTAURANT PROFILE IMAGE
+        // Restaurant owner or Admin
+        // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
+        [HttpPost("{id}/image")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadRestaurantImage(
+            int id,
+            [FromForm] IFormFile? image,
+            CancellationToken cancellationToken)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == id, cancellationToken);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") && restaurant.UserId != userId.Value)
+            {
+                return Forbid();
+            }
+
+            var validationError = await ImageUploadValidation.ValidateAsync(
+                image, cancellationToken);
+
+            if (validationError != null)
+            {
+                return BadRequest(validationError);
+            }
+
+            var oldPublicId = restaurant.ImagePublicId;
+            CloudinaryUploadResult uploaded;
+
+            await using (var stream = image!.OpenReadStream())
+            {
+                uploaded = await _cloudinary.UploadImageAsync(
+                    stream,
+                    $"restaurant-{id}-{Guid.NewGuid():N}{GetImageExtension(image!.ContentType)}",
+                    image!.ContentType,
+                    $"restaurants/{id}",
+                    cancellationToken);
+            }
+
+            restaurant.ImageUrl = uploaded.SecureUrl;
+            restaurant.ImagePublicId = uploaded.PublicId;
+
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(uploaded.PublicId, cancellationToken);
+                }
+                catch (Exception cleanupException)
+                {
+                    _logger.LogError(cleanupException,
+                        "Could not clean up newly uploaded restaurant image {PublicId}.",
+                        uploaded.PublicId);
+                }
+
+                throw;
+            }
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(oldPublicId, cancellationToken);
+                }
+                catch (Exception deleteException)
+                {
+                    _logger.LogWarning(deleteException,
+                        "Restaurant image {PublicId} was replaced in the database but could not be deleted from Cloudinary.",
+                        oldPublicId);
+                }
+            }
+
+            return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
+        // REMOVE RESTAURANT PROFILE IMAGE
+        // Restaurant owner or Admin
+        // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
+        [HttpDelete("{id}/image")]
+        public async Task<IActionResult> DeleteRestaurantImage(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == id, cancellationToken);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") && restaurant.UserId != userId.Value)
+            {
+                return Forbid();
+            }
+
+            var oldPublicId = restaurant.ImagePublicId;
+            restaurant.ImageUrl = null;
+            restaurant.ImagePublicId = null;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(oldPublicId, cancellationToken);
+                }
+                catch (Exception deleteException)
+                {
+                    _logger.LogWarning(deleteException,
+                        "Restaurant image {PublicId} was removed from the profile but could not be deleted from Cloudinary.",
+                        oldPublicId);
+                }
+            }
+
+            return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
+        private static string GetImageExtension(string contentType)
+        {
+            return contentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => ".jpg"
+            };
         }
 
         // =========================================================

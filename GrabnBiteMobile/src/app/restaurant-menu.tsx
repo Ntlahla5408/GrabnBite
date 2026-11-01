@@ -1,8 +1,10 @@
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,11 +18,13 @@ import { useAuth } from "../context/authContext";
 import {
   createMenuItem,
   deleteMenuItem,
+  deleteMenuItemImage,
   getMenuCategories,
   getRestaurantMenu,
   MenuCategory,
   MenuItem,
   updateMenuItem,
+  uploadMenuItemImage,
 } from "../services/menuService";
 import { getMyRestaurant } from "../services/restaurantService";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
@@ -50,6 +54,7 @@ export default function RestaurantMenuScreen() {
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [isAvailable, setIsAvailable] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
   /*
    * -----------------------------
@@ -117,6 +122,7 @@ export default function RestaurantMenuScreen() {
     setPrice("");
     setCategoryId(null);
     setIsAvailable(true);
+    setSelectedImage(null);
     setEditingItem(null);
     setShowForm(false);
   };
@@ -128,6 +134,7 @@ export default function RestaurantMenuScreen() {
     setPrice("");
     setCategoryId(categories[0]?.menuCategoryId ?? null);
     setIsAvailable(true);
+    setSelectedImage(null);
     setShowForm(true);
   };
 
@@ -138,7 +145,43 @@ export default function RestaurantMenuScreen() {
     setPrice(item.price.toString());
     setCategoryId(item.menuCategoryId);
     setIsAvailable(item.isAvailable);
+    setSelectedImage(null);
     setShowForm(true);
+  };
+
+  const chooseMenuItemImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Allow photo library access to choose a menu item picture.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setSelectedImage(result.assets[0]);
+    }
+  };
+
+  const removeCurrentMenuItemImage = async () => {
+    if (!token || !restaurantId || !editingItem) return;
+
+    try {
+      setSaving(true);
+      await deleteMenuItemImage(restaurantId, editingItem.menuItemId, token);
+      setEditingItem({ ...editingItem, imageUrl: null });
+      await loadMenu();
+      Alert.alert("Photo removed", "The menu item picture has been removed.");
+    } catch (err: any) {
+      Alert.alert("Unable to remove photo", err?.message || "Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /*
@@ -187,8 +230,21 @@ export default function RestaurantMenuScreen() {
           },
           token,
         );
+
+        if (selectedImage) {
+          await uploadMenuItemImage(
+            restaurantId,
+            editingItem.menuItemId,
+            {
+              uri: selectedImage.uri,
+              name: selectedImage.fileName ?? `menu-item-${editingItem.menuItemId}.jpg`,
+              type: selectedImage.mimeType ?? "image/jpeg",
+            },
+            token,
+          );
+        }
       } else {
-        await createMenuItem(
+        const createdItem = await createMenuItem(
           restaurantId,
           {
             name: name.trim(),
@@ -199,6 +255,23 @@ export default function RestaurantMenuScreen() {
           },
           token,
         );
+
+        // Keep the new item selected if its image upload fails, so retrying
+        // updates the item instead of creating a duplicate.
+        setEditingItem(createdItem);
+
+        if (selectedImage) {
+          await uploadMenuItemImage(
+            restaurantId,
+            createdItem.menuItemId,
+            {
+              uri: selectedImage.uri,
+              name: selectedImage.fileName ?? `menu-item-${createdItem.menuItemId}.jpg`,
+              type: selectedImage.mimeType ?? "image/jpeg",
+            },
+            token,
+          );
+        }
       }
 
       resetForm();
@@ -381,6 +454,36 @@ export default function RestaurantMenuScreen() {
               multiline
             />
 
+            <Text style={styles.label}>Menu item photo</Text>
+            {(selectedImage?.uri || editingItem?.imageUrl) ? (
+              <Image
+                source={{ uri: selectedImage?.uri ?? editingItem?.imageUrl ?? undefined }}
+                style={styles.selectedItemImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>No photo selected</Text>
+              </View>
+            )}
+            <Pressable
+              style={styles.photoButton}
+              onPress={chooseMenuItemImage}
+              disabled={saving}
+            >
+              <Text style={styles.photoButtonText}>{selectedImage || editingItem?.imageUrl ? "Choose / change photo" : "Choose photo"}</Text>
+            </Pressable>
+            {selectedImage ? (
+              <Pressable style={styles.clearPhotoButton} onPress={() => setSelectedImage(null)}>
+                <Text style={styles.clearPhotoText}>Clear selected photo</Text>
+              </Pressable>
+            ) : editingItem?.imageUrl ? (
+              <Pressable style={styles.clearPhotoButton} onPress={removeCurrentMenuItemImage} disabled={saving}>
+                <Text style={styles.clearPhotoText}>Remove current photo</Text>
+              </Pressable>
+            ) : null}
+            <Text style={styles.helperText}>JPEG, PNG or WebP. Maximum file size: 5 MB.</Text>
+
             <Text style={styles.label}>Price</Text>
 
             <TextInput
@@ -483,6 +586,9 @@ export default function RestaurantMenuScreen() {
 
                   {items.map((item) => (
                     <View key={item.menuItemId} style={styles.itemCard}>
+                      {item.imageUrl ? (
+                        <Image source={{ uri: item.imageUrl }} style={styles.itemThumbnail} resizeMode="cover" />
+                      ) : null}
                       <View style={styles.itemInfo}>
                         <Text style={styles.itemName}>{item.name}</Text>
 
@@ -795,6 +901,57 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     elevation: 1,
+  },
+
+  itemThumbnail: {
+    width: 76,
+    height: 76,
+    borderRadius: 10,
+    backgroundColor: "#E5E7EB",
+    marginRight: 12,
+  },
+
+  selectedItemImage: {
+    width: "100%",
+    height: 170,
+    borderRadius: 10,
+    backgroundColor: "#E5E7EB",
+  },
+
+  imagePlaceholder: {
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  imagePlaceholderText: {
+    color: "#6B7280",
+    fontSize: 13,
+  },
+
+  photoButton: {
+    backgroundColor: "#071B2C",
+    borderRadius: 9,
+    paddingVertical: 11,
+    alignItems: "center",
+    marginTop: 10,
+  },
+
+  photoButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  clearPhotoButton: {
+    alignItems: "center",
+    paddingVertical: 9,
+  },
+
+  clearPhotoText: {
+    color: "#B91C1C",
+    fontWeight: "700",
   },
 
   itemInfo: {

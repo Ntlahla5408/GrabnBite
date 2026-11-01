@@ -50,6 +50,10 @@ export default function AdminRestaurantEditScreen() {
 
   const [loading, setLoading] = useState(Boolean(restaurantId));
   const [saving, setSaving] = useState(false);
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalConfirmation, setApprovalConfirmation] = useState<boolean | null>(null);
+  const [approvalMessage, setApprovalMessage] = useState("");
+  const [approvalError, setApprovalError] = useState("");
   const [error, setError] = useState(restaurantId ? "" : "Restaurant ID is missing.");
 
   const loadRestaurant = useCallback(async () => {
@@ -102,6 +106,39 @@ export default function AdminRestaurantEditScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     if (restaurantId) void loadRestaurant();
   }, [user, restaurantId, loadRestaurant]);
+
+  async function updateApproval(isApproved: boolean) {
+    if (!restaurantId || !restaurant) return;
+
+    try {
+      setApprovalLoading(true);
+      setApprovalError("");
+      setApprovalMessage("");
+
+      const updatedRestaurant = await apiRequest(
+        "/api/Restaurant/admin/" + restaurantId + "/approval",
+        {
+          method: "PUT",
+          body: JSON.stringify({ isApproved }),
+        },
+        token,
+      );
+
+      setRestaurant(updatedRestaurant);
+      setApprovalConfirmation(null);
+      setApprovalMessage(
+        isApproved
+          ? "Restaurant approved successfully. It can now appear to customers."
+          : "Approval removed. The restaurant is now hidden from customers.",
+      );
+    } catch (err: any) {
+      setApprovalError(
+        err?.message || "Unable to update restaurant approval. Please try again.",
+      );
+    } finally {
+      setApprovalLoading(false);
+    }
+  }
 
   async function saveRestaurant() {
     if (!name.trim()) {
@@ -418,6 +455,62 @@ export default function AdminRestaurantEditScreen() {
           </Text>
         </View>
 
+        <Pressable
+          style={[
+            styles.saveButton,
+            { backgroundColor: restaurant?.isApproved === true ? "#B91C1C" : "#15803D" },
+            (approvalLoading || saving) && styles.saveButtonDisabled,
+          ]}
+          onPress={() => {
+            setApprovalError("");
+            setApprovalMessage("");
+            setApprovalConfirmation(restaurant?.isApproved !== true);
+          }}
+          disabled={approvalLoading || saving || !restaurant}
+          accessibilityRole="button"
+        >
+          {approvalLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>
+              {restaurant?.isApproved === true ? "Remove Approval" : "Approve Restaurant"}
+            </Text>
+          )}
+        </Pressable>
+
+        {approvalConfirmation !== null && (
+          <View style={styles.approvalConfirmCard}>
+            <Text style={styles.approvalConfirmText}>
+              {approvalConfirmation
+                ? "Approve this restaurant? It will become visible to customers."
+                : "Remove this restaurant's approval? It will be hidden from customers."}
+            </Text>
+            <Pressable
+              style={styles.approvalConfirmButton}
+              onPress={() => void updateApproval(approvalConfirmation)}
+              disabled={approvalLoading}
+            >
+              <Text style={styles.saveButtonText}>
+                {approvalConfirmation ? "Confirm Approval" : "Confirm Removal"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.cancelButton}
+              onPress={() => setApprovalConfirmation(null)}
+              disabled={approvalLoading}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {approvalMessage !== "" && (
+          <Text style={styles.approvalSuccessText}>{approvalMessage}</Text>
+        )}
+        {approvalError !== "" && (
+          <Text style={styles.approvalErrorText}>{approvalError}</Text>
+        )}
+
         {/* SAVE */}
         <Pressable
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
@@ -668,6 +761,48 @@ const styles = StyleSheet.create({
     color: "#9A3412",
     fontSize: 12,
     marginTop: 8,
+  },
+
+  approvalConfirmCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+
+  approvalConfirmText: {
+    color: "#334155",
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+
+  approvalConfirmButton: {
+    height: 46,
+    borderRadius: 9,
+    backgroundColor: "#15803D",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  approvalSuccessText: {
+    color: "#166534",
+    backgroundColor: "#DCFCE7",
+    borderRadius: 9,
+    padding: 12,
+    marginTop: 12,
+    lineHeight: 19,
+  },
+
+  approvalErrorText: {
+    color: "#B91C1C",
+    backgroundColor: "#FEE2E2",
+    borderRadius: 9,
+    padding: 12,
+    marginTop: 12,
+    lineHeight: 19,
   },
 
   saveButton: {

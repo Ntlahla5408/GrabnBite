@@ -1,11 +1,13 @@
 import { router } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
+import { useAuth } from "../../context/authContext";
 
 const logo = require("../../../assets/images/GrabnbiteLogo.jpg");
 
 export default function HomeHeader() {
   const { theme } = useThemePreference();
+  const { user, loading } = useAuth();
   const colors = AppThemeColors[theme];
   return (
     <View style={[styles.container, { backgroundColor: colors.header }]}>
@@ -31,15 +33,17 @@ export default function HomeHeader() {
           <Text style={[styles.cartIcon, { color: colors.text }]}>🛒</Text>
         </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.loginButton,
-            pressed && styles.loginButtonPressed,
-          ]}
-          onPress={() => router.push("/login")}
-        >
-          <Text style={styles.loginText}>Login</Text>
-        </Pressable>
+        {!loading && !user && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.loginButton,
+              pressed && styles.loginButtonPressed,
+            ]}
+            onPress={() => router.push("/login")}
+          >
+            <Text style={styles.loginText}>Login</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );

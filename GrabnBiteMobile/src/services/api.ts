@@ -9,6 +9,39 @@ const API_URL =
 
 const TOKEN_KEY = "grabnbite_token";
 
+/** Build a multipart image body that works on both web and native platforms. */
+export async function createImageFormData(
+  asset: { uri: string; name: string; type: string },
+): Promise<FormData> {
+  const formData = new FormData();
+
+  if (Platform.OS === "web") {
+    // On web, FormData needs a real Blob/File; { uri, name, type } is only
+    // the React Native native-platform file descriptor format.
+    const fileResponse = await fetch(asset.uri);
+    if (!fileResponse.ok) {
+      throw new Error("Unable to read the selected image. Please choose it again.");
+    }
+
+    const imageBlob = await fileResponse.blob();
+    if (imageBlob.size === 0) {
+      throw new Error("The selected image is empty. Please choose another image.");
+    }
+
+    const imageFile = new Blob([imageBlob], { type: asset.type || imageBlob.type || "image/jpeg" });
+    formData.append("image", imageFile, asset.name);
+    return formData;
+  }
+
+  formData.append("image", {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.type,
+  } as any);
+
+  return formData;
+}
+
 async function getStoredToken(): Promise<string | null> {
   if (Platform.OS === "web") {
     return localStorage.getItem(TOKEN_KEY);

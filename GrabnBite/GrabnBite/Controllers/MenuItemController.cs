@@ -1,6 +1,7 @@
 ﻿using GrabnBite.Data;
 using GrabnBite.DTOs.Menu;
 using GrabnBite.Models.Entities;
+using GrabnBite.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,17 @@ namespace GrabnBite.Controllers
     public class MenuItemController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ICloudinaryImageService _cloudinary;
+        private readonly ILogger<MenuItemController> _logger;
 
-        public MenuItemController(AppDbContext context)
+        public MenuItemController(
+            AppDbContext context,
+            ICloudinaryImageService cloudinary,
+            ILogger<MenuItemController> logger)
         {
             _context = context;
+            _cloudinary = cloudinary;
+            _logger = logger;
         }
 
         // =========================================================
@@ -122,6 +130,7 @@ namespace GrabnBite.Controllers
                 Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
+                ImageUrl = menuItem.ImageUrl,
                 RestaurantId = menuItem.RestaurantId,
                 MenuCategoryId = menuItem.MenuCategoryId
             };
@@ -150,6 +159,7 @@ namespace GrabnBite.Controllers
                 Description = m.Description,
                 Price = m.Price,
                 IsAvailable = m.IsAvailable,
+                ImageUrl = m.ImageUrl,
                 RestaurantId = m.RestaurantId,
                 MenuCategoryId = m.MenuCategoryId
             }).ToList();
@@ -312,6 +322,202 @@ namespace GrabnBite.Controllers
             return Ok(response);
         }
 
+
+        // =========================================================
+        // UPLOAD / REPLACE MENU ITEM IMAGE
+        // Restaurant owner or Admin
+        // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
+        [HttpPost("restaurant/{restaurantId}/{id}/image")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadMenuItemImage(
+            int restaurantId,
+            int id,
+            [FromForm] IFormFile? image,
+            CancellationToken cancellationToken)
+        {
+            if (restaurantId <= 0 || id <= 0)
+            {
+                return BadRequest("Valid restaurant and menu item ids are required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId, cancellationToken);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") && restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
+            }
+
+            var menuItem = await _context.MenuItems
+                .FirstOrDefaultAsync(item =>
+                    item.MenuItemId == id && item.RestaurantId == restaurantId,
+                    cancellationToken);
+
+            if (menuItem == null)
+            {
+                return NotFound("Menu item not found for this restaurant.");
+            }
+
+            var validationError = await ImageUploadValidation.ValidateAsync(
+                image, cancellationToken);
+
+            if (validationError != null)
+            {
+                return BadRequest(validationError);
+            }
+
+            var oldPublicId = menuItem.ImagePublicId;
+            CloudinaryUploadResult uploaded;
+
+            await using (var stream = image!.OpenReadStream())
+            {
+                uploaded = await _cloudinary.UploadImageAsync(
+                    stream,
+                    $"menu-item-{id}-{Guid.NewGuid():N}",
+                    $"restaurants/{restaurantId}/menu-items/{id}",
+                    cancellationToken);
+            }
+
+            menuItem.ImageUrl = uploaded.SecureUrl;
+            menuItem.ImagePublicId = uploaded.PublicId;
+
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(uploaded.PublicId, cancellationToken);
+                }
+                catch (Exception cleanupException)
+                {
+                    _logger.LogError(cleanupException,
+                        "Could not clean up newly uploaded menu item image {PublicId}.",
+                        uploaded.PublicId);
+                }
+
+                throw;
+            }
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(oldPublicId, cancellationToken);
+                }
+                catch (Exception deleteException)
+                {
+                    _logger.LogWarning(deleteException,
+                        "Menu item image {PublicId} was replaced in the database but could not be deleted from Cloudinary.",
+                        oldPublicId);
+                }
+            }
+
+            return Ok(new MenuItemResponseDto
+            {
+                MenuItemId = menuItem.MenuItemId,
+                Name = menuItem.Name,
+                Description = menuItem.Description,
+                Price = menuItem.Price,
+                IsAvailable = menuItem.IsAvailable,
+                ImageUrl = menuItem.ImageUrl,
+                RestaurantId = menuItem.RestaurantId,
+                MenuCategoryId = menuItem.MenuCategoryId
+            });
+        }
+
+        // =========================================================
+        // REMOVE MENU ITEM IMAGE
+        // Restaurant owner or Admin
+        // =========================================================
+        [Authorize(Roles = "Restaurant,Admin")]
+        [HttpDelete("restaurant/{restaurantId}/{id}/image")]
+        public async Task<IActionResult> DeleteMenuItemImage(
+            int restaurantId,
+            int id,
+            CancellationToken cancellationToken)
+        {
+            if (restaurantId <= 0 || id <= 0)
+            {
+                return BadRequest("Valid restaurant and menu item ids are required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId, cancellationToken);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") && restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
+            }
+
+            var menuItem = await _context.MenuItems
+                .FirstOrDefaultAsync(item =>
+                    item.MenuItemId == id && item.RestaurantId == restaurantId,
+                    cancellationToken);
+
+            if (menuItem == null)
+            {
+                return NotFound("Menu item not found for this restaurant.");
+            }
+
+            var oldPublicId = menuItem.ImagePublicId;
+            menuItem.ImageUrl = null;
+            menuItem.ImagePublicId = null;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(oldPublicId))
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(oldPublicId, cancellationToken);
+                }
+                catch (Exception deleteException)
+                {
+                    _logger.LogWarning(deleteException,
+                        "Menu item image {PublicId} was removed from the menu but could not be deleted from Cloudinary.",
+                        oldPublicId);
+                }
+            }
+
+            return Ok(new MenuItemResponseDto
+            {
+                MenuItemId = menuItem.MenuItemId,
+                Name = menuItem.Name,
+                Description = menuItem.Description,
+                Price = menuItem.Price,
+                IsAvailable = menuItem.IsAvailable,
+                ImageUrl = menuItem.ImageUrl,
+                RestaurantId = menuItem.RestaurantId,
+                MenuCategoryId = menuItem.MenuCategoryId
+            });
+        }
+
         // =========================================================
         // DELETE
         // Restaurant can delete own restaurant's item
@@ -366,9 +572,25 @@ namespace GrabnBite.Controllers
                     "Menu item not found for this restaurant.");
             }
 
+            var imagePublicId = menuItem.ImagePublicId;
             _context.MenuItems.Remove(menuItem);
 
             await _context.SaveChangesAsync();
+
+            if (!string.IsNullOrWhiteSpace(imagePublicId))
+            {
+                try
+                {
+                    await _cloudinary.DeleteImageAsync(imagePublicId);
+                }
+                catch (Exception deleteException)
+                {
+                    _logger.LogWarning(deleteException,
+                        "Menu item {MenuItemId} was deleted but its Cloudinary image {PublicId} could not be removed.",
+                        id,
+                        imagePublicId);
+                }
+            }
 
             return Ok(new
             {

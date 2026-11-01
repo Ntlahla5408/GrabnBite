@@ -35,7 +35,15 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GrabnBite to access your photos so you can upload restaurant and menu item pictures.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

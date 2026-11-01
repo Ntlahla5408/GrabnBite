@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/authContext";
 
-const logo = require("../../assets/images/GrabnbiteLogo.jpg");
+const logo = require("../../assets/images/inside-icon.png");
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");

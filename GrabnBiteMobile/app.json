@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "GrabnBite",
-    "slug": "GrabnBiteMobile",
+    "slug": "GrabnBite",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/android-icon.png",

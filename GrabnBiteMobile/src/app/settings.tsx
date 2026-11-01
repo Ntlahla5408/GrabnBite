@@ -57,6 +57,12 @@ export default function SettingsScreen() {
             Your choice is saved on this device and restored when you reopen GrabnBite.
           </Text>
         </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Legal</Text>
+          <SettingsLink icon="📄" title="Legal and Policies" description="Read GrabnBite's policy documents" onPress={() => router.push("/policies")} colors={colors} />
+        </View>
+
         <View style={styles.section}>
           <Pressable accessibilityRole="button" onPress={() => void handleLogout()}
             style={[styles.logoutButton, { backgroundColor: colors.surfaceElevated, borderColor: "#DC2626" }]}>

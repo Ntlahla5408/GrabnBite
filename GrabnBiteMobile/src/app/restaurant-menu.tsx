@@ -256,6 +256,10 @@ export default function RestaurantMenuScreen() {
           token,
         );
 
+        // Keep the new item selected if its image upload fails, so retrying
+        // updates the item instead of creating a duplicate.
+        setEditingItem(createdItem);
+
         if (selectedImage) {
           await uploadMenuItemImage(
             restaurantId,

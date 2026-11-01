@@ -7,7 +7,6 @@ using GrabnBite.Data;
 using GrabnBite.Hubs;
 using GrabnBite.Configuration;
 using GrabnBite.Services;
-using GrabnBite.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 

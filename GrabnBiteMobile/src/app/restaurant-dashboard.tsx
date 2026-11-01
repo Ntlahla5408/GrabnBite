@@ -20,6 +20,7 @@ import {
   readyRestaurantOrder,
   RestaurantOrder,
 } from "../services/restaurantOrderService";
+import { getMyRestaurant } from "../services/restaurantService";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F28C28";
@@ -51,6 +52,18 @@ export default function RestaurantDashboardScreen() {
 
     try {
       setError("");
+
+      try {
+        await getMyRestaurant(token);
+      } catch (profileError: any) {
+        if (String(profileError?.message ?? "").includes("HTTP 404")) {
+          setOrders([]);
+          setError("Create your restaurant profile to start receiving orders.");
+          return;
+        }
+
+        throw profileError;
+      }
 
       const data = await getRestaurantOrders(token);
       setOrders(data);

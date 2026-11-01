@@ -55,7 +55,6 @@ export default function RestaurantMenuScreen() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [isAvailable, setIsAvailable] = useState(true);
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [pickingImage, setPickingImage] = useState(false);
 
   /*
    * -----------------------------
@@ -464,9 +463,9 @@ export default function RestaurantMenuScreen() {
               </View>
             )}
             <Pressable
-              style={[styles.photoButton, pickingImage && styles.disabledButton]}
+              style={styles.photoButton}
               onPress={chooseMenuItemImage}
-              disabled={pickingImage || saving}
+              disabled={saving}
             >
               <Text style={styles.photoButtonText}>{selectedImage || editingItem?.imageUrl ? "Choose / change photo" : "Choose photo"}</Text>
             </Pressable>

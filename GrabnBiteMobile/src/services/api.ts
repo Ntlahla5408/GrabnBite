@@ -27,7 +27,15 @@ export async function apiRequest(
   // Headers safely supports both existing headers and Authorization.
   const headers = new Headers(options.headers);
 
-  headers.set("Content-Type", "application/json");
+  const isMultipartBody =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  // Let fetch set the multipart boundary for FormData uploads.
+  if (isMultipartBody) {
+    headers.delete("Content-Type");
+  } else {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (storedToken) {
     headers.set("Authorization", `Bearer ${storedToken}`);

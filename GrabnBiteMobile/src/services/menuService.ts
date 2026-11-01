@@ -86,3 +86,50 @@ export async function deleteMenuItem(
     token,
   );
 }
+
+export interface CreateMenuCategory {
+  name: string;
+  description: string;
+}
+
+export interface UpdateMenuCategory {
+  name: string;
+  description: string;
+}
+
+export async function createMenuCategory(
+  restaurantId: number,
+  data: CreateMenuCategory,
+  token: string,
+): Promise<MenuCategory> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}`,
+    { method: "POST", body: JSON.stringify(data) },
+    token,
+  );
+}
+
+export async function updateMenuCategory(
+  restaurantId: number,
+  categoryId: number,
+  data: UpdateMenuCategory,
+  token: string,
+): Promise<MenuCategory> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}/${categoryId}`,
+    { method: "PUT", body: JSON.stringify(data) },
+    token,
+  );
+}
+
+export async function deleteMenuCategory(
+  restaurantId: number,
+  categoryId: number,
+  token: string,
+): Promise<void> {
+  return apiRequest(
+    `/api/MenuCategory/restaurant/${restaurantId}/${categoryId}`,
+    { method: "DELETE" },
+    token,
+  );
+}

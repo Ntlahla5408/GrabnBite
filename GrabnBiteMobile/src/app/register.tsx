@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { register } from "../services/authService";
 
-const logo = require("../../assets/images/GrabnbiteLogo.jpg");
+const logo = require("../../assets/images/inside-icon.png");
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState("");

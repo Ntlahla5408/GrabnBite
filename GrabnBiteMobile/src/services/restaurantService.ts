@@ -65,3 +65,39 @@ export async function updateMyRestaurant(
     token,
   );
 }
+
+export interface ImageUploadAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export async function uploadRestaurantImage(
+  restaurantId: number,
+  asset: ImageUploadAsset,
+  token: string,
+): Promise<Restaurant> {
+  const formData = new FormData();
+  formData.append("image", {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.type,
+  } as any);
+
+  return apiRequest(
+    `/api/Restaurant/${restaurantId}/image`,
+    { method: "POST", body: formData },
+    token,
+  );
+}
+
+export async function deleteRestaurantImage(
+  restaurantId: number,
+  token: string,
+): Promise<Restaurant> {
+  return apiRequest(
+    `/api/Restaurant/${restaurantId}/image`,
+    { method: "DELETE" },
+    token,
+  );
+}

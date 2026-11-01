@@ -190,6 +190,7 @@ namespace GrabnBite.Controllers
                 Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
+                ImageUrl = menuItem.ImageUrl,
                 RestaurantId = menuItem.RestaurantId,
                 MenuCategoryId = menuItem.MenuCategoryId
             };
@@ -229,6 +230,7 @@ namespace GrabnBite.Controllers
                 Description = m.Description,
                 Price = m.Price,
                 IsAvailable = m.IsAvailable,
+                ImageUrl = m.ImageUrl,
                 RestaurantId = m.RestaurantId,
                 MenuCategoryId = m.MenuCategoryId
             }).ToList();
@@ -315,6 +317,7 @@ namespace GrabnBite.Controllers
                 Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
+                ImageUrl = menuItem.ImageUrl,
                 RestaurantId = menuItem.RestaurantId,
                 MenuCategoryId = menuItem.MenuCategoryId
             };

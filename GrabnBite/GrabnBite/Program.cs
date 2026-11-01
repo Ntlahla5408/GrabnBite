@@ -17,6 +17,7 @@ if (!builder.Environment.IsDevelopment())
 
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
 builder.Services.AddHttpClient<YocoPaymentService>();
+builder.Services.AddScoped<FakePaymentGateway>();
 
 builder.Services.AddCors(options =>
 {
@@ -105,30 +106,44 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        // Always verify database connectivity, but never seed demo accounts
+        // outside Development. Production databases must be provisioned through
+        // controlled deployment/migration processes.
         await db.Database.OpenConnectionAsync();
-        Console.WriteLine("DATABASE CONNECTION: True");
+        app.Logger.LogInformation("Database connectivity check succeeded.");
         await db.Database.CloseConnectionAsync();
-    }
-    catch (Exception)
-    {
-        Console.WriteLine("DATABASE CONNECTION: False");
-        app.Logger.LogError("Database connection failed during startup; exception details were omitted to protect connection credentials.");
-    }
 
-    await DbSeeder.SeedAsync(db);
+        if (app.Environment.IsDevelopment())
+        {
+            await DbSeeder.SeedAsync(db);
+            app.Logger.LogInformation("Development database seeding completed.");
+        }
+        else
+        {
+            app.Logger.LogInformation(
+                "Database seeding skipped because the application is not running in Development.");
+        }
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogCritical(
+            ex,
+            "Application startup stopped because the database connection or development seeding failed.");
+
+        // Never continue into a partially usable API after a failed DB probe/seed.
+        throw;
+    }
 }
 
 app.UseCors("MyPolicy");
 
-// Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-
-app.UseSwagger();
-app.UseSwaggerUI();
+// Keep interactive API documentation available locally, but do not expose
+// the Swagger UI and API schema publicly in production by default.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 

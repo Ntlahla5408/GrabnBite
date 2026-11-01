@@ -13,8 +13,11 @@ import { useAuth } from "../context/authContext";
 import { getAddresses } from "../services/addressService";
 import { createCheckout } from "../services/checkoutService";
 import { Address } from "../types/address";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function CheckoutScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
@@ -124,16 +127,16 @@ export default function CheckoutScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#F97316" />
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
 
-        <Text style={styles.loadingText}>Loading checkout...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading checkout...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -142,18 +145,19 @@ export default function CheckoutScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.backButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
             pressed && styles.buttonPressed,
           ]}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
         </Pressable>
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Checkout</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Checkout</Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Choose where you want your order delivered.
           </Text>
         </View>
@@ -161,29 +165,30 @@ export default function CheckoutScreen() {
         {/* Address Section */}
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery Address</Text>
 
-            <Text style={styles.sectionSubtitle}>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
               Select an address for this order
             </Text>
           </View>
         </View>
 
         {addresses.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconContainer}>
+          <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: colors.accentSoft }]}>
               <Text style={styles.emptyIcon}>📍</Text>
             </View>
 
-            <Text style={styles.emptyTitle}>No delivery addresses</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No delivery addresses</Text>
 
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               Add a delivery address before placing your order.
             </Text>
 
             <Pressable
               style={({ pressed }) => [
                 styles.addAddressButton,
+                { backgroundColor: colors.accent },
                 pressed && styles.addAddressButtonPressed,
               ]}
               onPress={() => router.push("/addresses")}
@@ -201,6 +206,7 @@ export default function CheckoutScreen() {
                   key={address.addressId}
                   style={({ pressed }) => [
                     styles.addressCard,
+                    { backgroundColor: colors.surface, borderColor: selected ? colors.accent : colors.border },
                     selected && styles.selectedAddressCard,
                     pressed && styles.addressCardPressed,
                   ]}
@@ -208,30 +214,30 @@ export default function CheckoutScreen() {
                 >
                   <View style={styles.addressContent}>
                     <View style={styles.addressHeader}>
-                      <Text style={styles.addressLabel}>
+                      <Text style={[styles.addressLabel, { color: colors.text }]}>
                         {address.label || "Delivery Address"}
                       </Text>
 
                       {address.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultText}>Default</Text>
+                        <View style={[styles.defaultBadge, { backgroundColor: colors.accentSoft, borderColor: colors.accent }]}>
+                          <Text style={[styles.defaultText, { color: colors.accent }]}>Default</Text>
                         </View>
                       )}
                     </View>
 
-                    <Text style={styles.addressText}>
+                    <Text style={[styles.addressText, { color: colors.textSecondary }]}>
                       {address.streetAddress}
                     </Text>
 
-                    <Text style={styles.addressText}>
+                    <Text style={[styles.addressText, { color: colors.textSecondary }]}>
                       {address.city}, {address.province}
                     </Text>
 
-                    <Text style={styles.addressText}>{address.postalCode}</Text>
+                    <Text style={[styles.addressText, { color: colors.textSecondary }]}>{address.postalCode}</Text>
                   </View>
 
                   <View
-                    style={[styles.radio, selected && styles.radioSelected]}
+                    style={[styles.radio, { borderColor: selected ? colors.accent : colors.border }, selected && styles.radioSelected]}
                   >
                     {selected && <View style={styles.radioDot} />}
                   </View>
@@ -243,18 +249,19 @@ export default function CheckoutScreen() {
             <Pressable
               style={({ pressed }) => [
                 styles.addNewAddressButton,
+                { backgroundColor: colors.surface, borderColor: colors.border },
                 pressed && styles.addNewAddressButtonPressed,
               ]}
               onPress={() => router.push("/addresses")}
             >
-              <View style={styles.addNewAddressIcon}>
-                <Text style={styles.addNewAddressIconText}>+</Text>
+              <View style={[styles.addNewAddressIcon, { backgroundColor: colors.accentSoft }]}>
+                <Text style={[styles.addNewAddressIconText, { color: colors.accent }]}>+</Text>
               </View>
 
               <View>
-                <Text style={styles.addNewAddressTitle}>Add a new address</Text>
+                <Text style={[styles.addNewAddressTitle, { color: colors.text }]}>Add a new address</Text>
 
-                <Text style={styles.addNewAddressSubtitle}>
+                <Text style={[styles.addNewAddressSubtitle, { color: colors.textSecondary }]}>
                   Deliver to a different location
                 </Text>
               </View>
@@ -264,18 +271,18 @@ export default function CheckoutScreen() {
 
         {error ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[styles.errorText, { color: theme === "dark" ? "#FCA5A5" : "#B42318" }]}>{error}</Text>
           </View>
         ) : null}
       </ScrollView>
 
       {/* Bottom checkout bar */}
       {addresses.length > 0 && (
-        <View style={styles.bottomBar}>
+        <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <View style={styles.bottomInfo}>
-            <Text style={styles.bottomLabel}>Delivery address</Text>
+            <Text style={[styles.bottomLabel, { color: colors.textSecondary }]}>Delivery address</Text>
 
-            <Text style={styles.bottomValue}>
+            <Text style={[styles.bottomValue, { color: colors.text }]}>
               {selectedAddressId ? "Address selected" : "Select an address"}
             </Text>
           </View>
@@ -283,6 +290,7 @@ export default function CheckoutScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.checkoutButton,
+              { backgroundColor: colors.accent },
               checkingOut && styles.disabledButton,
               pressed && !checkingOut && styles.checkoutButtonPressed,
             ]}
@@ -304,7 +312,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#071B2C",
+    backgroundColor: "#F7F9FC",
   },
 
   content: {
@@ -325,7 +333,7 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 10,
-    color: "#AFC0CC",
+    color: "#627487",
     fontSize: 14,
   },
 
@@ -333,9 +341,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#0D2638",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#18384D",
+    borderColor: "#E1E8EF",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 22,
@@ -346,7 +354,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#FFFFFF",
+    color: "#102A43",
     fontSize: 32,
     lineHeight: 34,
     marginTop: -3,
@@ -381,7 +389,7 @@ const styles = StyleSheet.create({
 
   sectionSubtitle: {
     marginTop: 4,
-    color: "#7F94A3",
+    color: "#627487",
     fontSize: 12,
   },
 
@@ -397,7 +405,7 @@ const styles = StyleSheet.create({
   },
 
   selectedAddressCard: {
-    borderColor: "#F97316",
+    borderColor: "#F47721",
     borderWidth: 2,
   },
 
@@ -423,16 +431,16 @@ const styles = StyleSheet.create({
   },
 
   defaultBadge: {
-    backgroundColor: "rgba(249, 115, 22, 0.12)",
+    backgroundColor: "#FFF1E6",
     borderWidth: 1,
-    borderColor: "rgba(249, 115, 22, 0.25)",
+    borderColor: "#F47721",
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 10,
   },
 
   defaultText: {
-    color: "#F97316",
+    color: "#F47721",
     fontSize: 11,
     fontWeight: "800",
   },
@@ -464,14 +472,14 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderRadius: 6,
-    backgroundColor: "#F97316",
+    backgroundColor: "#F47721",
   },
 
   addNewAddressButton: {
     backgroundColor: "#0D2638",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#315067",
+    borderColor: "#E1E8EF",
     borderStyle: "dashed",
     padding: 16,
     marginTop: 2,
@@ -527,7 +535,7 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#18384D",
+    backgroundColor: "#FFF1E6",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
@@ -593,7 +601,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "#071B2C",
     borderTopWidth: 1,
-    borderTopColor: "#18384D",
+    borderTopColor: "#E1E8EF",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 14,

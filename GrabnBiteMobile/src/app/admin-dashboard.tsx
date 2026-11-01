@@ -12,6 +12,7 @@ import {
 import { router } from "expo-router";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface AdminUser {
   userId: number;
@@ -27,6 +28,8 @@ interface AdminUser {
 
 export default function AdminDashboard() {
   const { user, token, logout } = useAuth();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,26 +95,31 @@ export default function AdminDashboard() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.header }]}>
         <View>
-          <Text style={styles.headerTitle}>Admin Dashboard</Text>
+          <Text style={[styles.headerTitle, { color: colors.accent }]}>Admin Dashboard</Text>
 
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             Welcome back, {user.firstName}
           </Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>Settings</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -142,38 +150,41 @@ export default function AdminDashboard() {
         {!loading && error === "" && (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Overview</Text>
+              <Text style={[styles.sectionTitle, { color: colors.accent }]}>Overview</Text>
 
               <View style={styles.statsGrid}>
-                <StatCard title="Total Users" value={userCount} />
+                <StatCard title="Total Users" value={userCount} colors={colors} />
 
-                <StatCard title="Customers" value={customerCount} />
+                <StatCard title="Customers" value={customerCount} colors={colors} />
 
-                <StatCard title="Restaurants" value={restaurantCount} />
+                <StatCard title="Restaurants" value={restaurantCount} colors={colors} />
 
-                <StatCard title="Drivers" value={driverCount} />
+                <StatCard title="Drivers" value={driverCount} colors={colors} />
               </View>
             </View>
 
             {/* Management */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Management</Text>
+              <Text style={[styles.sectionTitle, { color: colors.accent }]}>Management</Text>
 
               <DashboardButton
                 title="User Management"
                 subtitle="View and manage customer, restaurant, driver and admin accounts."
+                colors={colors}
                 onPress={() => router.push("/admin-users")}
               />
 
               <DashboardButton
                 title="Restaurants"
                 subtitle="Manage restaurants and restaurant-related information."
+                colors={colors}
                 onPress={() => router.push("/admin-restaurants")}
               />
 
               <DashboardButton
                 title="Drivers"
                 subtitle="View and manage GrabnBite Drivers."
+                colors={colors}
                 onPress={() => router.push("/admin-drivers")}
               />
             </View>
@@ -184,12 +195,11 @@ export default function AdminDashboard() {
   );
 }
 
-function StatCard({ title, value }: { title: string; value: number }) {
+function StatCard({ title, value, colors }: { title: string; value: number; colors: typeof AppThemeColors[keyof typeof AppThemeColors] }) {
   return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-
-      <Text style={styles.statTitle}>{title}</Text>
+    <View style={[styles.statCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+      <Text style={[styles.statValue, { color: colors.accent }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: colors.textSecondary }]}>{title}</Text>
     </View>
   );
 }
@@ -198,26 +208,29 @@ function DashboardButton({
   title,
   subtitle,
   onPress,
+  colors,
 }: {
   title: string;
   subtitle: string;
   onPress: () => void;
+  colors: typeof AppThemeColors[keyof typeof AppThemeColors];
 }) {
   return (
     <Pressable
       style={({ pressed }) => [
         styles.dashboardButton,
+        { backgroundColor: colors.surfaceElevated, borderColor: colors.border },
         pressed && styles.buttonPressed,
       ]}
       onPress={onPress}
     >
       <View style={styles.dashboardButtonContent}>
-        <Text style={styles.dashboardButtonTitle}>{title}</Text>
+        <Text style={[styles.dashboardButtonTitle, { color: colors.text }]}>{title}</Text>
 
-        <Text style={styles.dashboardButtonSubtitle}>{subtitle}</Text>
+        <Text style={[styles.dashboardButtonSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
       </View>
 
-      <Text style={styles.arrow}>›</Text>
+      <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
     </Pressable>
   );
 }
@@ -277,7 +290,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    color: "#071B2C",
+    color: "#F47721",
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 14,

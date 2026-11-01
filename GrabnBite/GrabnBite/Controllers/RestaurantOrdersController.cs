@@ -1,4 +1,5 @@
-﻿using GrabnBite.Data;
+﻿using Npgsql;
+using GrabnBite.Data;
 using GrabnBite.Hubs;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -102,7 +103,9 @@ namespace GrabnBite.Controllers
                     .Select(h => new
                     {
                         status = h.Status,
-                        changedAt = h.ChangedAt
+                        changedAt = h.ChangedAt,
+                        changedByUserId = h.ChangedByUserId,
+                        changedByRole = h.ChangedByRole
                     })
             });
 
@@ -147,7 +150,7 @@ namespace GrabnBite.Controllers
             return await ChangeOrderStatus(
                 orderId,
                 "PREPARING",
-                "READY",
+                "READY_FOR_PICKUP",
                 "Order is ready for pickup.");
         }
 
@@ -175,8 +178,15 @@ namespace GrabnBite.Controllers
                     "Restaurant profile not found.");
             }
 
+            // Serialize restaurant status transitions with customer cancellation and
+            // verified payment recording. This prevents a stale read from accepting an
+            // order that was cancelled, or advancing it twice, during a concurrent request.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+
             var order = await _context.Orders
                 .Include(o => o.StatusHistory)
+                .Include(o => o.Payment)
                 .Include(o => o.Delivery)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == orderId &&
@@ -193,6 +203,31 @@ namespace GrabnBite.Controllers
                     $"Order must be {expectedStatus} before it can become {newStatus}.");
             }
 
+            // A payment method must be recorded before restaurant acceptance.
+            // Cash-on-delivery may remain pending until collection; every other
+            // payment method must be verified as PAID before food preparation.
+            if (newStatus == "ACCEPTED" && order.Payment == null)
+            {
+                return BadRequest("A payment method must be selected before the restaurant can accept this order.");
+            }
+
+            // Do not accept an order while the payment is flagged for reconciliation
+            // or has entered any refund state. A PAID status alone is insufficient when
+            // a delayed/duplicate provider checkout has made the payment inconsistent.
+            if (newStatus == "ACCEPTED" && order.Payment != null &&
+                (order.Payment.RequiresReconciliation ||
+                 !string.Equals(order.Payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase)))
+            {
+                return Conflict("This payment needs reconciliation or refund review before the restaurant can accept the order.");
+            }
+
+            if (newStatus == "ACCEPTED" &&
+                !string.Equals(order.Payment!.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Payment must be confirmed before the restaurant can accept this order.");
+            }
+
             // Change order status
             order.Status = newStatus;
 
@@ -202,28 +237,43 @@ namespace GrabnBite.Controllers
                 {
                     OrderId = order.OrderId,
                     Status = newStatus,
-                    ChangedAt = DateTime.UtcNow
+                    ChangedAt = DateTime.UtcNow,
+                    ChangedByUserId = GetCurrentUserId(),
+                    ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Restaurant"
                 });
 
-            // ============================================================
-            // CREATE DELIVERY WHEN ORDER BECOMES READY
-            // ============================================================
-
-            if (newStatus == "READY")
+            // Create the delivery only when the order reaches the
+            // canonical READY_FOR_PICKUP state used by DeliveryController.
+            var deliveryCreated = false;
+            if (newStatus == "READY_FOR_PICKUP" && order.Delivery == null)
             {
-                // Prevent duplicate delivery records
-                if (order.Delivery == null)
+                order.Delivery = new Delivery
                 {
-                    order.Delivery = new Delivery
-                    {
-                        OrderId = order.OrderId,
-                        DriverId = null,
-                        Status = "UNASSIGNED"
-                    };
-                }
+                    OrderId = order.OrderId,
+                    DriverId = null,
+                    Status = "UNASSIGNED"
+                };
+                deliveryCreated = true;
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException ||
+                ex.GetType().Name == "SerializationFailureException" ||
+                ex is PostgresException postgresException &&
+                    postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
+            {
+                await transaction.RollbackAsync();
+
+                // The order/payment state or one-to-one delivery may have changed
+                // while this request was in flight. Refresh instead of reporting a
+                // successful transition based on stale state.
+                return Conflict("The order or payment changed while this update was being processed. Refresh and check the latest status.");
+            }
 
             // Notify the customer that the order status changed.
             await _hubContext.Clients
@@ -238,7 +288,7 @@ namespace GrabnBite.Controllers
                 message,
                 orderId = order.OrderId,
                 status = order.Status,
-                deliveryCreated = newStatus == "READY"
+                deliveryCreated
             });
         }
     }

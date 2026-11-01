@@ -82,7 +82,7 @@ namespace GrabnBite.Controllers
             var restaurant = new Restaurant
             {
                 Name = dto.Name.Trim(),
-                Description = dto.Description?.Trim(),
+                Description = dto.Description?.Trim() ?? string.Empty,
                 PhoneNumber = dto.PhoneNumber.Trim(),
                 Email = dto.Email.Trim(),
                 Address = dto.Address.Trim(),
@@ -106,7 +106,7 @@ namespace GrabnBite.Controllers
             {
                 RestaurantId = restaurant.RestaurantId,
                 Name = restaurant.Name,
-                Description = restaurant.Description,
+                Description = restaurant.Description ?? string.Empty,
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,
@@ -227,7 +227,7 @@ namespace GrabnBite.Controllers
             }
 
             restaurant.Name = dto.Name.Trim();
-            restaurant.Description = dto.Description?.Trim();
+            restaurant.Description = dto.Description?.Trim() ?? string.Empty;
             restaurant.PhoneNumber = dto.PhoneNumber.Trim();
             restaurant.Email = dto.Email.Trim();
             restaurant.Address = dto.Address.Trim();
@@ -291,7 +291,7 @@ namespace GrabnBite.Controllers
             }
 
             restaurant.Name = dto.Name.Trim();
-            restaurant.Description = dto.Description?.Trim();
+            restaurant.Description = dto.Description?.Trim() ?? string.Empty;
             restaurant.PhoneNumber = dto.PhoneNumber.Trim();
             restaurant.Email = dto.Email.Trim();
             restaurant.Address = dto.Address.Trim();
@@ -360,7 +360,7 @@ namespace GrabnBite.Controllers
             {
                 RestaurantId = restaurant.RestaurantId,
                 Name = restaurant.Name,
-                Description = restaurant.Description,
+                Description = restaurant.Description ?? string.Empty,
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,

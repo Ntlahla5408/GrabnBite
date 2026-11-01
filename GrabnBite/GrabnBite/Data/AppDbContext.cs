@@ -25,6 +25,7 @@ namespace GrabnBite.Data
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
 
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<PaymentReconciliationEvent> PaymentReconciliationEvents { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -332,6 +333,14 @@ namespace GrabnBite.Data
             // MENU ITEM → CART ITEM
             // ============================================================
 
+            // Preserve the existing CartId index alongside the composite uniqueness index.
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => ci.CartId);
+
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => new { ci.CartId, ci.MenuItemId })
+                .IsUnique();
+
             modelBuilder.Entity<CartItem>()
                 .HasOne(ci => ci.MenuItem)
                 .WithMany()
@@ -367,6 +376,50 @@ namespace GrabnBite.Data
                 .Property(p => p.Amount)
                 .HasPrecision(10, 2);
 
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RefundAmount)
+                .HasPrecision(10, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RefundStatus)
+                .HasDefaultValue("NOT_REQUIRED");
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RequiresReconciliation)
+                .HasDefaultValue(false);
+
+            modelBuilder.Entity<Payment>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_Payments_RefundStatus",
+                    "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')"));
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_PaymentReconciliationEvents_RefundStatus",
+                    "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')"));
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasOne(e => e.Payment)
+                .WithMany(p => p.ReconciliationEvents)
+                .HasForeignKey(e => e.PaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => new { e.PaymentId, e.CreatedAt });
+
+            // Provider webhook retries must not create duplicate reconciliation cases.
+            // Limit uniqueness to system-generated Yoco event types so the admin audit
+            // trail can still record repeated status transitions using the same reference.
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => new { e.PaymentId, e.EventType, e.ProviderReference })
+                .IsUnique()
+                .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')")
+                .HasDatabaseName("IX_PaymentReconciliationEvents_YocoEventIdempotency");
+
+            // Preserve the existing actor lookup index used by the audit trail.
+            modelBuilder.Entity<PaymentReconciliationEvent>()
+                .HasIndex(e => e.ActorUserId);
+
 
             // ============================================================
             // USER EMAIL
@@ -391,6 +444,15 @@ namespace GrabnBite.Data
             // ============================================================
             // ORDER STATUS HISTORY
             // ============================================================
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasIndex(h => h.ChangedByUserId);
+
+            modelBuilder.Entity<OrderStatusHistory>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(h => h.ChangedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<OrderStatusHistory>()
                 .HasOne(h => h.Order)

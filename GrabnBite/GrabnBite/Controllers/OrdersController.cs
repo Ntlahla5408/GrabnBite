@@ -1,4 +1,5 @@
-﻿using GrabnBite.Data;
+﻿using Npgsql;
+using GrabnBite.Data;
 using GrabnBite.DTOs.Order;
 using GrabnBite.Hubs;
 using GrabnBite.Models.Entities;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Data;
 
 namespace GrabnBite.Controllers
 {
@@ -118,8 +120,13 @@ namespace GrabnBite.Controllers
                 return Unauthorized();
             }
 
+            // Use a serializable transaction so cancellation and payment-state
+            // checks cannot silently pass each other under concurrent requests.
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var order = await _context.Orders
                 .Include(o => o.StatusHistory)
+                .Include(o => o.Payment)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == id &&
                     o.UserId == userId.Value);
@@ -131,28 +138,61 @@ namespace GrabnBite.Controllers
 
             if (order.Status != "PENDING")
             {
-                return BadRequest(
-                    "Only pending orders can be cancelled.");
+                return BadRequest("Only pending orders can be cancelled.");
+            }
+
+            // Cancellation is safe only if no payment exists or the provider has
+            // authoritatively confirmed that the payment failed. PENDING/INITIATED
+            // outcomes are ambiguous; PAID requires the refund workflow.
+            if (order.Payment != null)
+            {
+                var paymentIsPaid = string.Equals(
+                    order.Payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase);
+                var isCashOnDelivery = string.Equals(
+                    order.Payment.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase);
+                var paymentIsUnresolved = !string.Equals(
+                    order.Payment.PaymentStatus, "FAILED", StringComparison.OrdinalIgnoreCase);
+
+                // Cash-on-delivery has no external payment to reconcile before
+                // collection. It may be cancelled while the order is still pending,
+                // but a recorded PAID result must still go through refund handling.
+                if (paymentIsPaid || (!isCashOnDelivery && paymentIsUnresolved))
+                {
+                    return Conflict(paymentIsPaid
+                        ? "This order has been paid. Cancellation must be handled through the refund process."
+                        : "Payment is still pending or has not been reconciled. Check the payment status before cancelling.");
+                }
             }
 
             order.Status = "CANCELLED";
-
             order.StatusHistory.Add(new OrderStatusHistory
             {
                 Status = "CANCELLED",
                 ChangedAt = DateTime.UtcNow,
+                ChangedByUserId = userId.Value,
+                ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Customer",
                 OrderId = order.OrderId
             });
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (ex is DbUpdateException ||
+                                       ex is PostgresException postgresException &&
+                                           postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
+            {
+                await transaction.RollbackAsync();
+                // A payment confirmation or another cancellation may have won the race.
+                // Ask the client to refresh rather than reporting a false success.
+                return Conflict("The order or payment changed while cancellation was being processed. Refresh and check the latest status.");
+            }
 
-            // Notify connected clients about the order status change.
+            // Notify connected clients only after the database transaction commits.
             await _hubContext.Clients
                 .User(userId.Value.ToString())
-                .SendAsync(
-                    "OrderStatusUpdated",
-                    order.OrderId,
-                    order.Status);
+                .SendAsync("OrderStatusUpdated", order.OrderId, order.Status);
 
             return Ok(new
             {
@@ -198,7 +238,9 @@ namespace GrabnBite.Controllers
                 {
                     h.OrderStatusHistoryId,
                     h.Status,
-                    h.ChangedAt
+                    h.ChangedAt,
+                    h.ChangedByUserId,
+                    h.ChangedByRole
                 })
                 .ToListAsync();
 

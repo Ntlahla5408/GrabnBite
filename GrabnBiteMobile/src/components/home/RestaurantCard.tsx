@@ -1,4 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 interface RestaurantCardProps {
   name: string;
@@ -17,9 +18,11 @@ export default function RestaurantCard({
   deliveryTime,
   onPress,
 }: RestaurantCardProps) {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, { backgroundColor: colors.surfaceElevated }, pressed && styles.cardPressed]}
       onPress={onPress}
     >
       {imageUrl ? (
@@ -29,18 +32,18 @@ export default function RestaurantCard({
           resizeMode="cover"
         />
       ) : (
-        <View style={styles.imagePlaceholder}>
+        <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface }]}>
           <Text style={styles.placeholderIcon}>🍽️</Text>
-          <Text style={styles.placeholderText}>No image available</Text>
+          <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>No image available</Text>
         </View>
       )}
 
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.accent }]} numberOfLines={1}>
           {name}
         </Text>
 
-        <Text style={styles.cuisine} numberOfLines={2}>
+        <Text style={[styles.cuisine, { color: colors.textSecondary }]} numberOfLines={2}>
           {cuisine}
         </Text>
 
@@ -71,7 +74,7 @@ export default function RestaurantCard({
             <>
               <Text style={styles.separator}>•</Text>
 
-              <Text style={styles.time}>{deliveryTime}</Text>
+              <Text style={[styles.time, { color: colors.textSecondary }]}>{deliveryTime}</Text>
             </>
           )}
         </View>
@@ -83,7 +86,7 @@ export default function RestaurantCard({
 const styles = StyleSheet.create({
   card: {
     width: 290,
-    backgroundColor: "#0D2638",
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     overflow: "hidden",
     marginRight: 14,
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 165,
-    backgroundColor: "#18384D",
+    backgroundColor: "#EEF2F6",
   },
 
   imagePlaceholder: {
@@ -133,14 +136,14 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#FFFFFF",
+    color: "#102A43",
     fontSize: 18,
     fontWeight: "800",
   },
 
   cuisine: {
     marginTop: 5,
-    color: "#B8C7D3",
+    color: "#627487",
     fontSize: 13,
     lineHeight: 18,
   },

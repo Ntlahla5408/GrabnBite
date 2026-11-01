@@ -11,6 +11,7 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
   orderItemId: number;
@@ -33,6 +34,8 @@ interface Order {
 }
 
 export default function OrderScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
@@ -132,12 +135,22 @@ export default function OrderScreen() {
       description: "Your food is being prepared.",
     },
     {
-      key: "READY",
+      key: "READY_FOR_PICKUP",
       title: "Ready for pickup",
       description: "Your order is ready for collection.",
     },
     {
-      key: "OUT_FOR_DELIVERY",
+      key: "ASSIGNED",
+      title: "Driver assigned",
+      description: "A driver has accepted your delivery.",
+    },
+    {
+      key: "PICKED_UP",
+      title: "Picked up",
+      description: "The driver has collected your order.",
+    },
+    {
+      key: "DELIVERING",
       title: "On the way",
       description: "Your order is on its way to you.",
     },
@@ -152,15 +165,17 @@ export default function OrderScreen() {
     "PENDING",
     "ACCEPTED",
     "PREPARING",
-    "READY",
-    "OUT_FOR_DELIVERY",
+    "READY_FOR_PICKUP",
+    "ASSIGNED",
+    "PICKED_UP",
+    "DELIVERING",
     "DELIVERED",
   ];
 
   const currentIndex = statusOrder.indexOf(status);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -186,11 +201,15 @@ export default function OrderScreen() {
                 ? "Restaurant Accepted"
                 : status === "PREPARING"
                   ? "Preparing Your Order"
-                  : status === "READY"
+                  : status === "READY_FOR_PICKUP"
                     ? "Ready for Pickup"
-                    : status === "OUT_FOR_DELIVERY"
-                      ? "On the Way"
-                      : status === "DELIVERED"
+                    : status === "ASSIGNED"
+                      ? "Driver Assigned"
+                      : status === "PICKED_UP"
+                        ? "Picked Up"
+                        : status === "DELIVERING"
+                          ? "On the Way"
+                          : status === "DELIVERED"
                         ? "Order Delivered"
                         : "Order Received"}
           </Text>

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import {
   acceptRestaurantOrder,
   getRestaurantOrders,
@@ -28,6 +29,8 @@ const GREEN = "#2E7D32";
 
 export default function RestaurantDashboardScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   // ALL STATE HOOKS
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
@@ -113,11 +116,11 @@ export default function RestaurantDashboardScreen() {
     (order) => order.status === "PREPARING",
   );
 
-  const readyOrders = orders.filter((order) => order.status === "READY");
+  const readyOrders = orders.filter((order) => order.status === "READY_FOR_PICKUP");
 
   if (authLoading || loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={ORANGE} />
 
         <Text style={styles.loadingText}>Loading restaurant dashboard...</Text>
@@ -127,7 +130,7 @@ export default function RestaurantDashboardScreen() {
 
   if (!token) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Text style={styles.errorTitle}>Restaurant login required</Text>
 
         <Pressable
@@ -141,21 +144,26 @@ export default function RestaurantDashboardScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.header }]}>
         <View>
-          <Text style={styles.headerSmall}>Restaurant Dashboard</Text>
+          <Text style={[styles.headerSmall, { color: colors.accent }]}>Restaurant Dashboard</Text>
 
-          <Text style={styles.headerTitle}>Welcome back</Text>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>Welcome back</Text>
 
           {user?.email ? (
-            <Text style={styles.headerEmail}>{user.email}</Text>
+            <Text style={[styles.headerEmail, { color: colors.textSecondary }]}>{user.email}</Text>
           ) : null}
         </View>
 
-        <View style={styles.headerIcon}>
-          <Text style={styles.headerIconText}>🍴</Text>
-        </View>
+        <Pressable
+          style={styles.headerIcon}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          onPress={() => router.push("/settings" as any)}
+        >
+          <Text style={styles.headerIconText}>⚙️</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -171,19 +179,20 @@ export default function RestaurantDashboardScreen() {
         ) : null}
 
         <View style={styles.summaryRow}>
-          <SummaryCard label="New" value={pendingOrders.length} />
+          <SummaryCard label="New" value={pendingOrders.length} colors={colors} />
 
           <SummaryCard
             label="Preparing"
             value={acceptedOrders.length + preparingOrders.length}
+            colors={colors}
           />
 
-          <SummaryCard label="Ready" value={readyOrders.length} />
+          <SummaryCard label="Ready" value={readyOrders.length} colors={colors} />
         </View>
 
         {/* Menu Management */}
         <Pressable
-          style={styles.menuManagementButton}
+          style={[styles.menuManagementButton, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
           onPress={() => router.push("/restaurant-menu")}
         >
           <View style={styles.menuManagementIcon}>
@@ -191,18 +200,19 @@ export default function RestaurantDashboardScreen() {
           </View>
 
           <View style={styles.menuManagementContent}>
-            <Text style={styles.menuManagementTitle}>Manage Menu</Text>
+            <Text style={[styles.menuManagementTitle, { color: colors.accent }]}>Manage Menu</Text>
 
-            <Text style={styles.menuManagementSubtitle}>
+            <Text style={[styles.menuManagementSubtitle, { color: colors.textSecondary }]}>
               Add, edit, or remove menu items
             </Text>
           </View>
 
-          <Text style={styles.menuManagementArrow}>→</Text>
+          <Text style={[styles.menuManagementArrow, { color: colors.accent }]}>→</Text>
         </Pressable>
 
         <OrderSection
           title="New Orders"
+          colors={colors}
           orders={pendingOrders}
           actionLabel="Accept Order"
           actionColor={ORANGE}
@@ -212,6 +222,7 @@ export default function RestaurantDashboardScreen() {
 
         <OrderSection
           title="Accepted"
+          colors={colors}
           orders={acceptedOrders}
           actionLabel="Start Preparing"
           actionColor={BLUE}
@@ -221,6 +232,7 @@ export default function RestaurantDashboardScreen() {
 
         <OrderSection
           title="Preparing"
+          colors={colors}
           orders={preparingOrders}
           actionLabel="Mark Ready"
           actionColor={GREEN}
@@ -230,6 +242,7 @@ export default function RestaurantDashboardScreen() {
 
         <OrderSection
           title="Ready for Pickup"
+          colors={colors}
           orders={readyOrders}
           actionLabel=""
           actionColor={GREEN}
@@ -238,12 +251,12 @@ export default function RestaurantDashboardScreen() {
         />
 
         {orders.length === 0 ? (
-          <View style={styles.emptyBox}>
+          <View style={[styles.emptyBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <Text style={styles.emptyIcon}>🍽️</Text>
 
-            <Text style={styles.emptyTitle}>No orders yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No orders yet</Text>
 
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               New customer orders will appear here.
             </Text>
           </View>
@@ -253,12 +266,13 @@ export default function RestaurantDashboardScreen() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.summaryCard}>
-      <Text style={styles.summaryValue}>{value}</Text>
+type ThemeColors = (typeof AppThemeColors)[keyof typeof AppThemeColors];
 
-      <Text style={styles.summaryLabel}>{label}</Text>
+function SummaryCard({ label, value, colors }: { label: string; value: number; colors: ThemeColors }) {
+  return (
+    <View style={[styles.summaryCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+      <Text style={[styles.summaryValue, { color: colors.accent }]}>{value}</Text>
+      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
 }
@@ -270,6 +284,7 @@ function OrderSection({
   actionColor,
   actionLoading,
   onAction,
+  colors,
 }: {
   title: string;
   orders: RestaurantOrder[];
@@ -277,56 +292,57 @@ function OrderSection({
   actionColor: string;
   actionLoading: number | null;
   onAction: (order: RestaurantOrder) => void;
+  colors: ThemeColors;
 }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>{title}</Text>
 
-        <Text style={styles.sectionCount}>{orders.length}</Text>
+        <Text style={[styles.sectionCount, { backgroundColor: colors.surface, color: colors.accent }]}>{orders.length}</Text>
       </View>
 
       {orders.length === 0 ? (
-        <Text style={styles.noOrders}>No orders in this section.</Text>
+        <Text style={[styles.noOrders, { color: colors.textSecondary }]}>No orders in this section.</Text>
       ) : (
         orders.map((order) => (
-          <View key={order.orderId} style={styles.orderCard}>
+          <View key={order.orderId} style={[styles.orderCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <View style={styles.orderHeader}>
               <View>
-                <Text style={styles.orderNumber}>Order #{order.orderId}</Text>
+                <Text style={[styles.orderNumber, { color: colors.text }]}>Order #{order.orderId}</Text>
 
-                <Text style={styles.orderDate}>
+                <Text style={[styles.orderDate, { color: colors.textSecondary }]}>
                   {formatDate(order.orderDate)}
                 </Text>
               </View>
 
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>
+              <View style={[styles.statusBadge, { backgroundColor: colors.accentSoft }]}>
+                <Text style={[styles.statusText, { color: colors.accent }]}>
                   {formatStatus(order.status)}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             {order.items.map((item) => (
               <View key={item.orderItemId} style={styles.itemRow}>
                 <Text style={styles.quantity}>{item.quantity}×</Text>
 
-                <Text style={styles.itemName} numberOfLines={1}>
+                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
                   {item.menuItemName}
                 </Text>
 
-                <Text style={styles.itemPrice}>
+                <Text style={[styles.itemPrice, { color: colors.text }]}>
                   R{item.subtotal.toFixed(2)}
                 </Text>
               </View>
             ))}
 
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>Total</Text>
 
-              <Text style={styles.totalAmount}>
+              <Text style={[styles.totalAmount, { color: colors.accent }]}>
                 R{order.totalAmount.toFixed(2)}
               </Text>
             </View>
@@ -373,10 +389,16 @@ function formatStatus(status: string) {
     case "PREPARING":
       return "PREPARING";
 
-    case "READY":
-      return "READY";
+    case "READY_FOR_PICKUP":
+      return "READY FOR PICKUP";
 
-    case "OUT_FOR_DELIVERY":
+    case "ASSIGNED":
+      return "DRIVER ASSIGNED";
+
+    case "PICKED_UP":
+      return "PICKED UP";
+
+    case "DELIVERING":
       return "OUT FOR DELIVERY";
 
     case "DELIVERED":
@@ -457,6 +479,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E1E8EF",
     paddingVertical: 16,
     alignItems: "center",
     elevation: 2,
@@ -512,6 +536,8 @@ const styles = StyleSheet.create({
   orderCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E1E8EF",
     padding: 18,
     marginBottom: 12,
     elevation: 2,
@@ -629,6 +655,8 @@ const styles = StyleSheet.create({
   emptyBox: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E1E8EF",
     padding: 35,
     alignItems: "center",
     marginTop: 20,

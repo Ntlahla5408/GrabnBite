@@ -1,8 +1,11 @@
 import { router, usePathname } from "expo-router";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function CustomerBottomNav() {
   const pathname = usePathname();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const tabs = [
     {
@@ -23,8 +26,8 @@ export default function CustomerBottomNav() {
   ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.nav}>
+    <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+      <View style={[styles.nav, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {tabs.map((tab) => {
           const active =
             tab.route === "/"
@@ -43,15 +46,15 @@ export default function CustomerBottomNav() {
               <View
                 style={[
                   styles.iconContainer,
-                  active && styles.activeIconContainer,
+                  active && { backgroundColor: colors.accentSoft },
                 ]}
               >
-                <Text style={[styles.icon, active && styles.activeIcon]}>
+                <Text style={[styles.icon, { color: active ? colors.accent : colors.textSecondary }]}>
                   {tab.icon}
                 </Text>
               </View>
 
-              <Text style={[styles.label, active && styles.activeLabel]}>
+              <Text style={[styles.label, { color: active ? colors.accent : colors.textSecondary }, active && styles.activeLabel]}>
                 {tab.label}
               </Text>
 
@@ -73,9 +76,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 10,
-    backgroundColor: "#071B2C",
     borderTopWidth: 1,
-    borderTopColor: "#18384D",
   },
 
   nav: {
@@ -86,10 +87,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    backgroundColor: "#0D2638",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#18384D",
   },
 
   tab: {
@@ -114,7 +113,7 @@ const styles = StyleSheet.create({
   },
 
   activeIconContainer: {
-    backgroundColor: "rgba(249, 115, 22, 0.12)",
+    backgroundColor: "#FFF1E6",
   },
 
   icon: {
@@ -123,7 +122,7 @@ const styles = StyleSheet.create({
   },
 
   activeIcon: {
-    color: "#F97316",
+    color: "#F47721",
   },
 
   label: {
@@ -133,7 +132,7 @@ const styles = StyleSheet.create({
   },
 
   activeLabel: {
-    color: "#FFFFFF",
+    color: "#102A43",
     fontWeight: "800",
   },
 

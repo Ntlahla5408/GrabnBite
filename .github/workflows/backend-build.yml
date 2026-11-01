@@ -1,0 +1,28 @@
+name: Backend build
+
+on:
+  push:
+    branches:
+      - main
+      - fix/core-order-flow-theme
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore backend
+        run: dotnet restore GrabnBite/GrabnBite/GrabnBite.csproj
+
+      - name: Build backend
+        run: dotnet build GrabnBite/GrabnBite/GrabnBite.csproj --configuration Release --no-restore

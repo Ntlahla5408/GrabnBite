@@ -106,6 +106,7 @@ namespace GrabnBite.Controllers
 
             var delivery = await _context.Deliveries
                 .Include(d => d.Order)
+                    .ThenInclude(o => o.StatusHistory)
                 .FirstOrDefaultAsync(d =>
                     d.DeliveryId == deliveryId);
 
@@ -141,8 +142,36 @@ namespace GrabnBite.Controllers
                     "Driver is currently offline.");
             }
 
+            if (delivery.Order.Status != "READY_FOR_PICKUP")
+            {
+                return BadRequest(
+                    "Only orders ready for pickup can be assigned.");
+            }
+
+            var driverHasActiveDelivery = await _context.Deliveries
+                .AnyAsync(d =>
+                    d.DriverId == driver.DriverId &&
+                    d.Status != "DELIVERED");
+
+            if (driverHasActiveDelivery)
+            {
+                return Conflict("This driver already has an active delivery.");
+            }
+
             delivery.DriverId = driver.DriverId;
             delivery.Status = "ASSIGNED";
+
+            // Keep the customer-facing order lifecycle aligned with delivery assignment.
+            delivery.Order.Status = "ASSIGNED";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "ASSIGNED",
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+            });
 
             await _context.SaveChangesAsync();
 
@@ -227,7 +256,17 @@ namespace GrabnBite.Controllers
 
                 orderDate = delivery.Order.OrderDate,
 
-                deliveryAddress = delivery.Order.DeliveryAddress,
+                deliveryAddress = new
+                {
+                    AddressId = delivery.Order.DeliveryAddressId,
+                    Label = delivery.Order.DeliveryAddressLabel,
+                    StreetAddress = delivery.Order.DeliveryStreetAddress,
+                    City = delivery.Order.DeliveryCity,
+                    Province = delivery.Order.DeliveryProvince,
+                    PostalCode = delivery.Order.DeliveryPostalCode,
+                    Latitude = delivery.Order.DeliveryLatitude,
+                    Longitude = delivery.Order.DeliveryLongitude
+                },
 
                 items = delivery.Order.OrderItems.Select(item => new
                 {
@@ -291,8 +330,16 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "PICKED_UP";
             delivery.PickedUpAt = DateTime.UtcNow;
+            delivery.Order.Status = "PICKED_UP";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "PICKED_UP",
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
 
-            delivery.Order.Status = "DRIVER_PICKED_UP";
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+            });
 
             await _context.SaveChangesAsync();
 
@@ -356,6 +403,15 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "DELIVERING";
             delivery.Order.Status = "DELIVERING";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "DELIVERING",
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+            });
 
             await _context.SaveChangesAsync();
 
@@ -419,8 +475,16 @@ namespace GrabnBite.Controllers
 
             delivery.Status = "DELIVERED";
             delivery.DeliveredAt = DateTime.UtcNow;
-
             delivery.Order.Status = "DELIVERED";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "DELIVERED",
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+            });
 
             driver.IsOnline = true;
 
@@ -608,23 +672,37 @@ namespace GrabnBite.Controllers
                     .ThenInclude(o => o.OrderItems)
                 .Where(d =>
                     d.Status == "UNASSIGNED" &&
-                    d.DriverId == null)
+                    d.DriverId == null &&
+                    d.Order.Status == "READY_FOR_PICKUP")
                 .OrderBy(d => d.Order.OrderDate)
                 .Select(d => new
                 {
                     deliveryId = d.DeliveryId,
                     orderId = d.OrderId,
+                    driverId = d.DriverId,
                     status = d.Status,
-
-                    restaurantId = d.Order.RestaurantId,
-                    restaurantName = d.Order.Restaurant.Name,
-
+                    pickedUpAt = d.PickedUpAt,
+                    deliveredAt = d.DeliveredAt,
+                    driverLatitude = d.DriverLatitude,
+                    driverLongitude = d.DriverLongitude,
+                    restaurant = new
+                    {
+                        restaurantId = d.Order.RestaurantId,
+                        name = d.Order.Restaurant.Name
+                    },
                     totalAmount = d.Order.TotalAmount,
                     orderDate = d.Order.OrderDate,
-
-                    deliveryAddressId = d.Order.DeliveryAddressId,
-
-                    deliveryAddress = d.Order.DeliveryAddress,
+                    deliveryAddress = new
+                    {
+                        AddressId = d.Order.DeliveryAddressId,
+                        Label = d.Order.DeliveryAddressLabel,
+                        StreetAddress = d.Order.DeliveryStreetAddress,
+                        City = d.Order.DeliveryCity,
+                        Province = d.Order.DeliveryProvince,
+                        PostalCode = d.Order.DeliveryPostalCode,
+                        Latitude = d.Order.DeliveryLatitude,
+                        Longitude = d.Order.DeliveryLongitude
+                    },
 
                     items = d.Order.OrderItems.Select(item => new
                     {
@@ -651,20 +729,17 @@ namespace GrabnBite.Controllers
         {
             if (deliveryId <= 0)
             {
-                return BadRequest(
-                    "A valid delivery id is required.");
+                return BadRequest("A valid delivery id is required.");
             }
 
-            var userId = User.FindFirstValue(
-                ClaimTypes.NameIdentifier);
-
-            if (!int.TryParse(userId, out var parsedUserId))
+            var userId = GetCurrentUserId();
+            if (userId == null)
             {
                 return Unauthorized();
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == parsedUserId);
+                .FirstOrDefaultAsync(d => d.UserId == userId.Value);
 
             if (driver == null)
             {
@@ -673,63 +748,80 @@ namespace GrabnBite.Controllers
 
             if (!driver.IsApproved)
             {
-                return BadRequest(
-                    "Your driver account has not been approved.");
+                return Forbid();
             }
 
             if (!driver.IsOnline)
             {
-                return BadRequest(
-                    "You must be online to accept deliveries.");
+                return BadRequest("You must be online to accept deliveries.");
             }
 
-            // Check whether driver already has an active delivery
-            var existingDelivery = await _context.Deliveries
-                .FirstOrDefaultAsync(d =>
+            var hasActiveDelivery = await _context.Deliveries
+                .AnyAsync(d =>
                     d.DriverId == driver.DriverId &&
                     d.Status != "DELIVERED");
 
-            if (existingDelivery != null)
+            if (hasActiveDelivery)
             {
-                return BadRequest(
-                    "You already have an active delivery.");
+                return Conflict("You already have an active delivery.");
             }
 
-            var delivery = await _context.Deliveries
-                .Include(d => d.Order)
-                .FirstOrDefaultAsync(d =>
-                    d.DeliveryId == deliveryId);
+            var deliveryExists = await _context.Deliveries
+                .AnyAsync(d => d.DeliveryId == deliveryId);
 
-            if (delivery == null)
+            if (!deliveryExists)
             {
                 return NotFound("Delivery not found.");
             }
 
-            if (delivery.Status != "UNASSIGNED")
+            // Atomically claim only a delivery that is still unassigned and ready.
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            var claimedRows = await _context.Deliveries
+                .Where(d =>
+                    d.DeliveryId == deliveryId &&
+                    d.Status == "UNASSIGNED" &&
+                    d.DriverId == null &&
+                    d.Order.Status == "READY_FOR_PICKUP")
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(d => d.DriverId, driver.DriverId)
+                    .SetProperty(d => d.Status, "ASSIGNED"));
+
+            if (claimedRows == 0)
             {
-                return BadRequest(
-                    "This delivery has already been accepted.");
+                await transaction.RollbackAsync();
+                return Conflict("This delivery is no longer available to accept.");
             }
 
-            if (delivery.DriverId != null)
-            {
-                return BadRequest(
-                    "This delivery has already been assigned.");
-            }
+            var delivery = await _context.Deliveries
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.StatusHistory)
+                .FirstAsync(d => d.DeliveryId == deliveryId);
 
-            // Assign delivery to current driver
-            delivery.DriverId = driver.DriverId;
-            delivery.Status = "ASSIGNED";
+            delivery.Order.Status = "ASSIGNED";
+            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            {
+                OrderId = delivery.OrderId,
+                Status = "ASSIGNED",
+                ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = GetCurrentUserId(),
+
+            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+            });
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
-            return Ok(new
+            return Ok(new DeliveryResponseDto
             {
-                message = "Delivery accepted successfully.",
-                deliveryId = delivery.DeliveryId,
-                orderId = delivery.OrderId,
-                driverId = driver.DriverId,
-                status = delivery.Status
+                DeliveryId = delivery.DeliveryId,
+                OrderId = delivery.OrderId,
+                DriverId = delivery.DriverId,
+                Status = delivery.Status,
+                PickedUpAt = delivery.PickedUpAt,
+                DeliveredAt = delivery.DeliveredAt,
+                DriverLatitude = delivery.DriverLatitude,
+                DriverLongitude = delivery.DriverLongitude
             });
         }
     }

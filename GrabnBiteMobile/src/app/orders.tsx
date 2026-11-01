@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
   orderItemId: number;
@@ -36,8 +37,10 @@ const ACTIVE_STATUSES = [
   "PENDING",
   "ACCEPTED",
   "PREPARING",
-  "READY",
-  "OUT_FOR_DELIVERY",
+  "READY_FOR_PICKUP",
+  "ASSIGNED",
+  "PICKED_UP",
+  "DELIVERING",
 ];
 
 function getStatusLabel(status: string) {
@@ -48,9 +51,13 @@ function getStatusLabel(status: string) {
       return "Accepted";
     case "PREPARING":
       return "Preparing";
-    case "READY":
-      return "Ready";
-    case "OUT_FOR_DELIVERY":
+    case "READY_FOR_PICKUP":
+      return "Ready for Pickup";
+    case "ASSIGNED":
+      return "Driver Assigned";
+    case "PICKED_UP":
+      return "Picked Up";
+    case "DELIVERING":
       return "On the Way";
     case "DELIVERED":
       return "Delivered";
@@ -69,7 +76,7 @@ function getStatusColor(status: string) {
     case "CANCELLED":
       return "#D32F2F";
 
-    case "OUT_FOR_DELIVERY":
+    case "DELIVERING":
       return "#1A4B6B";
 
     default:
@@ -78,6 +85,8 @@ function getStatusColor(status: string) {
 }
 
 export default function OrdersScreen() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -141,7 +150,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}

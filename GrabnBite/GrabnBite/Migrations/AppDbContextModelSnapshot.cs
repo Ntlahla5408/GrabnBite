@@ -124,6 +124,9 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("CartId");
 
+                    b.HasIndex("CartId", "MenuItemId")
+                        .IsUnique();
+
                     b.HasIndex("MenuItemId");
 
                     b.ToTable("CartItems");
@@ -312,6 +315,32 @@ namespace GrabnBite.Migrations
                     b.Property<int>("DeliveryAddressId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("DeliveryAddressLabel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryStreetAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryCity")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryProvince")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryPostalCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double>("DeliveryLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("DeliveryLongitude")
+                        .HasColumnType("double precision");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -389,6 +418,12 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("ChangedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ChangedByRole")
+                        .HasColumnType("text");
+
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
 
@@ -397,6 +432,8 @@ namespace GrabnBite.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("OrderStatusHistoryId");
+
+                    b.HasIndex("ChangedByUserId");
 
                     b.HasIndex("OrderId");
 
@@ -421,6 +458,49 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("RefundCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RefundFailedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<DateTime?>("RefundRequiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefundProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RefundProviderReference")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RefundRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RefundStatus")
+                        .IsRequired()
+                        .HasDefaultValue("NOT_REQUIRED")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReconciliationOpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReconciliationReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReconciliationResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReconciliationResolutionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("RequiresReconciliation")
+                        .HasDefaultValue(false)
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
                         .HasColumnType("text");
@@ -443,7 +523,63 @@ namespace GrabnBite.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+                        });
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.PaymentReconciliationEvent", b =>
+                {
+                    b.Property<int>("PaymentReconciliationEventId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PaymentReconciliationEventId"));
+
+                    b.Property<string>("ActorRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PaymentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderReference")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RefundStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("PaymentReconciliationEventId");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("PaymentId", "CreatedAt");
+
+                    b.HasIndex("PaymentId", "EventType", "ProviderReference")
+                        .IsUnique()
+                        .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')")
+                        .HasDatabaseName("IX_PaymentReconciliationEvents_YocoEventIdempotency");
+
+                    b.ToTable("PaymentReconciliationEvents", t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentReconciliationEvents_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
+                        });
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
@@ -781,6 +917,11 @@ namespace GrabnBite.Migrations
 
             modelBuilder.Entity("GrabnBite.Models.Entities.OrderStatusHistory", b =>
                 {
+                    b.HasOne("GrabnBite.Models.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GrabnBite.Models.Entities.Order", "Order")
                         .WithMany("StatusHistory")
                         .HasForeignKey("OrderId")
@@ -799,6 +940,17 @@ namespace GrabnBite.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.PaymentReconciliationEvent", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.Payment", "Payment")
+                        .WithMany("ReconciliationEvents")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
@@ -922,6 +1074,11 @@ namespace GrabnBite.Migrations
 
                     b.Navigation("Reviews");
                 });
+            modelBuilder.Entity("GrabnBite.Models.Entities.Payment", b =>
+                {
+                    b.Navigation("ReconciliationEvents");
+                });
+
 #pragma warning restore 612, 618
         }
     }

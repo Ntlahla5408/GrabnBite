@@ -2,13 +2,13 @@
 import { apiRequest } from "./api";
 
 export interface YocoPaymentResponse {
-  redirectUrl: string;
+  redirectUrl?: string;
   paymentId: number;
   orderId: number;
   amount: number;
   paymentStatus: string;
   paymentMethod: string;
-  paymentReference: string;
+  paymentReference: string | null;
   transactionReference: string | null;
   paymentDate: string;
   yocoCheckoutId: string;
@@ -33,6 +33,8 @@ export interface YocoPaymentConfirmation {
   paymentId?: number;
   paymentStatus: string;
   orderStatus?: string;
+  requiresReconciliation?: boolean;
+  refundStatus?: string;
 }
 
 export async function confirmYocoPayment(

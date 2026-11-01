@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -53,6 +54,8 @@ type Delivery = {
 export default function DriverDashboard() {
   const router = useRouter();
   const { user, token, logout } = useAuth();
+  const { theme, isDark } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   const [availableDeliveries, setAvailableDeliveries] = useState<Delivery[]>(
     [],
@@ -339,7 +342,7 @@ export default function DriverDashboard() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: colors.surface }]}>
         <ActivityIndicator size="large" color={ORANGE} />
         <Text style={styles.loadingText}>Loading driver dashboard...</Text>
       </View>
@@ -347,7 +350,7 @@ export default function DriverDashboard() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -357,22 +360,27 @@ export default function DriverDashboard() {
         {/* HEADER */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.logo}>GrabnBite</Text>
-            <Text style={styles.subtitle}>Driver Dashboard</Text>
+            <Text style={[styles.logo, { color: colors.text }]}>GrabnBite</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Driver Dashboard</Text>
           </View>
 
-          <TouchableOpacity
-            onPress={async () => {
-              await logout();
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+            <TouchableOpacity onPress={() => router.push("/settings" as any)}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>Settings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                await logout();
               router.replace("/login");
-            }}
-          >
-            <Text style={styles.logout}>Logout</Text>
-          </TouchableOpacity>
+              }}
+            >
+              <Text style={styles.logout}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ONLINE STATUS */}
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: isDark ? colors.surfaceElevated : NAVY }]}>
           <View>
             <Text style={styles.statusTitle}>Driver Status</Text>
 
@@ -404,7 +412,7 @@ export default function DriverDashboard() {
         </View>
 
         {/* ACTIVE DELIVERY */}
-        <Text style={styles.sectionTitle}>ACTIVE DELIVERY</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>ACTIVE DELIVERY</Text>
 
         {activeDelivery ? (
           <View style={styles.card}>

@@ -22,24 +22,37 @@ export default function PaymentScreen() {
 
   const orderId = Number(params.orderId);
 
-  const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
+  const [loading, setLoading] = useState(true);
   const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
+  const [error, setError] = useState("");
   const [openingPayment, setOpeningPayment] = useState(false);
 
   const startPayment = useCallback(async () => {
-    if (!token || !orderId) {
+    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+      setError("Please sign in and open a valid order to continue payment.");
+      setLoading(false);
       return;
     }
 
     try {
       const result = await createYocoPayment(orderId, token);
-      setError("");
+
+      if (result.paymentStatus?.toUpperCase() === "PAID") {
+        router.replace({
+          pathname: "/payment-success",
+          params: { orderId: String(orderId) },
+        });
+        return;
+      }
+
+      if (!result.redirectUrl) {
+        throw new Error("Yoco did not return a secure checkout URL.");
+      }
 
       setCheckoutUrl(result.redirectUrl);
+      setError("");
     } catch {
       console.error("Failed to create Yoco payment.");
-
       setError("Unable to start payment. Please try again.");
     } finally {
       setLoading(false);
@@ -47,9 +60,58 @@ export default function PaymentScreen() {
   }, [token, orderId]);
 
   useEffect(() => {
-    if (authLoading) {
+    if (
+      authLoading ||
+      !token ||
+      !Number.isInteger(orderId) ||
+      orderId <= 0
+    ) {
       return;
     }
+
+    const paymentToken = token;
+    let cancelled = false;
+
+    async function initializePayment() {
+      try {
+        const result = await createYocoPayment(orderId, paymentToken);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (result.paymentStatus?.toUpperCase() === "PAID") {
+          router.replace({
+            pathname: "/payment-success",
+            params: { orderId: String(orderId) },
+          });
+          return;
+        }
+
+        if (!result.redirectUrl) {
+          throw new Error("Yoco did not return a secure checkout URL.");
+        }
+
+        setCheckoutUrl(result.redirectUrl);
+        setError("");
+      } catch {
+        if (!cancelled) {
+          console.error("Failed to create Yoco payment.");
+          setError("Unable to start payment. Please try again.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void initializePayment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, token, orderId]);
 
   async function openPayment() {
     if (!checkoutUrl) {
@@ -71,7 +133,10 @@ export default function PaymentScreen() {
     }
   }
 
-  if (loading) {
+  const invalidPaymentInput =
+    !authLoading && (!token || !Number.isInteger(orderId) || orderId <= 0);
+
+  if (authLoading || (loading && !invalidPaymentInput)) {
     return (
       <View style={styles.center}>
         <View style={styles.loadingIconContainer}>
@@ -89,7 +154,7 @@ export default function PaymentScreen() {
     );
   }
 
-  if (error) {
+  if (invalidPaymentInput || error) {
     return (
       <View style={styles.center}>
         <View style={styles.errorIconContainer}>
@@ -98,14 +163,27 @@ export default function PaymentScreen() {
 
         <Text style={styles.errorTitle}>Payment could not start</Text>
 
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>
+          {invalidPaymentInput
+            ? "Please sign in and open a valid order to continue payment."
+            : error}
+        </Text>
 
         <Pressable
           style={({ pressed }) => [
             styles.retryButton,
             pressed && styles.buttonPressed,
           ]}
-          onPress={startPayment}
+          onPress={() => {
+            if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+              setError("Please sign in and open a valid order to continue payment.");
+              return;
+            }
+
+            setLoading(true);
+            setError("");
+            void startPayment();
+          }}
         >
           <Text style={styles.retryText}>Try Again</Text>
         </Pressable>

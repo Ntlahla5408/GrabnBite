@@ -3,9 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 export default function AccountScreen() {
   const { user, logout } = useAuth();
+  const { theme, isDark } = useThemePreference();
+  const colors = AppThemeColors[theme];
 
   async function handleLogout() {
     await logout();
@@ -14,13 +17,13 @@ export default function AccountScreen() {
 
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loggedOutContainer}>
           <Text style={styles.icon}>👤</Text>
 
-          <Text style={styles.title}>Welcome to GrabnBite</Text>
+          <Text style={[styles.title, { color: colors.accent }]}>Welcome to GrabnBite</Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Sign in to manage your account, orders and addresses.
           </Text>
 
@@ -38,21 +41,21 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Account</Text>
-          <Text style={styles.headerSubtitle}>
+        <View style={[styles.header, { backgroundColor: colors.header }]}>
+          <Text style={[styles.headerTitle, { color: colors.headerText }]}>My Account</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             Manage your GrabnBite account
           </Text>
         </View>
 
         {/* Profile */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
               {user.firstName?.charAt(0).toUpperCase() || "U"}
@@ -60,22 +63,22 @@ export default function AccountScreen() {
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>
+            <Text style={[styles.name, { color: colors.text }]}>
               {user.firstName} {user.lastName}
             </Text>
 
-            <Text style={styles.email}>{user.email}</Text>
+            <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
 
-            <Text style={styles.role}>Customer</Text>
+            <Text style={[styles.role, { color: colors.accent }]}>Customer</Text>
           </View>
         </View>
 
         {/* Account options */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My GrabnBite</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>My GrabnBite</Text>
 
           <Pressable
-            style={styles.option}
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/orders")}
           >
             <View style={styles.optionIcon}>
@@ -83,17 +86,17 @@ export default function AccountScreen() {
             </View>
 
             <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>My Orders</Text>
-              <Text style={styles.optionSubtitle}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>My Orders</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>
                 View your current and previous orders
               </Text>
             </View>
 
-            <Text style={styles.arrow}>›</Text>
+            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
           </Pressable>
 
           <Pressable
-            style={styles.option}
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
             onPress={() => router.push("/addresses")}
           >
             <View style={styles.optionIcon}>
@@ -101,18 +104,33 @@ export default function AccountScreen() {
             </View>
 
             <View style={styles.optionContent}>
-              <Text style={styles.optionTitle}>My Addresses</Text>
-              <Text style={styles.optionSubtitle}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>My Addresses</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>
                 Manage your delivery addresses
               </Text>
             </View>
 
+            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Preferences</Text>
+          <Pressable
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+            onPress={() => router.push("/settings")}
+          >
+            <View style={styles.optionIcon}><Text>{isDark ? "🌙" : "🎨"}</Text></View>
+            <View style={styles.optionContent}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>Settings</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>Change light and dark appearance</Text>
+            </View>
             <Text style={styles.arrow}>›</Text>
           </Pressable>
         </View>
 
         {/* Logout */}
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Pressable style={[styles.logoutButton, { backgroundColor: colors.accent }]} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
       </ScrollView>
@@ -125,7 +143,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
 
   content: {
@@ -167,7 +185,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#F97316",
+    backgroundColor: "#F47721",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -196,7 +214,7 @@ const styles = StyleSheet.create({
   },
 
   role: {
-    color: "#F97316",
+    color: "#F47721",
     fontSize: 12,
     fontWeight: "700",
     marginTop: 5,
@@ -229,7 +247,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 10,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "#FFF1E6",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,

@@ -17,6 +17,15 @@
 
         public int DeliveryAddressId { get; set; }
 
+        // Immutable snapshot captured at checkout; saved addresses may change later.
+        public string DeliveryAddressLabel { get; set; } = string.Empty;
+        public string DeliveryStreetAddress { get; set; } = string.Empty;
+        public string DeliveryCity { get; set; } = string.Empty;
+        public string DeliveryProvince { get; set; } = string.Empty;
+        public string DeliveryPostalCode { get; set; } = string.Empty;
+        public double DeliveryLatitude { get; set; }
+        public double DeliveryLongitude { get; set; }
+
         // Relationships
         public User User { get; set; } = null!;
 

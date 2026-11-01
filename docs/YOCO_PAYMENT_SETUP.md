@@ -30,8 +30,11 @@ Use the signing secret provided for that webhook as `Yoco__WebhookSecret`. The e
 
 - The app's authenticated confirmation request checks the checkout directly with Yoco.
 - The return screen must not display a confirmed-success state unless the API confirms `PAID`.
-- Payment simulation endpoints were removed so customers cannot mark an order paid through a test endpoint.
-- Retry is allowed only when the prior checkout is absent or Yoco confirms it failed/cancelled. Unknown or still-active checkouts are not replaced automatically to avoid duplicate charges.
+- The fake-payment simulator is available only in the ASP.NET Development environment and is not a real payment processor. It must never be enabled as a production payment path.
+- If a client retry follows a lost response, the API reuses the existing checkout and its secure redirect URL when available. It creates a replacement checkout only after Yoco confirms the prior checkout failed or was cancelled.
+- A retry records the detached checkout ID in the reconciliation event trail. If that old checkout later completes, the webhook can still resolve it, record the verified charge, and open an admin reconciliation item instead of silently ignoring it.
+- Restaurant acceptance is blocked while a payment has an unresolved reconciliation or refund state.
+- An administrator may resolve a delayed-checkout case without a refund only after the active retry is verified by Yoco as failed/cancelled and no multiple-completed-checkout event was recorded. Cases involving multiple completed checkouts must go through refund/reconciliation review.
 
 ## Required validation before merge/live payments
 

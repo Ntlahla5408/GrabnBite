@@ -104,7 +104,7 @@ namespace GrabnBite.Controllers
             var menuItem = new MenuItem
             {
                 Name = dto.Name.Trim(),
-                Description = dto.Description?.Trim(),
+                Description = dto.Description?.Trim() ?? string.Empty,
                 Price = dto.Price,
                 IsAvailable = dto.IsAvailable,
                 RestaurantId = restaurantId,
@@ -119,7 +119,7 @@ namespace GrabnBite.Controllers
             {
                 MenuItemId = menuItem.MenuItemId,
                 Name = menuItem.Name,
-                Description = menuItem.Description,
+                Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
                 RestaurantId = menuItem.RestaurantId,
@@ -177,7 +177,7 @@ namespace GrabnBite.Controllers
             {
                 MenuItemId = menuItem.MenuItemId,
                 Name = menuItem.Name,
-                Description = menuItem.Description,
+                Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
                 RestaurantId = menuItem.RestaurantId,
@@ -292,7 +292,7 @@ namespace GrabnBite.Controllers
             }
 
             menuItem.Name = dto.Name.Trim();
-            menuItem.Description = dto.Description?.Trim();
+            menuItem.Description = dto.Description?.Trim() ?? string.Empty;
             menuItem.Price = dto.Price;
             menuItem.IsAvailable = dto.IsAvailable;
 
@@ -302,7 +302,7 @@ namespace GrabnBite.Controllers
             {
                 MenuItemId = menuItem.MenuItemId,
                 Name = menuItem.Name,
-                Description = menuItem.Description,
+                Description = menuItem.Description ?? string.Empty,
                 Price = menuItem.Price,
                 IsAvailable = menuItem.IsAvailable,
                 RestaurantId = menuItem.RestaurantId,

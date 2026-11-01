@@ -1,4 +1,5 @@
-﻿using GrabnBite.Data;
+﻿using Npgsql;
+using GrabnBite.Data;
 using GrabnBite.DTOs.Checkout;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,12 @@ namespace GrabnBite.Controllers
             {
                 return BadRequest("Invalid delivery address ID.");
             }
+
+            // Prevent two concurrent checkout requests from creating two orders
+            // from the same cart. This transaction also keeps order creation and
+            // cart clearing atomic.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
             // --------------------------------------------------------
             // Find the authenticated customer's cart
@@ -154,10 +161,10 @@ namespace GrabnBite.Controllers
                         "Cart contains an invalid quantity.");
                 }
 
-                if (cartItem.UnitPrice < 0)
+                if (cartItem.MenuItem.Price < 0)
                 {
                     return BadRequest(
-                        "Cart contains an invalid item price.");
+                        "A menu item has an invalid price.");
                 }
             }
 
@@ -170,6 +177,17 @@ namespace GrabnBite.Controllers
                 UserId = userId.Value,
                 RestaurantId = cart.RestaurantId,
                 DeliveryAddressId = dto.DeliveryAddressId,
+                // Older address records may have a missing/blank label even though
+                // the Orders snapshot column is required by PostgreSQL.
+                DeliveryAddressLabel = string.IsNullOrWhiteSpace(address.Label)
+                    ? "Delivery address"
+                    : address.Label.Trim(),
+                DeliveryStreetAddress = address.StreetAddress,
+                DeliveryCity = address.City,
+                DeliveryProvince = address.Province,
+                DeliveryPostalCode = address.PostalCode,
+                DeliveryLatitude = address.Latitude,
+                DeliveryLongitude = address.Longitude,
                 Status = "PENDING",
                 OrderDate = DateTime.UtcNow
             };
@@ -181,7 +199,9 @@ namespace GrabnBite.Controllers
             order.StatusHistory.Add(new OrderStatusHistory
             {
                 Status = "PENDING",
-                ChangedAt = DateTime.UtcNow
+                ChangedAt = DateTime.UtcNow,
+                ChangedByUserId = userId.Value,
+                ChangedByRole = User.FindFirstValue(ClaimTypes.Role) ?? "Customer"
             });
 
             // --------------------------------------------------------
@@ -195,9 +215,11 @@ namespace GrabnBite.Controllers
                     MenuItemId = cartItem.MenuItemId,
                     ItemName = cartItem.MenuItem.Name,
                     Quantity = cartItem.Quantity,
-                    UnitPrice = cartItem.UnitPrice,
+                    // Use the current menu price at checkout, not a stale
+                    // cart price captured before a restaurant changed its menu.
+                    UnitPrice = cartItem.MenuItem.Price,
                     Subtotal =
-                        cartItem.UnitPrice * cartItem.Quantity
+                        cartItem.MenuItem.Price * cartItem.Quantity
                 };
 
                 order.OrderItems.Add(orderItem);
@@ -228,7 +250,20 @@ namespace GrabnBite.Controllers
 
             _context.CartItems.RemoveRange(cart.CartItems);
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex) when (
+                ex is DbUpdateException ||
+                ex.GetType().Name == "SerializationFailureException" ||
+                ex is PostgresException postgresException &&
+                    postgresException.SqlState == PostgresErrorCodes.SerializationFailure)
+            {
+                await transaction.RollbackAsync();
+                return Conflict("The cart changed while checkout was being processed. Refresh your cart before trying again.");
+            }
 
             // --------------------------------------------------------
             // Return result

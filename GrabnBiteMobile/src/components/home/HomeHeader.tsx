@@ -1,18 +1,21 @@
 import { router } from "expo-router";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 
 const logo = require("../../../assets/images/GrabnbiteLogo.jpg");
 
 export default function HomeHeader() {
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
         <Image source={logo} style={styles.logoImage} />
 
         <View>
-          <Text style={styles.logoText}>GrabnBite</Text>
+          <Text style={[styles.logoText, { color: colors.accent }]}>GrabnBite</Text>
 
-          <Text style={styles.tagline}>Your next meal starts here.</Text>
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
         </View>
       </View>
 
@@ -20,11 +23,12 @@ export default function HomeHeader() {
         <Pressable
           style={({ pressed }) => [
             styles.cartButton,
+            { backgroundColor: colors.surface, borderColor: colors.border },
             pressed && styles.buttonPressed,
           ]}
           onPress={() => router.push("/cart")}
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Text style={[styles.cartIcon, { color: colors.text }]}>🛒</Text>
         </Pressable>
 
         <Pressable
@@ -49,7 +53,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 12,
-    backgroundColor: "#071B2C",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -90,9 +93,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#0D2638",
     borderWidth: 1,
-    borderColor: "#18384D",
     justifyContent: "center",
     alignItems: "center",
   },

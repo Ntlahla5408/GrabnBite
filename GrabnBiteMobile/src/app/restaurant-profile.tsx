@@ -104,7 +104,7 @@ export default function RestaurantProfileScreen() {
           phoneNumber: phoneNumber.trim(),
           email: email.trim(),
           address: address.trim(),
-          imageUrl: imageUrl.trim() || null,
+          imageUrl: null,
           latitude: latitudeValue,
           longitude: longitudeValue,
         },
@@ -183,7 +183,7 @@ export default function RestaurantProfileScreen() {
         <Field label="Contact phone *" value={phoneNumber} onChangeText={setPhoneNumber} placeholder="Restaurant phone number" keyboardType="phone-pad" />
         <Field label="Contact email *" value={email} onChangeText={setEmail} placeholder="Restaurant email" keyboardType="email-address" />
         <Field label="Physical address *" value={address} onChangeText={setAddress} placeholder="Street address and area" multiline />
-        <Field label="Image URL (optional)" value={imageUrl} onChangeText={setImageUrl} placeholder="https://..." autoCapitalize="none" />
+        <Text style={styles.locationNote}>You can add your restaurant photo after creating your profile, from Edit restaurant profile.</Text>
         <Text style={styles.locationNote}>Location coordinates are optional. Leave them blank if you do not have them yet.</Text>
         <Field label="Latitude" value={latitude} onChangeText={setLatitude} placeholder="-33.9608" keyboardType="numeric" />
         <Field label="Longitude" value={longitude} onChangeText={setLongitude} placeholder="25.6022" keyboardType="numeric" />

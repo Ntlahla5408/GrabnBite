@@ -240,7 +240,7 @@ export default function RestaurantProfileEditScreen() {
         <View style={styles.notice}>
           <Text style={styles.noticeText}>{restaurant.isApproved ? "Your restaurant is approved." : "Your restaurant is awaiting administrator approval. Editing details does not approve it."}</Text>
         </View>
-        <Pressable style={[styles.button, saving && styles.disabled]} onPress={saveProfile} disabled={saving}>
+        <Pressable style={[styles.button, (saving || uploadingImage) && styles.disabled]} onPress={saveProfile} disabled={saving || uploadingImage}>
           {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save profile changes</Text>}
         </Pressable>
       </ScrollView>

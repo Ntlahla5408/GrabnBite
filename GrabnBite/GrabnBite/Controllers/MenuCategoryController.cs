@@ -172,6 +172,48 @@ namespace GrabnBite.Controllers
                 return BadRequest("Category name is required.");
             }
 
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
+            }
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurant = await _context.Restaurants
+                .FirstOrDefaultAsync(r => r.RestaurantId == restaurantId);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                restaurant.UserId != currentUserId.Value)
+            {
+                return Forbid();
+            }
+
             var category = await _context.MenuCategories
                 .FirstOrDefaultAsync(c =>
                     c.MenuCategoryId == id &&

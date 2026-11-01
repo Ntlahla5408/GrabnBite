@@ -1,13 +1,10 @@
 using GrabnBite.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace GrabnBite.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261101090000_AddCloudinaryImageReferences")]
     public partial class AddCloudinaryImageReferences : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

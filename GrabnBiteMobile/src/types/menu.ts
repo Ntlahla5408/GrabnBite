@@ -4,6 +4,7 @@ export interface MenuItem {
   description: string;
   price: number;
   isAvailable: boolean;
+  imageUrl: string | null;
   restaurantId: number;
   menuCategoryId: number;
 }

@@ -1,8 +1,10 @@
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +15,12 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
-import { getMyRestaurant, updateMyRestaurant } from "../services/restaurantService";
+import {
+  deleteRestaurantImage,
+  getMyRestaurant,
+  updateMyRestaurant,
+  uploadRestaurantImage,
+} from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 
 export default function RestaurantProfileEditScreen() {
@@ -30,6 +37,7 @@ export default function RestaurantProfileEditScreen() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
 
   const loadProfile = useCallback(async () => {
@@ -65,6 +73,70 @@ export default function RestaurantProfileEditScreen() {
     }
   }, [authLoading, token, user?.role, loadProfile]);
 
+  async function chooseRestaurantImage() {
+    if (!token || !restaurant) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Allow photo library access to choose a restaurant picture.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (result.canceled || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    try {
+      setUploadingImage(true);
+      const updated = await uploadRestaurantImage(
+        restaurant.restaurantId,
+        {
+          uri: asset.uri,
+          name: asset.fileName ?? `restaurant-${restaurant.restaurantId}.jpg`,
+          type: asset.mimeType ?? "image/jpeg",
+        },
+        token,
+      );
+      setRestaurant(updated);
+      setImageUrl(updated.imageUrl ?? "");
+      Alert.alert("Photo uploaded", "Your restaurant picture has been updated.");
+    } catch (err: any) {
+      Alert.alert("Upload failed", err?.message || "Unable to upload the restaurant picture.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function removeRestaurantImage() {
+    if (!token || !restaurant || !imageUrl) return;
+
+    Alert.alert("Remove restaurant photo", "Are you sure you want to remove this picture?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setUploadingImage(true);
+            const updated = await deleteRestaurantImage(restaurant.restaurantId, token);
+            setRestaurant(updated);
+            setImageUrl("");
+          } catch (err: any) {
+            Alert.alert("Unable to remove photo", err?.message || "Please try again.");
+          } finally {
+            setUploadingImage(false);
+          }
+        },
+      },
+    ]);
+  }
+
   async function saveProfile() {
     if (!token || !restaurant) return;
 
@@ -95,7 +167,7 @@ export default function RestaurantProfileEditScreen() {
           phoneNumber: phoneNumber.trim(),
           email: email.trim(),
           address: address.trim(),
-          imageUrl: imageUrl.trim() || null,
+          imageUrl: restaurant.imageUrl,
           latitude: latitudeValue,
           longitude: longitudeValue,
           isOpen,
@@ -133,8 +205,29 @@ export default function RestaurantProfileEditScreen() {
         <Field label="Phone number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
         <Field label="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" />
         <Field label="Address *" value={address} onChangeText={setAddress} multiline />
-        <Field label="Restaurant image URL" value={imageUrl} onChangeText={setImageUrl} autoCapitalize="none" placeholder="https://..." />
-        <Text style={styles.helper}>Image URL is the existing supported method. Actual photo selection and upload will be added as a separate storage step.</Text>
+        <View style={styles.imageSection}>
+          <Text style={styles.label}>Restaurant photo</Text>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.restaurantImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.imagePlaceholderText}>No restaurant photo selected</Text>
+            </View>
+          )}
+          <Pressable
+            style={[styles.button, uploadingImage && styles.disabled]}
+            onPress={chooseRestaurantImage}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>{imageUrl ? "Change restaurant photo" : "Choose restaurant photo"}</Text>}
+          </Pressable>
+          {imageUrl ? (
+            <Pressable style={styles.removeImageButton} onPress={removeRestaurantImage} disabled={uploadingImage}>
+              <Text style={styles.removeImageText}>Remove photo</Text>
+            </Pressable>
+          ) : null}
+          <Text style={styles.helper}>JPEG, PNG or WebP. Maximum file size: 5 MB.</Text>
+        </View>
         <Field label="Latitude" value={latitude} onChangeText={setLatitude} keyboardType="numeric" />
         <Field label="Longitude" value={longitude} onChangeText={setLongitude} keyboardType="numeric" />
         <View style={styles.openRow}>
@@ -190,6 +283,12 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 10, backgroundColor: "#FFFFFF", paddingHorizontal: 14, color: "#071B2C", fontSize: 15 },
   multiline: { minHeight: 86, paddingTop: 12 },
   helper: { color: "#64748B", fontSize: 12, lineHeight: 18, marginTop: 4, marginBottom: 12 },
+  imageSection: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 15, marginBottom: 16 },
+  restaurantImage: { width: "100%", height: 190, borderRadius: 10, backgroundColor: "#E2E8F0" },
+  imagePlaceholder: { width: "100%", height: 150, borderRadius: 10, backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" },
+  imagePlaceholderText: { color: "#64748B", fontSize: 13 },
+  removeImageButton: { alignItems: "center", paddingVertical: 12 },
+  removeImageText: { color: "#B91C1C", fontWeight: "700" },
   openRow: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 15, flexDirection: "row", alignItems: "center", marginVertical: 8 },
   notice: { backgroundColor: "#FFF7ED", borderColor: "#FED7AA", borderWidth: 1, borderRadius: 10, padding: 14, marginVertical: 14 },
   noticeText: { color: "#9A3412", fontSize: 13, lineHeight: 19 },

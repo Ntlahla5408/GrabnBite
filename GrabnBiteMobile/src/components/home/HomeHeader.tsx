@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 import { useAuth } from "../../context/authContext";
 
-const logo = require("../../../assets/images/GrabnbiteLogo.jpg");
+const logo = require("../../../assets/images/inside-icon.png");
 
 export default function HomeHeader() {
   const { theme } = useThemePreference();
@@ -12,7 +12,7 @@ export default function HomeHeader() {
   return (
     <View style={[styles.container, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
-        <Image source={logo} style={styles.logoImage} />
+        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
 
         <View>
           <Text style={[styles.logoText, { color: colors.accent }]}>GrabnBite</Text>
@@ -71,8 +71,8 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 48,
     height: 48,
-    borderRadius: 12,
     marginRight: 10,
+    backgroundColor: "transparent",
   },
 
   logoText: {

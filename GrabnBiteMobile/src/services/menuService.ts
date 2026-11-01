@@ -6,6 +6,7 @@ export interface MenuItem {
   description: string;
   price: number;
   isAvailable: boolean;
+  imageUrl: string | null;
   restaurantId: number;
   menuCategoryId: number;
 }
@@ -129,6 +130,38 @@ export async function deleteMenuCategory(
 ): Promise<void> {
   return apiRequest(
     `/api/MenuCategory/restaurant/${restaurantId}/${categoryId}`,
+    { method: "DELETE" },
+    token,
+  );
+}
+
+export async function uploadMenuItemImage(
+  restaurantId: number,
+  menuItemId: number,
+  asset: { uri: string; name: string; type: string },
+  token: string,
+): Promise<MenuItem> {
+  const formData = new FormData();
+  formData.append("image", {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.type,
+  } as any);
+
+  return apiRequest(
+    `/api/MenuItem/restaurant/${restaurantId}/${menuItemId}/image`,
+    { method: "POST", body: formData },
+    token,
+  );
+}
+
+export async function deleteMenuItemImage(
+  restaurantId: number,
+  menuItemId: number,
+  token: string,
+): Promise<MenuItem> {
+  return apiRequest(
+    `/api/MenuItem/restaurant/${restaurantId}/${menuItemId}/image`,
     { method: "DELETE" },
     token,
   );

@@ -39,6 +39,8 @@ export default function RestaurantProfileEditScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
+  const [imageUploadMessage, setImageUploadMessage] = useState("");
+  const [imageUploadError, setImageUploadError] = useState("");
 
   const loadProfile = useCallback(async () => {
     if (!token) return;
@@ -93,6 +95,8 @@ export default function RestaurantProfileEditScreen() {
 
     const asset = result.assets[0];
     try {
+      setImageUploadMessage("");
+      setImageUploadError("");
       setUploadingImage(true);
       const updated = await uploadRestaurantImage(
         restaurant.restaurantId,
@@ -105,9 +109,9 @@ export default function RestaurantProfileEditScreen() {
       );
       setRestaurant(updated);
       setImageUrl(updated.imageUrl ?? "");
-      Alert.alert("Photo uploaded", "Your restaurant picture has been updated.");
+      setImageUploadMessage("Restaurant photo uploaded successfully.");
     } catch (err: any) {
-      Alert.alert("Upload failed", err?.message || "Unable to upload the restaurant picture.");
+      setImageUploadError(err?.message || "Unable to upload the restaurant picture.");
     } finally {
       setUploadingImage(false);
     }
@@ -226,6 +230,8 @@ export default function RestaurantProfileEditScreen() {
               <Text style={styles.removeImageText}>Remove photo</Text>
             </Pressable>
           ) : null}
+          {imageUploadMessage ? <Text style={styles.imageSuccess}>{imageUploadMessage}</Text> : null}
+          {imageUploadError ? <Text style={styles.imageError}>{imageUploadError}</Text> : null}
           <Text style={styles.helper}>JPEG, PNG or WebP. Maximum file size: 5 MB.</Text>
         </View>
         <Field label="Latitude" value={latitude} onChangeText={setLatitude} keyboardType="numeric" />
@@ -289,6 +295,8 @@ const styles = StyleSheet.create({
   imagePlaceholderText: { color: "#64748B", fontSize: 13 },
   removeImageButton: { alignItems: "center", paddingVertical: 12 },
   removeImageText: { color: "#B91C1C", fontWeight: "700" },
+  imageSuccess: { color: "#166534", fontSize: 13, marginTop: 8 },
+  imageError: { color: "#B91C1C", fontSize: 13, lineHeight: 18, marginTop: 8 },
   openRow: { backgroundColor: "#FFFFFF", borderRadius: 12, padding: 15, flexDirection: "row", alignItems: "center", marginVertical: 8 },
   notice: { backgroundColor: "#FFF7ED", borderColor: "#FED7AA", borderWidth: 1, borderRadius: 10, padding: 14, marginVertical: 14 },
   noticeText: { color: "#9A3412", fontSize: 13, lineHeight: 19 },

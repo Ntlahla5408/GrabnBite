@@ -13,6 +13,7 @@ namespace GrabnBite.Services
         Task<CloudinaryUploadResult> UploadImageAsync(
             Stream imageStream,
             string fileName,
+            string contentType,
             string folder,
             CancellationToken cancellationToken = default);
 
@@ -59,7 +60,7 @@ namespace GrabnBite.Services
             using var fileContent = new StreamContent(imageStream);
 
             fileContent.Headers.ContentType =
-                new MediaTypeHeaderValue("application/octet-stream");
+                new MediaTypeHeaderValue(contentType);
 
             content.Add(fileContent, "file", Path.GetFileName(fileName));
             content.Add(new StringContent(_settings.ApiKey), "api_key");

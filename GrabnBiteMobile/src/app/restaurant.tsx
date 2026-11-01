@@ -257,6 +257,9 @@ export default function RestaurantScreen() {
 
               {categoryItems.map((item) => (
                 <View key={item.menuItemId} style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.menuItemImage} resizeMode="cover" />
+                  ) : null}
                   <View style={styles.menuInfo}>
                     <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
                       {item.name}
@@ -551,6 +554,14 @@ const styles = StyleSheet.create({
     borderColor: "#18384D",
     flexDirection: "row",
     alignItems: "center",
+  },
+
+  menuItemImage: {
+    width: 82,
+    height: 82,
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+    marginRight: 13,
   },
 
   menuInfo: {

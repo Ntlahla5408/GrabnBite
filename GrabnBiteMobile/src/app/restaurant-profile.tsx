@@ -26,7 +26,6 @@ export default function RestaurantProfileScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState(user?.email ?? "");
   const [address, setAddress] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
 

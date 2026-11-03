@@ -19,6 +19,7 @@ export default function PolicyReaderScreen() {
   const policyId = typeof id === "string" ? Number(id) : Number.NaN;
   const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPdfLoading, setIsPdfLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -35,6 +36,7 @@ export default function PolicyReaderScreen() {
 
       setIsLoading(true);
       setLoadError(null);
+      setIsPdfLoading(true);
 
       try {
         const data = await apiRequest(`/api/Policies/${policyId}`);
@@ -90,9 +92,15 @@ export default function PolicyReaderScreen() {
             title={policy.title}
             src={policy.fileUrl}
             style={styles.pdfFrame}
-            onLoad={() => setIsLoading(false)}
+            onLoad={() => setIsPdfLoading(false)}
             onError={() => setLoadError("Your browser could not load this PDF. Please try again later.")}
           />
+          {isPdfLoading ? (
+            <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={[styles.messageText, { color: colors.textSecondary }]}>Opening PDF…</Text>
+            </View>
+          ) : null}
         </View>
       )}
     </View>
@@ -109,6 +117,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1, minHeight: 0, position: "relative", backgroundColor: "#E8EDF2" },
   pdfFrame: { border: 0, width: "100%", height: "100%", minHeight: "70vh", backgroundColor: "#E8EDF2" },
+  loadingOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", zIndex: 1 },
   message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
   messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8 },

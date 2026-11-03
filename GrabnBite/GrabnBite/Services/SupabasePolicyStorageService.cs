@@ -16,6 +16,8 @@ namespace GrabnBite.Services
         Task DeleteAsync(
             string storagePath,
             CancellationToken cancellationToken = default);
+
+        string GetPublicUrl(string storagePath);
     }
 
     public sealed record PolicyStorageUploadResult(string StoragePath, string PublicUrl);
@@ -40,9 +42,7 @@ namespace GrabnBite.Services
         {
             ValidateConfiguration();
 
-            var encodedPath = EncodeStoragePath(storagePath);
-            var endpoint = $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/{Uri.EscapeDataString(_settings.BucketName)}/{encodedPath}";
-
+            var endpoint = $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/{Uri.EscapeDataString(_settings.BucketName)}/{EncodeStoragePath(storagePath)}";
             using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
             AddServiceHeaders(request);
             request.Headers.TryAddWithoutValidation("x-upsert", "false");
@@ -60,8 +60,7 @@ namespace GrabnBite.Services
                     $"Supabase PDF upload failed with HTTP {(int)response.StatusCode}.");
             }
 
-            var publicUrl = $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/public/{Uri.EscapeDataString(_settings.BucketName)}/{encodedPath}";
-            return new PolicyStorageUploadResult(storagePath, publicUrl);
+            return new PolicyStorageUploadResult(storagePath, GetPublicUrl(storagePath));
         }
 
         public async Task DeleteAsync(
@@ -81,12 +80,17 @@ namespace GrabnBite.Services
                 "application/json");
 
             using var response = await _httpClient.SendAsync(request, cancellationToken);
-
             if (!response.IsSuccessStatusCode)
             {
                 throw new InvalidOperationException(
                     $"Supabase PDF deletion failed with HTTP {(int)response.StatusCode}.");
             }
+        }
+
+        public string GetPublicUrl(string storagePath)
+        {
+            ValidateConfiguration();
+            return $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/public/{Uri.EscapeDataString(_settings.BucketName)}/{EncodeStoragePath(storagePath)}";
         }
 
         private void AddServiceHeaders(HttpRequestMessage request)

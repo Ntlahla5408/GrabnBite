@@ -140,7 +140,7 @@ namespace GrabnBite.Controllers
             }
             catch
             {
-                await TryDeleteStorageObjectAsync(upload.StoragePath, cancellationToken);
+                await TryDeleteStorageObjectAsync(storagePath, cancellationToken);
                 throw;
             }
 
@@ -315,7 +315,7 @@ namespace GrabnBite.Controllers
                 PolicyDocumentId = policy.PolicyDocumentId,
                 Title = policy.Title,
                 Description = policy.Description,
-                FileUrl = _storage.GetPublicUrl(policy.StoragePath),
+                FileUrl = string.Empty,
                 OriginalFileName = policy.OriginalFileName,
                 Status = policy.Status,
                 EffectiveDate = policy.EffectiveDate,

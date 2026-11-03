@@ -1,13 +1,10 @@
 using GrabnBite.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace GrabnBite.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261103210000_AddPolicyDocuments")]
     public partial class AddPolicyDocuments : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

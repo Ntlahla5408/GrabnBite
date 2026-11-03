@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
@@ -91,7 +92,7 @@ export default function PolicyReaderScreen() {
             key={`${policy.policyDocumentId}-${policy.version}-${reloadKey}`}
             title={policy.title}
             src={policy.fileUrl}
-            style={styles.pdfFrame}
+            style={pdfFrameStyle}
             onLoad={() => setIsPdfLoading(false)}
             onError={() => setLoadError("Your browser could not load this PDF. Please try again later.")}
           />
@@ -107,8 +108,16 @@ export default function PolicyReaderScreen() {
   );
 }
 
+const pdfFrameStyle: CSSProperties = {
+  border: 0,
+  width: "100%",
+  height: "100%",
+  minHeight: "70vh",
+  backgroundColor: "#E8EDF2",
+};
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, minHeight: "100vh" },
+  screen: { flex: 1 },
   header: { minHeight: 76, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", alignItems: "center", borderBottomWidth: 1 },
   backButton: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF1E6", marginRight: 10 },
   backText: { fontSize: 34, lineHeight: 38, marginTop: -4 },
@@ -116,7 +125,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 15, fontWeight: "800" },
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1, minHeight: 0, position: "relative", backgroundColor: "#E8EDF2" },
-  pdfFrame: { border: 0, width: "100%", height: "100%", minHeight: "70vh", backgroundColor: "#E8EDF2" },
   loadingOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", zIndex: 1 },
   message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },

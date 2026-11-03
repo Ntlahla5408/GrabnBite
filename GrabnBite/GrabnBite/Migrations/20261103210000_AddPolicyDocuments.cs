@@ -39,6 +39,10 @@ namespace GrabnBite.Migrations
                 name: "IX_PolicyDocuments_IsArchived_Status",
                 table: "PolicyDocuments",
                 columns: new[] { "IsArchived", "Status" });
+
+            // The table is not intended to be queried directly through the Supabase Data API.
+            // The ASP.NET Core backend accesses it using its database connection.
+            migrationBuilder.Sql("ALTER TABLE \"PolicyDocuments\" ENABLE ROW LEVEL SECURITY;");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

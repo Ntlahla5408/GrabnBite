@@ -27,12 +27,23 @@
 
         public bool IsApproved { get; set; } = false;
 
+        // Existing restaurants remain active by default; new onboarding flow
+        // must explicitly activate an approved restaurant.
+        public bool IsActive { get; set; } = true;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Restaurant account owner
         public int UserId { get; set; }
 
         public User User { get; set; } = null!;
+
+        // Nullable for restaurants created before the partner application workflow.
+        public int? RestaurantApplicationId { get; set; }
+
+        public RestaurantApplication? RestaurantApplication { get; set; }
+
+        public RestaurantCommissionSetting? CommissionSettings { get; set; }
 
         // Relationships
         public ICollection<MenuCategory> MenuCategories { get; set; }

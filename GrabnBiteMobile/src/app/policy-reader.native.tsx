@@ -20,6 +20,7 @@ export default function PolicyReaderScreen() {
   const policyId = typeof id === "string" ? Number(id) : Number.NaN;
   const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPdfLoading, setIsPdfLoading] = useState(true);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -38,6 +39,7 @@ export default function PolicyReaderScreen() {
       setIsLoading(true);
       setLoadError(null);
       setPageCount(null);
+      setIsPdfLoading(true);
 
       try {
         const data = await apiRequest(`/api/Policies/${policyId}`);
@@ -93,13 +95,22 @@ export default function PolicyReaderScreen() {
             source={{ uri: policy.fileUrl }}
             style={styles.viewer}
             fitPolicy="width"
-            onLoad={({ pageCount: loadedPages }) => setPageCount(loadedPages)}
+            onLoad={({ pageCount: loadedPages }) => {
+              setPageCount(loadedPages);
+              setIsPdfLoading(false);
+            }}
             onError={(error) => {
               if (error.page === undefined) {
                 setLoadError(error.message);
               }
             }}
           />
+          {isPdfLoading ? (
+            <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={[styles.messageText, { color: colors.textSecondary }]}>Opening PDF…</Text>
+            </View>
+          ) : null}
         </View>
       )}
     </View>
@@ -116,6 +127,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1 },
   viewer: { flex: 1, backgroundColor: "#E8EDF2" },
+  loadingOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
   message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
   messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8 },

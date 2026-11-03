@@ -248,7 +248,7 @@ namespace GrabnBite.Data
                 .HasOne(a => a.RestaurantApplication)
                 .WithMany(r => r.AgreementAcceptances)
                 .HasForeignKey(a => a.RestaurantApplicationId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
                 .HasOne(d => d.RestaurantAgreementAcceptance)
@@ -286,7 +286,7 @@ namespace GrabnBite.Data
                 .HasOne(h => h.RestaurantApplication)
                 .WithMany(a => a.History)
                 .HasForeignKey(h => h.RestaurantApplicationId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<RestaurantApplicationHistory>()
                 .HasOne(h => h.PerformedByUser)

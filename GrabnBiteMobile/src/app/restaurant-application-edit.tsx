@@ -131,7 +131,7 @@ export default function RestaurantApplicationEditScreen() {
     };
   }, [applicationId, authLoading, token, user?.role]);
 
-  const update = <K extends keyof DraftForm>(key: K, value: DraftForm[K]) => {
+  const update = <K extends keyof DraftForm,>(key: K, value: DraftForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 

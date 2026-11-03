@@ -47,89 +47,15 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Restaurant")]
         [HttpPost]
-        public async Task<IActionResult> CreateRestaurant(
-            CreateRestaurantDto dto)
+        [Obsolete("Restaurant profiles are created only after an application is approved.")]
+        public IActionResult CreateRestaurant(CreateRestaurantDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.Name))
+            // Do not allow the legacy endpoint to bypass partner verification.
+            // A RestaurantApplication is created during account registration.
+            return Conflict(new
             {
-                return BadRequest("Restaurant name is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
-            {
-                return BadRequest("Phone number is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.Email))
-            {
-                return BadRequest("Email is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.Address))
-            {
-                return BadRequest("Address is required.");
-            }
-
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            // Prevent one user account from creating multiple restaurants
-            var existingRestaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
-
-            if (existingRestaurant != null)
-            {
-                return BadRequest(
-                    "This account already has a restaurant.");
-            }
-
-            var restaurant = new Restaurant
-            {
-                Name = dto.Name.Trim(),
-                Description = dto.Description?.Trim() ?? string.Empty,
-                PhoneNumber = dto.PhoneNumber.Trim(),
-                Email = dto.Email.Trim(),
-                Address = dto.Address.Trim(),
-                ImageUrl = dto.ImageUrl?.Trim(),
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
-
-                // Taken from JWT, NOT from frontend
-                UserId = userId.Value,
-
-                IsOpen = false,
-                IsApproved = false,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Restaurants.Add(restaurant);
-
-            await _context.SaveChangesAsync();
-
-            var response = new RestaurantResponseDto
-            {
-                RestaurantId = restaurant.RestaurantId,
-                Name = restaurant.Name,
-                Description = restaurant.Description ?? string.Empty,
-                PhoneNumber = restaurant.PhoneNumber,
-                Email = restaurant.Email,
-                Address = restaurant.Address,
-                ImageUrl = restaurant.ImageUrl,
-                Latitude = restaurant.Latitude,
-                Longitude = restaurant.Longitude,
-                IsOpen = restaurant.IsOpen,
-                IsApproved = restaurant.IsApproved,
-                CreatedAt = restaurant.CreatedAt
-            };
-
-            return CreatedAtAction(
-                nameof(GetRestaurant),
-                new { id = restaurant.RestaurantId },
-                response);
+                message = "Direct restaurant creation is disabled. Complete your restaurant partner application and wait for approval."
+            });
         }
 
         // =========================================================
@@ -142,6 +68,7 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetRestaurants()
         {
             var restaurants = await _context.Restaurants
+                .Where(r => r.IsApproved && r.IsActive)
                 .ToListAsync();
 
             var response = restaurants
@@ -168,7 +95,9 @@ namespace GrabnBite.Controllers
 
             var restaurant = await _context.Restaurants
                 .FirstOrDefaultAsync(r =>
-                    r.RestaurantId == id);
+                    r.RestaurantId == id &&
+                    r.IsApproved &&
+                    r.IsActive);
 
             if (restaurant == null)
             {
@@ -584,6 +513,45 @@ namespace GrabnBite.Controllers
         // Restaurant only
         // =========================================================
         [Authorize(Roles = "Restaurant")]
+        [HttpGet("my-restaurants")]
+        public async Task<IActionResult> GetMyRestaurants()
+        {
+            var userId = GetCurrentUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var restaurants = await _context.Restaurants
+                .Where(r => r.UserId == userId.Value)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new
+                {
+                    restaurantId = r.RestaurantId,
+                    name = r.Name,
+                    description = r.Description,
+                    phoneNumber = r.PhoneNumber,
+                    email = r.Email,
+                    address = r.Address,
+                    imageUrl = r.ImageUrl,
+                    latitude = r.Latitude,
+                    longitude = r.Longitude,
+                    isOpen = r.IsOpen,
+                    isApproved = r.IsApproved,
+                    isActive = r.IsActive,
+                    restaurantApplicationId = r.RestaurantApplicationId,
+                    createdAt = r.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(restaurants);
+        }
+
+        // Backwards-compatible endpoint for clients that still expect one profile.
+        // It returns a conflict when an account owns multiple restaurants so that
+        // the client cannot silently select an arbitrary profile.
+        [Authorize(Roles = "Restaurant")]
         [HttpGet("my-restaurant")]
         public async Task<IActionResult> GetMyRestaurant()
         {
@@ -594,29 +562,27 @@ namespace GrabnBite.Controllers
                 return Unauthorized();
             }
 
-            var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
+            var restaurants = await _context.Restaurants
+                .Where(r => r.UserId == userId.Value)
+                .OrderByDescending(r => r.CreatedAt)
+                .Take(2)
+                .ToListAsync();
 
-            if (restaurant == null)
+            if (restaurants.Count == 0)
             {
-                return NotFound("No restaurant profile found for this account.");
+                return NotFound("No operational restaurant profile found for this account. Complete a partner application first.");
             }
 
-            return Ok(new
+            if (restaurants.Count > 1)
             {
-                restaurantId = restaurant.RestaurantId,
-                name = restaurant.Name,
-                description = restaurant.Description,
-                phoneNumber = restaurant.PhoneNumber,
-                email = restaurant.Email,
-                address = restaurant.Address,
-                imageUrl = restaurant.ImageUrl,
-                latitude = restaurant.Latitude,
-                longitude = restaurant.Longitude,
-                isOpen = restaurant.IsOpen,
-                isApproved = restaurant.IsApproved,
-                createdAt = restaurant.CreatedAt
-            });
+                return Conflict(new
+                {
+                    message = "This account has multiple restaurant profiles. Use GET api/Restaurant/my-restaurants and select a restaurant.",
+                    profilesEndpoint = "/api/Restaurant/my-restaurants"
+                });
+            }
+
+            return Ok(MapRestaurantToResponse(restaurants[0]));
         }
     }
 }

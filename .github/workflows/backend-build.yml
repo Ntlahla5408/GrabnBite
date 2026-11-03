@@ -1,16 +1,17 @@
-name: Backend build
+name: Backend and mobile validation
 
 on:
   push:
     branches:
       - main
       - fix/core-order-flow-theme
+      - feature/add-policy-documents
   pull_request:
     branches:
       - main
 
 jobs:
-  build:
+  backend-build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -26,3 +27,28 @@ jobs:
 
       - name: Build backend
         run: dotnet build GrabnBite/GrabnBite/GrabnBite.csproj --configuration Release --no-restore
+
+  mobile-validation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: GrabnBiteMobile
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: GrabnBiteMobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Run mobile lint
+        run: npm run lint
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit

@@ -1,52 +1,61 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { apiRequest } from "../services/api";
 
-const policyDocuments: Record<string, { title: string; source: number }> = {
-  terms: {
-    title: "Terms and Conditions of Use",
-    source: require("../../assets/policies/GrubnBite_Terms_and_Conditions_of_Use.pdf"),
-  },
-  cancellation: {
-    title: "Cancellation Policy",
-    source: require("../../assets/policies/GrubnBite_Cancellation_Policy.pdf"),
-  },
-  complaints: {
-    title: "Customer Complaints and Dispute Resolution",
-    source: require("../../assets/policies/GrubnBite_Customer_Complaints_and_Dispute_Resolution_Policy.pdf"),
-  },
-  "food-delivery": {
-    title: "Food Ordering and Delivery Policy",
-    source: require("../../assets/policies/GrubnBite_Food_Ordering_and_Delivery_Policy.pdf"),
-  },
-  payment: {
-    title: "Payment Policy",
-    source: require("../../assets/policies/GrubnBite_Payment_Policy.pdf"),
-  },
-  account: {
-    title: "Account Suspension and Termination Policy",
-    source: require("../../assets/policies/GrubnBite_Account_Suspension_and_Termination_Policy.pdf"),
-  },
-};
+interface PolicyDocument {
+  policyDocumentId: number;
+  title: string;
+  description: string;
+  fileUrl: string;
+  version: number;
+}
 
 export default function PolicyReaderScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const policyId = typeof id === "string" ? Number(id) : Number.NaN;
+  const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const policy = typeof id === "string" ? policyDocuments[id] : undefined;
-  const pdfUri = policy ? Image.resolveAssetSource(policy.source)?.uri : undefined;
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadPolicy() {
+      if (!Number.isInteger(policyId) || policyId <= 0) {
+        setPolicy(null);
+        setLoadError("A valid policy document was not selected.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setLoadError(null);
+
+      try {
+        const data = await apiRequest(`/api/Policies/${policyId}`);
+        if (isActive) {
+          setPolicy(data);
+        }
+      } catch (error) {
+        if (isActive) {
+          setPolicy(null);
+          setLoadError(error instanceof Error ? error.message : "Unable to load this policy document.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadPolicy();
+    return () => { isActive = false; };
+  }, [policyId, reloadKey]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -61,34 +70,28 @@ export default function PolicyReaderScreen() {
         </View>
       </View>
 
-      {!policy ? (
+      {isLoading ? (
         <View style={styles.message}>
-          <Text style={[styles.messageTitle, { color: colors.text }]}>Document not found</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>Return to Legal and Policies and select a document from the list.</Text>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>Loading policy document…</Text>
         </View>
-      ) : !pdfUri || loadError ? (
+      ) : loadError || !policy ? (
         <View style={styles.message}>
           <Text style={[styles.messageTitle, { color: colors.text }]}>Unable to open this document</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{loadError ?? "The PDF file could not be located in the web build."}</Text>
-          <Pressable onPress={() => { setLoadError(null); setIsLoading(true); setReloadKey((current) => current + 1); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{loadError ?? "Document not found."}</Text>
+          <Pressable onPress={() => setReloadKey((current) => current + 1)} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </View>
       ) : (
         <View style={styles.viewerContainer}>
-          {isLoading ? (
-            <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
-              <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Opening document…</Text>
-            </View>
-          ) : null}
           <iframe
-            key={reloadKey}
+            key={`${policy.policyDocumentId}-${policy.version}-${reloadKey}`}
             title={policy.title}
-            src={pdfUri}
+            src={policy.fileUrl}
             style={styles.pdfFrame}
-            onLoad={() => { setIsLoading(false); setLoadError(null); }}
-            onError={() => { setIsLoading(false); setLoadError("Your browser could not load this PDF. Try opening it in a new browser tab."); }}
+            onLoad={() => setIsLoading(false)}
+            onError={() => setLoadError("Your browser could not load this PDF. Please try again later.")}
           />
         </View>
       )}
@@ -106,8 +109,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1, minHeight: 0, position: "relative", backgroundColor: "#E8EDF2" },
   pdfFrame: { border: 0, width: "100%", height: "100%", minHeight: "70vh", backgroundColor: "#E8EDF2" },
-  loadingOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", zIndex: 1 },
-  loadingText: { fontSize: 12, marginTop: 10 },
   message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
   messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8 },

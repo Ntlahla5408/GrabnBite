@@ -41,6 +41,12 @@ type DraftForm = {
   maximumDeliveryDistanceKm: string;
   deliveryInstructions: string;
   commissionOfferAccepted: boolean | null;
+  operatingHours: {
+    dayOfWeek: string;
+    isOpen: boolean;
+    openingTime: string | null;
+    closingTime: string | null;
+  }[];
 };
 
 const emptyForm: DraftForm = {
@@ -65,6 +71,14 @@ const emptyForm: DraftForm = {
   maximumDeliveryDistanceKm: "",
   deliveryInstructions: "",
   commissionOfferAccepted: null,
+  operatingHours: [
+    "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+  ].map((dayOfWeek) => ({
+    dayOfWeek,
+    isOpen: false,
+    openingTime: null,
+    closingTime: null,
+  })),
 };
 
 export default function RestaurantApplicationEditScreen() {
@@ -117,6 +131,17 @@ export default function RestaurantApplicationEditScreen() {
           maximumDeliveryDistanceKm: result.maximumDeliveryDistanceKm?.toString() ?? "",
           deliveryInstructions: result.deliveryInstructions ?? "",
           commissionOfferAccepted: result.commissionOfferAccepted,
+          operatingHours: [
+            "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+          ].map((dayOfWeek) => {
+            const saved = result.operatingHours.find((hour) => hour.dayOfWeek === dayOfWeek);
+            return {
+              dayOfWeek,
+              isOpen: saved?.isOpen ?? false,
+              openingTime: saved?.openingTime ?? null,
+              closingTime: saved?.closingTime ?? null,
+            };
+          }),
         });
       })
       .catch((requestError: any) => {
@@ -177,7 +202,7 @@ export default function RestaurantApplicationEditScreen() {
       maximumDeliveryDistanceKm: deliveryDistance,
       deliveryInstructions: form.deliveryInstructions,
       commissionOfferAccepted: form.commissionOfferAccepted,
-      operatingHours: application.operatingHours,
+      operatingHours: form.operatingHours,
     };
 
     try {
@@ -251,6 +276,62 @@ export default function RestaurantApplicationEditScreen() {
         <Field label="Average preparation time (minutes)" value={form.averagePreparationTimeMinutes} onChangeText={(value) => update("averagePreparationTimeMinutes", value)} keyboardType="numeric" />
         <Field label="Maximum delivery distance (km)" value={form.maximumDeliveryDistanceKm} onChangeText={(value) => update("maximumDeliveryDistanceKm", value)} keyboardType="decimal-pad" />
         <Field label="Delivery instructions" value={form.deliveryInstructions} onChangeText={(value) => update("deliveryInstructions", value)} multiline />
+
+        <Text style={styles.sectionTitle}>Operating hours</Text>
+        <Text style={styles.helper}>
+          Set the days and times when customers can order from your restaurant.
+        </Text>
+        {form.operatingHours.map((hour, index) => (
+          <View key={hour.dayOfWeek} style={styles.hoursRow}>
+            <Toggle
+              label={hour.dayOfWeek}
+              value={hour.isOpen}
+              onChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  operatingHours: current.operatingHours.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, isOpen: value } : item,
+                  ),
+                }))
+              }
+            />
+            {hour.isOpen ? (
+              <View style={styles.timeFields}>
+                <TextInput
+                  value={hour.openingTime ?? ""}
+                  onChangeText={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      operatingHours: current.operatingHours.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, openingTime: value } : item,
+                      ),
+                    }))
+                  }
+                  placeholder="09:00"
+                  keyboardType="numbers-and-punctuation"
+                  style={styles.timeInput}
+                  maxLength={5}
+                />
+                <Text style={styles.timeSeparator}>to</Text>
+                <TextInput
+                  value={hour.closingTime ?? ""}
+                  onChangeText={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      operatingHours: current.operatingHours.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, closingTime: value } : item,
+                      ),
+                    }))
+                  }
+                  placeholder="17:00"
+                  keyboardType="numbers-and-punctuation"
+                  style={styles.timeInput}
+                  maxLength={5}
+                />
+              </View>
+            ) : null}
+          </View>
+        ))}
 
         <Text style={styles.sectionTitle}>Commission offer</Text>
         <Choice label="I acknowledge and accept the commission offer presented during onboarding" value={form.commissionOfferAccepted} onChange={(value) => update("commissionOfferAccepted", value)} />
@@ -342,6 +423,10 @@ const styles = StyleSheet.create({
   input: { minHeight: 46, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 10, color: "#0F172A", fontSize: 14 },
   multiline: { minHeight: 88, textAlignVertical: "top" },
   choiceGroup: { marginBottom: 14 },
+  hoursRow: { borderBottomWidth: 1, borderBottomColor: "#E2E8F0", paddingVertical: 7 },
+  timeFields: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 32, marginBottom: 8 },
+  timeInput: { width: 86, minHeight: 38, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 8, backgroundColor: "#FFFFFF", paddingHorizontal: 8, color: "#0F172A", textAlign: "center" },
+  timeSeparator: { color: "#64748B", fontSize: 12 },
   choiceButtons: { flexDirection: "row", gap: 10 },
   choiceButton: { minWidth: 86, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, paddingVertical: 10, alignItems: "center", backgroundColor: "#FFFFFF" },
   choiceButtonSelected: { backgroundColor: "#FFF7ED", borderColor: "#F97316" },

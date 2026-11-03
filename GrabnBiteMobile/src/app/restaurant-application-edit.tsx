@@ -138,20 +138,6 @@ export default function RestaurantApplicationEditScreen() {
   const handleSave = async () => {
     if (!token || !application) return;
 
-    if (!form.tradingName.trim() || !form.physicalAddress.trim() || !form.city.trim()) {
-      setError("Trading name, physical address and city are required before saving.");
-      return;
-    }
-
-    if (
-      !form.offersCustomerCollection &&
-      !form.offersRestaurantDelivery &&
-      !form.offersGrubnBiteDelivery
-    ) {
-      setError("Select at least one fulfilment method.");
-      return;
-    }
-
     const preparationTime = form.averagePreparationTimeMinutes.trim()
       ? Number(form.averagePreparationTimeMinutes)
       : null;

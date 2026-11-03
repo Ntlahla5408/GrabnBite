@@ -45,7 +45,12 @@ namespace GrabnBite.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
+
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<PolicyDocument>()
+    .HasIndex(p => new { p.IsArchived, p.Status });
 
             // ============================================================
             // USER → ADDRESS
@@ -244,6 +249,9 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.SetNull);
 
             // Agreement acceptance and immutable accepted-document snapshots.
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+    .HasKey(d => d.AgreementAcceptanceDocumentId);
+
             modelBuilder.Entity<RestaurantAgreementAcceptance>()
                 .HasOne(a => a.RestaurantApplication)
                 .WithMany(r => r.AgreementAcceptances)

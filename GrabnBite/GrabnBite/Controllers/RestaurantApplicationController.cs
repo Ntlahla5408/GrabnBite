@@ -1,8 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using GrabnBite.Data;
+using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GrabnBite.Controllers
 {
@@ -19,14 +21,10 @@ namespace GrabnBite.Controllers
         }
 
         // GET: api/RestaurantApplication/my-applications
-        // Returns only the authenticated restaurant account's applications.
         [HttpGet("my-applications")]
-        public async Task<IActionResult> GetMyApplications(
-            CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMyApplications(CancellationToken cancellationToken)
         {
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (!int.TryParse(userIdClaim, out var userId))
+            if (!TryGetCurrentUserId(out var userId))
             {
                 return Unauthorized();
             }
@@ -53,5 +51,327 @@ namespace GrabnBite.Controllers
 
             return Ok(applications);
         }
+
+        // GET: api/RestaurantApplication/{id}
+        // Only the owning account can retrieve its application.
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetApplication(int id, CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var application = await _context.RestaurantApplications
+                .AsNoTracking()
+                .Include(item => item.OperatingHours)
+                .Include(item => item.Documents)
+                .Include(item => item.BankingDetails)
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+            {
+                return NotFound("Restaurant application not found.");
+            }
+
+            return Ok(new
+            {
+                application.RestaurantApplicationId,
+                application.ApplicationReference,
+                status = application.Status.ToString(),
+                application.TradingName,
+                application.RegisteredBusinessName,
+                application.CipcRegistrationNumber,
+                application.RestaurantCategory,
+                application.PhysicalAddress,
+                application.City,
+                application.RestaurantContactNumber,
+                application.BusinessEmail,
+                application.WebsiteOrSocialMediaUrl,
+                application.RepresentativeFullName,
+                application.RepresentativePosition,
+                application.RepresentativeMobileNumber,
+                application.RepresentativeEmail,
+                application.HasAuthorityToRepresent,
+                application.OffersCustomerCollection,
+                application.OffersRestaurantDelivery,
+                application.OffersGrubnBiteDelivery,
+                application.AveragePreparationTimeMinutes,
+                application.MaximumDeliveryDistanceKm,
+                application.DeliveryInstructions,
+                application.CommissionOfferAccepted,
+                application.SubmittedAt,
+                application.DocumentsRequestedMessage,
+                application.RejectionReason,
+                application.AdminComments,
+                application.CreatedAt,
+                application.UpdatedAt,
+                operatingHours = application.OperatingHours
+                    .OrderBy(hour => hour.DayOfWeek)
+                    .Select(hour => new
+                    {
+                        dayOfWeek = hour.DayOfWeek.ToString(),
+                        hour.IsOpen,
+                        openingTime = hour.OpeningTime.HasValue
+                            ? hour.OpeningTime.Value.ToString("HH:mm")
+                            : null,
+                        closingTime = hour.ClosingTime.HasValue
+                            ? hour.ClosingTime.Value.ToString("HH:mm")
+                            : null
+                    }),
+                documents = application.Documents.Select(document => new
+                {
+                    document.RestaurantDocumentId,
+                    document.DocumentType,
+                    document.DocumentDescription,
+                    document.OriginalFileName,
+                    document.ContentType,
+                    document.FileSize,
+                    verificationStatus = document.VerificationStatus.ToString(),
+                    document.AdminComment,
+                    document.UploadedAt
+                }),
+                bankingDetailsProvided = application.BankingDetails != null &&
+                    !string.IsNullOrWhiteSpace(application.BankingDetails.AccountNumberEncrypted)
+            });
+        }
+
+        // PUT: api/RestaurantApplication/{id}/draft
+        // Draft and documents-required applications can be edited and saved.
+        [HttpPut("{id:int}/draft")]
+        public async Task<IActionResult> SaveDraft(
+            int id,
+            [FromBody] SaveRestaurantApplicationDraftRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+            {
+                return Unauthorized();
+            }
+
+            var application = await _context.RestaurantApplications
+                .Include(item => item.OperatingHours)
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+            {
+                return NotFound("Restaurant application not found.");
+            }
+
+            var status = application.Status.ToString();
+            if (status != "Draft" && status != "DocumentsRequired")
+            {
+                return Conflict("This application can no longer be edited in its current status.");
+            }
+
+            if (request.OffersCustomerCollection == false &&
+                request.OffersRestaurantDelivery == false &&
+                request.OffersGrubnBiteDelivery == false)
+            {
+                ModelState.AddModelError(
+                    nameof(request.OffersCustomerCollection),
+                    "Select at least one fulfilment method.");
+            }
+
+            if (request.AveragePreparationTimeMinutes is < 1 or > 600)
+            {
+                ModelState.AddModelError(
+                    nameof(request.AveragePreparationTimeMinutes),
+                    "Preparation time must be between 1 and 600 minutes.");
+            }
+
+            if (request.MaximumDeliveryDistanceKm is < 0 or > 500)
+            {
+                ModelState.AddModelError(
+                    nameof(request.MaximumDeliveryDistanceKm),
+                    "Delivery distance must be between 0 and 500 km.");
+            }
+
+            var duplicateDays = request.OperatingHours
+                .GroupBy(hour => hour.DayOfWeek)
+                .Any(group => group.Count() > 1);
+
+            if (duplicateDays)
+            {
+                ModelState.AddModelError(
+                    nameof(request.OperatingHours),
+                    "Only one operating-hours entry is allowed per day.");
+            }
+
+            foreach (var hour in request.OperatingHours)
+            {
+                if (hour.IsOpen &&
+                    (!hour.OpeningTime.HasValue ||
+                     !hour.ClosingTime.HasValue ||
+                     hour.OpeningTime >= hour.ClosingTime))
+                {
+                    ModelState.AddModelError(
+                        nameof(request.OperatingHours),
+                        $"Valid opening and closing times are required for {hour.DayOfWeek}.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            application.TradingName = request.TradingName?.Trim();
+            application.RegisteredBusinessName = request.RegisteredBusinessName?.Trim();
+            application.CipcRegistrationNumber = request.CipcRegistrationNumber?.Trim();
+            application.RestaurantCategory = request.RestaurantCategory?.Trim();
+            application.PhysicalAddress = request.PhysicalAddress?.Trim();
+            application.City = request.City?.Trim();
+            application.RestaurantContactNumber = request.RestaurantContactNumber?.Trim();
+            application.BusinessEmail = request.BusinessEmail?.Trim();
+            application.WebsiteOrSocialMediaUrl = request.WebsiteOrSocialMediaUrl?.Trim();
+            application.RepresentativeFullName = request.RepresentativeFullName?.Trim();
+            application.RepresentativePosition = request.RepresentativePosition?.Trim();
+            application.RepresentativeMobileNumber = request.RepresentativeMobileNumber?.Trim();
+            application.RepresentativeEmail = request.RepresentativeEmail?.Trim();
+            application.HasAuthorityToRepresent = request.HasAuthorityToRepresent;
+            application.OffersCustomerCollection = request.OffersCustomerCollection;
+            application.OffersRestaurantDelivery = request.OffersRestaurantDelivery;
+            application.OffersGrubnBiteDelivery = request.OffersGrubnBiteDelivery;
+            application.AveragePreparationTimeMinutes = request.AveragePreparationTimeMinutes;
+            application.MaximumDeliveryDistanceKm = request.MaximumDeliveryDistanceKm;
+            application.DeliveryInstructions = request.DeliveryInstructions?.Trim();
+            application.CommissionOfferAccepted = request.CommissionOfferAccepted;
+            application.UpdatedAt = DateTime.UtcNow;
+
+            var submittedHours = request.OperatingHours.ToDictionary(hour => hour.DayOfWeek);
+            foreach (var existingHour in application.OperatingHours.ToList())
+            {
+                if (!submittedHours.ContainsKey(existingHour.DayOfWeek))
+                {
+                    _context.RestaurantOperatingHours.Remove(existingHour);
+                }
+            }
+
+            foreach (var submittedHour in request.OperatingHours)
+            {
+                var existingHour = application.OperatingHours
+                    .FirstOrDefault(hour => hour.DayOfWeek == submittedHour.DayOfWeek);
+
+                if (existingHour == null)
+                {
+                    existingHour = new RestaurantOperatingHour
+                    {
+                        RestaurantApplicationId = application.RestaurantApplicationId,
+                        DayOfWeek = submittedHour.DayOfWeek
+                    };
+                    application.OperatingHours.Add(existingHour);
+                }
+
+                existingHour.IsOpen = submittedHour.IsOpen;
+                existingHour.OpeningTime = submittedHour.IsOpen
+                    ? submittedHour.OpeningTime
+                    : null;
+                existingHour.ClosingTime = submittedHour.IsOpen
+                    ? submittedHour.ClosingTime
+                    : null;
+            }
+
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = application.RestaurantApplicationId,
+                PreviousStatus = application.Status,
+                NewStatus = application.Status,
+                Action = "DraftSaved",
+                Comment = "Applicant saved application business information.",
+                PerformedByUserId = userId,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok(new
+            {
+                application.RestaurantApplicationId,
+                application.ApplicationReference,
+                status = application.Status.ToString(),
+                application.UpdatedAt,
+                message = "Your application draft has been saved."
+            });
+        }
+
+        private bool TryGetCurrentUserId(out int userId)
+        {
+            return int.TryParse(
+                User.FindFirstValue(ClaimTypes.NameIdentifier),
+                out userId);
+        }
+    }
+
+    public class SaveRestaurantApplicationDraftRequest
+    {
+        [StringLength(200)]
+        public string? TradingName { get; set; }
+
+        [StringLength(200)]
+        public string? RegisteredBusinessName { get; set; }
+
+        [StringLength(100)]
+        public string? CipcRegistrationNumber { get; set; }
+
+        [StringLength(100)]
+        public string? RestaurantCategory { get; set; }
+
+        [StringLength(500)]
+        public string? PhysicalAddress { get; set; }
+
+        [StringLength(100)]
+        public string? City { get; set; }
+
+        [StringLength(30)]
+        public string? RestaurantContactNumber { get; set; }
+
+        [EmailAddress, StringLength(254)]
+        public string? BusinessEmail { get; set; }
+
+        [Url, StringLength(500)]
+        public string? WebsiteOrSocialMediaUrl { get; set; }
+
+        [StringLength(200)]
+        public string? RepresentativeFullName { get; set; }
+
+        [StringLength(100)]
+        public string? RepresentativePosition { get; set; }
+
+        [StringLength(30)]
+        public string? RepresentativeMobileNumber { get; set; }
+
+        [EmailAddress, StringLength(254)]
+        public string? RepresentativeEmail { get; set; }
+
+        public bool? HasAuthorityToRepresent { get; set; }
+        public bool? OffersCustomerCollection { get; set; }
+        public bool? OffersRestaurantDelivery { get; set; }
+        public bool? OffersGrubnBiteDelivery { get; set; }
+
+        [Range(1, 600)]
+        public int? AveragePreparationTimeMinutes { get; set; }
+
+        [Range(typeof(decimal), "0", "500")]
+        public decimal? MaximumDeliveryDistanceKm { get; set; }
+
+        [StringLength(1000)]
+        public string? DeliveryInstructions { get; set; }
+
+        public bool? CommissionOfferAccepted { get; set; }
+
+        public List<RestaurantOperatingHourDraftRequest> OperatingHours { get; set; } = new();
+    }
+
+    public class RestaurantOperatingHourDraftRequest
+    {
+        public DayOfWeek DayOfWeek { get; set; }
+        public bool IsOpen { get; set; }
+        public TimeOnly? OpeningTime { get; set; }
+        public TimeOnly? ClosingTime { get; set; }
     }
 }

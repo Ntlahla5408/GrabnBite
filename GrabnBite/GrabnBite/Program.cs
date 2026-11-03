@@ -20,6 +20,11 @@ builder.Services.AddHttpClient<YocoPaymentService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddHttpClient<ICloudinaryImageService, CloudinaryImageService>();
+
+builder.Services.Configure<SupabaseStorageSettings>(
+    builder.Configuration.GetSection("SupabaseStorage"));
+builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStorageService>();
+
 builder.Services.AddScoped<FakePaymentGateway>();
 
 builder.Services.AddCors(options =>
@@ -29,12 +34,10 @@ builder.Services.AddCors(options =>
                .AllowAnyMethod()
                .AllowAnyHeader());
 });
-// Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -45,7 +48,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "GrabnBite Web API"
     });
 
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -71,12 +73,10 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -86,15 +86,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Key"]!
-                )
-            )
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
 
@@ -102,16 +97,13 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     try
     {
-        // Always verify database connectivity, but never seed demo accounts
-        // outside Development. Production databases must be provisioned through
-        // controlled deployment/migration processes.
+        // Production schema changes are applied through controlled EF migrations.
         await db.Database.OpenConnectionAsync();
         app.Logger.LogInformation("Database connectivity check succeeded.");
         await db.Database.CloseConnectionAsync();
@@ -132,16 +124,12 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogCritical(
             ex,
             "Application startup stopped because the database connection or development seeding failed.");
-
-        // Never continue into a partially usable API after a failed DB probe/seed.
         throw;
     }
 }
 
 app.UseCors("MyPolicy");
 
-// Keep interactive API documentation available locally, but do not expose
-// the Swagger UI and API schema publicly in production by default.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -149,9 +137,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.MapControllers();

@@ -68,7 +68,13 @@ namespace GrabnBite.Controllers
                     (item.EffectiveDate == null || item.EffectiveDate <= now),
                     cancellationToken);
 
-            return policy == null ? NotFound() : Ok(ToResponse(policy));
+            if (policy == null)
+                return NotFound();
+
+            var response = ToResponse(policy);
+            response.FileUrl = await _storage.CreateSignedUrlAsync(
+                policy.StoragePath, cancellationToken: cancellationToken);
+            return Ok(response);
         }
 
         [Authorize(Roles = "Admin")]
@@ -110,13 +116,13 @@ namespace GrabnBite.Controllers
 
             var storagePath = $"policies/{Guid.NewGuid():N}.pdf";
             await using var stream = request.PdfFile.OpenReadStream();
-            var upload = await _storage.UploadPdfAsync(stream, storagePath, cancellationToken);
+            await _storage.UploadPdfAsync(stream, storagePath, cancellationToken);
 
             var policy = new PolicyDocument
             {
                 Title = request.Title.Trim(),
                 Description = request.Description.Trim(),
-                StoragePath = upload.StoragePath,
+                StoragePath = storagePath,
                 OriginalFileName = Path.GetFileName(request.PdfFile.FileName),
                 ContentType = PdfContentType,
                 FileSize = request.PdfFile.Length,
@@ -182,9 +188,9 @@ namespace GrabnBite.Controllers
             {
                 newStoragePath = $"policies/{Guid.NewGuid():N}.pdf";
                 await using var stream = request.PdfFile.OpenReadStream();
-                var upload = await _storage.UploadPdfAsync(stream, newStoragePath, cancellationToken);
+                await _storage.UploadPdfAsync(stream, newStoragePath, cancellationToken);
                 previousStoragePath = policy.StoragePath;
-                policy.StoragePath = upload.StoragePath;
+                policy.StoragePath = newStoragePath;
                 policy.OriginalFileName = Path.GetFileName(request.PdfFile.FileName);
                 policy.ContentType = PdfContentType;
                 policy.FileSize = request.PdfFile.Length;

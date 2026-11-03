@@ -89,7 +89,13 @@ namespace GrabnBite.Services
 
         public string GetPublicUrl(string storagePath)
         {
-            ValidateConfiguration();
+            if (!Uri.TryCreate(_settings.ProjectUrl, UriKind.Absolute, out _) ||
+                string.IsNullOrWhiteSpace(_settings.BucketName))
+            {
+                throw new InvalidOperationException(
+                    "Supabase Storage public URL configuration is missing ProjectUrl or BucketName.");
+            }
+
             return $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/public/{Uri.EscapeDataString(_settings.BucketName)}/{EncodeStoragePath(storagePath)}";
         }
 

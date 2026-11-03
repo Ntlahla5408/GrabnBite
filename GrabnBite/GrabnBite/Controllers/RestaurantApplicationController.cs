@@ -168,15 +168,6 @@ namespace GrabnBite.Controllers
                 return Conflict("This application can no longer be edited in its current status.");
             }
 
-            if (request.OffersCustomerCollection == false &&
-                request.OffersRestaurantDelivery == false &&
-                request.OffersGrubnBiteDelivery == false)
-            {
-                ModelState.AddModelError(
-                    nameof(request.OffersCustomerCollection),
-                    "Select at least one fulfilment method.");
-            }
-
             if (request.AveragePreparationTimeMinutes is < 1 or > 600)
             {
                 ModelState.AddModelError(

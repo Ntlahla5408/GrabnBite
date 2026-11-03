@@ -144,10 +144,7 @@ namespace GrabnBite.Controllers
                 throw;
             }
 
-            return CreatedAtAction(
-                nameof(GetPublishedPolicy),
-                new { policyDocumentId = policy.PolicyDocumentId },
-                ToResponse(policy));
+            return StatusCode(StatusCodes.Status201Created, ToResponse(policy));
         }
 
         [Authorize(Roles = "Admin")]

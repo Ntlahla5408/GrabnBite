@@ -563,7 +563,10 @@ namespace GrabnBite.Controllers
             }
 
             var restaurants = await _context.Restaurants
-                .Where(r => r.UserId == userId.Value)
+                .Where(r =>
+                    r.UserId == userId.Value &&
+                    r.IsApproved &&
+                    r.IsActive)
                 .OrderByDescending(r => r.CreatedAt)
                 .Take(2)
                 .ToListAsync();

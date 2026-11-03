@@ -24,6 +24,7 @@ export default function RegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountType, setAccountType] = useState<"Customer" | "Restaurant">("Customer");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -36,6 +37,7 @@ export default function RegisterScreen() {
       phoneNumber,
       passwordEntered: !!password,
       confirmPasswordEntered: !!confirmPassword,
+      accountType,
     });
 
     if (
@@ -79,13 +81,16 @@ export default function RegisterScreen() {
         email,
         phoneNumber,
         password,
+        accountType,
       );
 
       console.log("REGISTER SUCCESS:", result);
 
       Alert.alert(
         "Account created",
-        "Your GrabnBite account has been created. Please log in.",
+        accountType === "Restaurant"
+          ? "Your restaurant account has been created and a draft partner application is ready. Please log in to continue onboarding."
+          : "Your GrabnBite account has been created. Please log in.",
         [
           {
             text: "OK",
@@ -141,8 +146,33 @@ export default function RegisterScreen() {
             <Text style={styles.heading}>Create your account</Text>
 
             <Text style={styles.description}>
-              Sign up to start ordering your favourite meals.
+              Create an account to order meals or register your restaurant as a GrabnBite partner.
             </Text>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Account type</Text>
+              <View style={styles.accountTypeRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: accountType === "Customer" }}
+                  style={[styles.accountTypeButton, accountType === "Customer" && styles.accountTypeButtonSelected]}
+                  onPress={() => setAccountType("Customer")}
+                >
+                  <Text style={[styles.accountTypeText, accountType === "Customer" && styles.accountTypeTextSelected]}>Customer</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: accountType === "Restaurant" }}
+                  style={[styles.accountTypeButton, accountType === "Restaurant" && styles.accountTypeButtonSelected]}
+                  onPress={() => setAccountType("Restaurant")}
+                >
+                  <Text style={[styles.accountTypeText, accountType === "Restaurant" && styles.accountTypeTextSelected]}>Restaurant partner</Text>
+                </Pressable>
+              </View>
+              {accountType === "Restaurant" ? (
+                <Text style={styles.accountTypeHint}>A draft partner application will be created. Your restaurant will only become operational after administrator approval.</Text>
+              ) : null}
+            </View>
 
             {/* First Name */}
             <View style={styles.fieldContainer}>
@@ -370,6 +400,44 @@ const styles = StyleSheet.create({
 
   fieldContainer: {
     marginBottom: 18,
+  },
+
+  accountTypeRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  accountTypeButton: {
+    flex: 1,
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+
+  accountTypeButtonSelected: {
+    borderColor: "#F97316",
+    backgroundColor: "#FFF7ED",
+  },
+
+  accountTypeText: {
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  accountTypeTextSelected: {
+    color: "#C2410C",
+  },
+
+  accountTypeHint: {
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
   },
 
   label: {

@@ -132,6 +132,20 @@ export default function RestaurantProfileScreen() {
             <Text style={styles.date}>
               Last updated: {new Date(application.updatedAt).toLocaleDateString()}
             </Text>
+            {application.status === "Draft" || application.status === "DocumentsRequired" ? (
+              <Pressable
+                style={styles.editButton}
+                onPress={() =>
+                  router.push(
+                    `/restaurant-application-edit?applicationId=${application.restaurantApplicationId}` as any,
+                  )
+                }
+              >
+                <Text style={styles.editButtonText}>
+                  {application.status === "Draft" ? "Continue application" : "Update application"}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ))}
 
@@ -167,6 +181,8 @@ const styles = StyleSheet.create({
   date: { color: "#94A3B8", fontSize: 12, marginTop: 12 },
   error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 14 },
   secondaryButton: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginTop: 8 },
+  editButton: { minHeight: 44, borderRadius: 9, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", marginTop: 16 },
+  editButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
   secondaryButtonText: { color: "#334155", fontSize: 14, fontWeight: "700" },
   center: { flex: 1, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center", padding: 24 },
   muted: { color: "#64748B", textAlign: "center", lineHeight: 20, marginTop: 12 },

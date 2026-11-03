@@ -8,12 +8,12 @@
 - Customer endpoints return only published, non-archived policies whose effective date has arrived.
 - Admin endpoints require the existing JWT `Admin` role.
 
-The bucket is public for reading because these are customer-facing legal documents. Do not upload private, confidential, or customer-specific files to this bucket. Public access does not grant permission to upload or delete objects.
+The bucket is private so draft policies cannot be read through a public object URL. The API creates a one-hour signed URL only when a customer requests a published policy. Upload and deletion are performed by the ASP.NET Core API using the service-role key.
 
 ## Supabase Storage configuration
 
 The `grabnbite-policies` bucket has been provisioned in the connected Supabase project with:
-- Public read access
+- Private bucket access; published documents are served through short-lived signed URLs
 - PDF-only allowed MIME type
 - 10 MiB maximum file size
 
@@ -56,4 +56,4 @@ The migration is named `20261103210000_AddPolicyDocuments`. Do not deploy the AP
 - `PUT /api/Policies/{policyDocumentId}` — update metadata and optionally replace the PDF.
 - `DELETE /api/Policies/{policyDocumentId}` — archive the policy without destroying its audit record or stored document.
 
-PDF uploads are validated by extension, PDF file signature, and configured size limit. Replacing a PDF increments the policy version and removes the previous storage object after the database update succeeds.
+PDF uploads are validated by extension, PDF file signature, and configured size limit. Replacing a PDF increments the policy version and removes the previous storage object after the database update succeeds. The single-policy customer endpoint returns a one-hour signed URL from the private bucket; the list endpoint does not expose storage paths.

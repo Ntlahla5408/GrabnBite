@@ -79,6 +79,10 @@ export async function apiRequest(
     headers,
   });
 
+  if (response.status === 204) {
+    return null;
+  }
+
   if (!response.ok) {
     const errorText = await response.text();
 

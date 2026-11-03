@@ -25,6 +25,10 @@ builder.Services.Configure<SupabaseStorageSettings>(
     builder.Configuration.GetSection("SupabaseStorage"));
 builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStorageService>();
 
+builder.Services.Configure<SupabaseRestaurantDocumentStorageSettings>(
+    builder.Configuration.GetSection("SupabaseRestaurantDocumentStorage"));
+builder.Services.AddHttpClient<ISupabaseRestaurantDocumentStorageService, SupabaseRestaurantDocumentStorageService>();
+
 builder.Services.AddScoped<FakePaymentGateway>();
 
 builder.Services.AddCors(options =>

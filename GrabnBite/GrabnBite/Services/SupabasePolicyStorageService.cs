@@ -99,8 +99,16 @@ namespace GrabnBite.Services
             }
 
             var signedUrl = signedUrlElement.GetString()!;
-            if (Uri.TryCreate(signedUrl, UriKind.Absolute, out _))
+
+            // Supabase may return a path such as "/object/sign/..." rather than
+            // a fully qualified URL. UriKind.Absolute can treat a rooted path
+            // as an absolute file URI, so only preserve absolute HTTP(S) URLs.
+            if (Uri.TryCreate(signedUrl, UriKind.Absolute, out var absoluteUri) &&
+                (absoluteUri.Scheme == Uri.UriSchemeHttp ||
+                 absoluteUri.Scheme == Uri.UriSchemeHttps))
+            {
                 return signedUrl;
+            }
 
             var relativePath = signedUrl.StartsWith("/", StringComparison.Ordinal)
                 ? signedUrl

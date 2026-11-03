@@ -8,19 +8,20 @@ namespace GrabnBite.Services
 {
     public interface ISupabasePolicyStorageService
     {
-        Task<PolicyStorageUploadResult> UploadPdfAsync(
+        Task UploadPdfAsync(
             Stream fileStream,
             string storagePath,
+            CancellationToken cancellationToken = default);
+
+        Task<string> CreateSignedUrlAsync(
+            string storagePath,
+            int expiresInSeconds = 3600,
             CancellationToken cancellationToken = default);
 
         Task DeleteAsync(
             string storagePath,
             CancellationToken cancellationToken = default);
-
-        string GetPublicUrl(string storagePath);
     }
-
-    public sealed record PolicyStorageUploadResult(string StoragePath, string PublicUrl);
 
     public sealed class SupabasePolicyStorageService : ISupabasePolicyStorageService
     {
@@ -35,7 +36,7 @@ namespace GrabnBite.Services
             _settings = settings.Value;
         }
 
-        public async Task<PolicyStorageUploadResult> UploadPdfAsync(
+        public async Task UploadPdfAsync(
             Stream fileStream,
             string storagePath,
             CancellationToken cancellationToken = default)
@@ -59,8 +60,53 @@ namespace GrabnBite.Services
                 throw new InvalidOperationException(
                     $"Supabase PDF upload failed with HTTP {(int)response.StatusCode}.");
             }
+        }
 
-            return new PolicyStorageUploadResult(storagePath, GetPublicUrl(storagePath));
+        public async Task<string> CreateSignedUrlAsync(
+            string storagePath,
+            int expiresInSeconds = 3600,
+            CancellationToken cancellationToken = default)
+        {
+            ValidateConfiguration();
+
+            if (expiresInSeconds < 60 || expiresInSeconds > 86400)
+                throw new ArgumentOutOfRangeException(nameof(expiresInSeconds));
+
+            var endpoint = $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/sign/{Uri.EscapeDataString(_settings.BucketName)}/{EncodeStoragePath(storagePath)}";
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            AddServiceHeaders(request);
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new { expiresIn = expiresInSeconds }),
+                Encoding.UTF8,
+                "application/json");
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException(
+                    $"Supabase signed URL creation failed with HTTP {(int)response.StatusCode}.");
+            }
+
+            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(
+                responseStream, cancellationToken: cancellationToken);
+
+            if (!document.RootElement.TryGetProperty("signedURL", out var signedUrlElement) ||
+                string.IsNullOrWhiteSpace(signedUrlElement.GetString()))
+            {
+                throw new InvalidOperationException(
+                    "Supabase returned an incomplete signed URL response.");
+            }
+
+            var signedUrl = signedUrlElement.GetString()!;
+            if (Uri.TryCreate(signedUrl, UriKind.Absolute, out _))
+                return signedUrl;
+
+            var relativePath = signedUrl.StartsWith("/", StringComparison.Ordinal)
+                ? signedUrl
+                : $"/{signedUrl}";
+
+            return $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1{relativePath}";
         }
 
         public async Task DeleteAsync(
@@ -85,18 +131,6 @@ namespace GrabnBite.Services
                 throw new InvalidOperationException(
                     $"Supabase PDF deletion failed with HTTP {(int)response.StatusCode}.");
             }
-        }
-
-        public string GetPublicUrl(string storagePath)
-        {
-            if (!Uri.TryCreate(_settings.ProjectUrl, UriKind.Absolute, out _) ||
-                string.IsNullOrWhiteSpace(_settings.BucketName))
-            {
-                throw new InvalidOperationException(
-                    "Supabase Storage public URL configuration is missing ProjectUrl or BucketName.");
-            }
-
-            return $"{_settings.ProjectUrl.TrimEnd('/')}/storage/v1/object/public/{Uri.EscapeDataString(_settings.BucketName)}/{EncodeStoragePath(storagePath)}";
         }
 
         private void AddServiceHeaders(HttpRequestMessage request)

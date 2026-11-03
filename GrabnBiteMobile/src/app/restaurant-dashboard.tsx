@@ -58,7 +58,7 @@ export default function RestaurantDashboardScreen() {
       } catch (profileError: any) {
         if (String(profileError?.message ?? "").includes("HTTP 404")) {
           setOrders([]);
-          setError("Create your restaurant profile to start receiving orders.");
+          router.replace("/restaurant-profile");
           return;
         }
 

@@ -231,9 +231,18 @@ export default function AdminPoliciesScreen() {
   }
 
   function confirmArchive(policy: PolicyDocument) {
+    const message = `"${policy.title}" will be removed from the customer policy list. Its record and PDF will be retained.`;
+
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(`Archive policy?\n\n${message}`)) {
+        void archivePolicy(policy);
+      }
+      return;
+    }
+
     Alert.alert(
       "Archive policy?",
-      `"${policy.title}" will be removed from the customer policy list. Its record and PDF will be retained.`,
+      message,
       [
         { text: "Cancel", style: "cancel" },
         { text: "Archive", style: "destructive", onPress: () => { void archivePolicy(policy); } },

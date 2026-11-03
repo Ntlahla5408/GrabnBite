@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using GrabnBite.Configuration;
 using GrabnBite.Data;
 using GrabnBite.DTOs.Policy;
@@ -45,11 +46,10 @@ namespace GrabnBite.Controllers
                     !policy.IsArchived &&
                     policy.Status == "Published" &&
                     (policy.EffectiveDate == null || policy.EffectiveDate <= now))
-                .OrderBy(policy => policy.Title)
-                .Select(policy => ToResponse(policy))
+                 .OrderBy(policy => policy.Title)
                 .ToListAsync(cancellationToken);
 
-            return Ok(policies);
+            return Ok(policies.Select(ToResponse).ToList());
         }
 
         [AllowAnonymous]
@@ -79,11 +79,10 @@ namespace GrabnBite.Controllers
             var policies = await _context.PolicyDocuments
                 .AsNoTracking()
                 .Where(policy => !policy.IsArchived)
-                .OrderByDescending(policy => policy.UpdatedAt ?? policy.CreatedAt)
-                .Select(policy => ToResponse(policy))
+                 .OrderByDescending(policy => policy.UpdatedAt ?? policy.CreatedAt)
                 .ToListAsync(cancellationToken);
 
-            return Ok(policies);
+            return Ok(policies.Select(ToResponse).ToList());
         }
 
         [Authorize(Roles = "Admin")]
@@ -101,7 +100,7 @@ namespace GrabnBite.Controllers
             if (request.PdfFile == null)
                 return BadRequest("A PDF document is required.");
 
-            var fileError = ValidatePdf(request.PdfFile);
+            var fileError = await ValidatePdfAsync(request.PdfFile, cancellationToken);
             if (fileError != null)
                 return BadRequest(fileError);
 
@@ -160,7 +159,7 @@ namespace GrabnBite.Controllers
 
             if (request.PdfFile != null)
             {
-                var fileError = ValidatePdf(request.PdfFile);
+                var fileError = await ValidatePdfAsync(request.PdfFile, cancellationToken);
                 if (fileError != null)
                     return BadRequest(fileError);
             }
@@ -258,7 +257,9 @@ namespace GrabnBite.Controllers
             return null;
         }
 
-        private string? ValidatePdf(IFormFile file)
+        private async Task<string?> ValidatePdfAsync(
+            IFormFile file,
+            CancellationToken cancellationToken)
         {
             if (file.Length <= 0)
                 return "The selected PDF is empty.";
@@ -269,8 +270,12 @@ namespace GrabnBite.Controllers
             if (!string.Equals(Path.GetExtension(file.FileName), ".pdf", StringComparison.OrdinalIgnoreCase))
                 return "Only PDF documents are accepted.";
 
-            if (!string.Equals(file.ContentType, PdfContentType, StringComparison.OrdinalIgnoreCase))
-                return "The uploaded file must have the application/pdf content type.";
+            await using var stream = file.OpenReadStream();
+            var header = new byte[5];
+            var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length), cancellationToken);
+
+            if (bytesRead != header.Length || Encoding.ASCII.GetString(header) != "%PDF-")
+                return "The selected file does not contain a valid PDF header.";
 
             return null;
         }

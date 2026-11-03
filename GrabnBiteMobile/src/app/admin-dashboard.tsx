@@ -187,6 +187,13 @@ export default function AdminDashboard() {
                 colors={colors}
                 onPress={() => router.push("/admin-drivers")}
               />
+
+              <DashboardButton
+                title="Policy Management"
+                subtitle="Add, update, publish and archive customer policy documents."
+                colors={colors}
+                onPress={() => router.push("/admin-policies")}
+              />
             </View>
           </>
         )}

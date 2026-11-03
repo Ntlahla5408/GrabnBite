@@ -1089,6 +1089,34 @@ namespace GrabnBite.Migrations
                 });
 
 #pragma warning restore 612, 618
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.PolicyDocument", b =>
+                {
+                    b.Property<int>("PolicyDocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PolicyDocumentId"));
+
+                    b.Property<string>("ContentType").IsRequired().HasColumnType("text");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<int>("CreatedByUserId").HasColumnType("integer");
+                    b.Property<string>("Description").IsRequired().HasMaxLength(500).HasColumnType("character varying(500)");
+                    b.Property<DateTime?>("EffectiveDate").HasColumnType("timestamp with time zone");
+                    b.Property<long>("FileSize").HasColumnType("bigint");
+                    b.Property<bool>("IsArchived").HasColumnType("boolean");
+                    b.Property<string>("OriginalFileName").IsRequired().HasColumnType("text");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                    b.Property<string>("StoragePath").IsRequired().HasColumnType("text");
+                    b.Property<string>("Title").IsRequired().HasMaxLength(180).HasColumnType("character varying(180)");
+                    b.Property<DateTime?>("UpdatedAt").HasColumnType("timestamp with time zone");
+                    b.Property<int?>("UpdatedByUserId").HasColumnType("integer");
+                    b.Property<int>("Version").HasColumnType("integer");
+                    b.HasKey("PolicyDocumentId");
+                    b.HasIndex("IsArchived", "Status");
+                    b.ToTable("PolicyDocuments");
+                });
+
         }
     }
 }

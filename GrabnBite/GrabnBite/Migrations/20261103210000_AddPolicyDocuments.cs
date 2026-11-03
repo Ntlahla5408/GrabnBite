@@ -43,6 +43,7 @@ namespace GrabnBite.Migrations
             // The table is not intended to be queried directly through the Supabase Data API.
             // The ASP.NET Core backend accesses it using its database connection.
             migrationBuilder.Sql("ALTER TABLE \"PolicyDocuments\" ENABLE ROW LEVEL SECURITY;");
+            migrationBuilder.Sql("CREATE POLICY \"PolicyDocuments service role access\" ON \"PolicyDocuments\" FOR ALL TO service_role USING (true) WITH CHECK (true);");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

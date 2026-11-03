@@ -1,12 +1,15 @@
--- GrabnBite policy PDFs are customer-facing legal documents.
--- The bucket is public for READ access only. Upload and delete operations
--- must be performed by the ASP.NET Core API using the Supabase service-role key.
+-- Policy PDFs are stored in a PRIVATE bucket. The ASP.NET Core API uses
+-- the Supabase service-role key to upload/delete files and create short-lived
+-- signed URLs for published documents.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
     'grabnbite-policies',
     'grabnbite-policies',
-    true,
+    false,
     10485760,
     array['application/pdf']::text[]
 )
-on conflict (id) do nothing;
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;

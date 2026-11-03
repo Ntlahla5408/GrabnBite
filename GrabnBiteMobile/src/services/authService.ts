@@ -22,6 +22,7 @@ export interface RegisterRequest {
   email: string;
   phoneNumber: string;
   password: string;
+  accountType: "Customer" | "Restaurant";
 }
 
 export interface RegisterResponse {
@@ -31,6 +32,11 @@ export interface RegisterResponse {
   lastName: string;
   email: string;
   role: string;
+  restaurantApplication?: {
+    restaurantApplicationId: number;
+    applicationReference: string;
+    status: string;
+  } | null;
 }
 
 export async function register(
@@ -39,6 +45,7 @@ export async function register(
   email: string,
   phoneNumber: string,
   password: string,
+  accountType: "Customer" | "Restaurant" = "Customer",
 ): Promise<RegisterResponse> {
   const body: RegisterRequest = {
     firstName: firstName.trim(),
@@ -46,6 +53,7 @@ export async function register(
     email: email.trim(),
     phoneNumber: phoneNumber.trim(),
     password,
+    accountType,
   };
 
   return apiRequest("/api/Authentication/register", {

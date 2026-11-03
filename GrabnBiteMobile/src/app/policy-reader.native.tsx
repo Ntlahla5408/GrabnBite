@@ -1,44 +1,64 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { PdfView } from "react-native-better-pdf";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { apiRequest } from "../services/api";
 
-const policyDocuments: Record<string, { title: string; source: number }> = {
-  terms: {
-    title: "Terms and Conditions of Use",
-    source: require("../../assets/policies/GrubnBite_Terms_and_Conditions_of_Use.pdf"),
-  },
-  cancellation: {
-    title: "Cancellation Policy",
-    source: require("../../assets/policies/GrubnBite_Cancellation_Policy.pdf"),
-  },
-  complaints: {
-    title: "Customer Complaints and Dispute Resolution",
-    source: require("../../assets/policies/GrubnBite_Customer_Complaints_and_Dispute_Resolution_Policy.pdf"),
-  },
-  "food-delivery": {
-    title: "Food Ordering and Delivery Policy",
-    source: require("../../assets/policies/GrubnBite_Food_Ordering_and_Delivery_Policy.pdf"),
-  },
-  payment: {
-    title: "Payment Policy",
-    source: require("../../assets/policies/GrubnBite_Payment_Policy.pdf"),
-  },
-  account: {
-    title: "Account Suspension and Termination Policy",
-    source: require("../../assets/policies/GrubnBite_Account_Suspension_and_Termination_Policy.pdf"),
-  },
-};
+interface PolicyDocument {
+  policyDocumentId: number;
+  title: string;
+  description: string;
+  fileUrl: string;
+  version: number;
+}
 
 export default function PolicyReaderScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const policyId = typeof id === "string" ? Number(id) : Number.NaN;
+  const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const policy = typeof id === "string" ? policyDocuments[id] : undefined;
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadPolicy() {
+      if (!Number.isInteger(policyId) || policyId <= 0) {
+        setPolicy(null);
+        setLoadError("A valid policy document was not selected.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setLoadError(null);
+      setPageCount(null);
+
+      try {
+        const data = await apiRequest(`/api/Policies/${policyId}`);
+        if (isActive) {
+          setPolicy(data);
+        }
+      } catch (error) {
+        if (isActive) {
+          setPolicy(null);
+          setLoadError(error instanceof Error ? error.message : "Unable to load this policy document.");
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadPolicy();
+    return () => { isActive = false; };
+  }, [policyId, reloadKey]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -49,50 +69,37 @@ export default function PolicyReaderScreen() {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text numberOfLines={2} style={[styles.title, { color: colors.text }]}>{policy?.title ?? "Policy document"}</Text>
-          {pageCount !== null ? (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{pageCount} pages</Text>
-          ) : null}
+          {pageCount !== null ? <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{pageCount} pages</Text> : null}
         </View>
       </View>
 
-      {!policy ? (
+      {isLoading ? (
         <View style={styles.message}>
-          <Text style={[styles.messageTitle, { color: colors.text }]}>Document not found</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>Return to Legal and Policies and select a document from the list.</Text>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>Loading policy document…</Text>
         </View>
-      ) : loadError ? (
+      ) : loadError || !policy ? (
         <View style={styles.message}>
           <Text style={[styles.messageTitle, { color: colors.text }]}>Unable to open this document</Text>
-          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{loadError}</Text>
-          <Pressable onPress={() => { setLoadError(null); setIsLoading(true); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{loadError ?? "Document not found."}</Text>
+          <Pressable onPress={() => setReloadKey((current) => current + 1)} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </View>
       ) : (
         <View style={styles.viewerContainer}>
           <PdfView
-            key={policy.source}
-            source={policy.source}
+            key={`${policy.policyDocumentId}-${policy.version}`}
+            source={{ uri: policy.fileUrl }}
             style={styles.viewer}
             fitPolicy="width"
-            onLoad={({ pageCount: loadedPages }) => {
-              setPageCount(loadedPages);
-              setIsLoading(false);
-              setLoadError(null);
-            }}
+            onLoad={({ pageCount: loadedPages }) => setPageCount(loadedPages)}
             onError={(error) => {
               if (error.page === undefined) {
-                setIsLoading(false);
                 setLoadError(error.message);
               }
             }}
           />
-          {isLoading ? (
-            <View style={[styles.loadingOverlay, { backgroundColor: colors.background }]}>
-              <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Opening document…</Text>
-            </View>
-          ) : null}
         </View>
       )}
     </View>
@@ -109,8 +116,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 11, marginTop: 3 },
   viewerContainer: { flex: 1 },
   viewer: { flex: 1, backgroundColor: "#E8EDF2" },
-  loadingOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center" },
-  loadingText: { fontSize: 12, marginTop: 10 },
   message: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   messageTitle: { fontSize: 17, fontWeight: "800", textAlign: "center" },
   messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8 },

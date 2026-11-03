@@ -1,55 +1,51 @@
 import { router } from "expo-router";
-import { Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { apiRequest } from "../services/api";
 
-const policies = [
-  {
-    id: "terms",
-    title: "Terms and Conditions of Use",
-    description: "The terms governing use of the GrabnBite platform.",
-    icon: "📄",
-    status: "Draft for legal review",
-  },
-  {
-    id: "cancellation",
-    title: "Cancellation Policy",
-    description: "Conditions and procedures for cancelling orders.",
-    icon: "↩️",
-    status: "Effective date to be confirmed",
-  },
-  {
-    id: "complaints",
-    title: "Customer Complaints and Dispute Resolution",
-    description: "How customers can raise complaints and resolve disputes.",
-    icon: "💬",
-    status: "Effective 1 November 2026",
-  },
-  {
-    id: "food-delivery",
-    title: "Food Ordering and Delivery Policy",
-    description: "Rules and expectations for food orders and delivery.",
-    icon: "🛵",
-    status: "Effective date to be confirmed",
-  },
-  {
-    id: "payment",
-    title: "Payment Policy",
-    description: "Payment terms and conditions for GrabnBite orders.",
-    icon: "💳",
-    status: "Effective 1 November 2026",
-  },
-  {
-    id: "account",
-    title: "Account Suspension and Termination Policy",
-    description: "Circumstances in which account access may be restricted or ended.",
-    icon: "🔒",
-    status: "Effective 1 November 2026",
-  },
-] as const;
+interface PolicyDocument {
+  policyDocumentId: number;
+  title: string;
+  description: string;
+  fileUrl: string;
+  status: string;
+  effectiveDate: string | null;
+  version: number;
+}
 
 export default function PoliciesScreen() {
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const [policies, setPolicies] = useState<PolicyDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadPolicies = useCallback(async () => {
+    try {
+      const data = await apiRequest("/api/Policies");
+      setPolicies(data);
+      setError("");
+    } catch (loadError) {
+      console.error("Failed to load published policies:", loadError);
+      setError("Unable to load policy documents. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start public policy loading after the screen mounts.
+    void loadPolicies();
+  }, [loadPolicies]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -66,37 +62,64 @@ export default function PoliciesScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.notice, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-          <Text style={[styles.noticeTitle, { color: colors.text }]}>Please note</Text>
+          <Text style={[styles.noticeTitle, { color: colors.text }]}>Policy documents</Text>
           <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
-            These documents are provided as supplied. The Terms and Conditions document is marked as a draft for legal review, and some policies still have an effective date to be confirmed.
-          </Text>
-          <Text style={[styles.noticeText, { color: colors.textSecondary, marginTop: 8 }]}>
-            A separate Privacy Policy and Refund and Returns Policy are not included in this document centre.
+            This section displays policies published by GrabnBite. Draft documents and policies that have not reached their effective date are not shown.
           </Text>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Available documents</Text>
-        {policies.map((policy) => (
-          <Pressable
-            key={policy.id}
-            accessibilityRole="button"
-            onPress={() => router.push({ pathname: "/policy-reader", params: { id: policy.id } })}
-            style={({ pressed }) => [
-              styles.policyCard,
-              { backgroundColor: colors.surfaceElevated, borderColor: colors.border, opacity: pressed ? 0.75 : 1 },
-            ]}
-          >
-            <View style={styles.policyIcon}>
-              <Text style={styles.policyEmoji}>{policy.icon}</Text>
-            </View>
-            <View style={styles.policyCopy}>
-              <Text style={[styles.policyTitle, { color: colors.text }]}>{policy.title}</Text>
-              <Text style={[styles.policyDescription, { color: colors.textSecondary }]}>{policy.description}</Text>
-              <Text style={[styles.policyStatus, { color: colors.accent }]}>{policy.status}</Text>
-            </View>
-            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
-          </Pressable>
-        ))}
+
+        {loading ? (
+          <View style={styles.message}>
+            <ActivityIndicator size="large" color={colors.accent} />
+            <Text style={[styles.messageText, { color: colors.textSecondary }]}>Loading policies…</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.message}>
+            <Text style={[styles.messageText, { color: "#DC2626" }]}>{error}</Text>
+            <Pressable onPress={() => { void loadPolicies(); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+              <Text style={styles.retryText}>Try again</Text>
+            </Pressable>
+          </View>
+        ) : policies.length === 0 ? (
+          <View style={[styles.emptyCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No published policies available</Text>
+            <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
+              Published policy documents will appear here once they have been added by GrabnBite.
+            </Text>
+          </View>
+        ) : (
+          policies.map((policy) => (
+            <Pressable
+              key={policy.policyDocumentId}
+              accessibilityRole="button"
+              onPress={() => router.push({
+                pathname: "/policy-reader",
+                params: { id: String(policy.policyDocumentId) },
+              })}
+              style={({ pressed }) => [
+                styles.policyCard,
+                { backgroundColor: colors.surfaceElevated, borderColor: colors.border, opacity: pressed ? 0.75 : 1 },
+              ]}
+            >
+              <View style={styles.policyIcon}>
+                <Text style={styles.policyEmoji}>📄</Text>
+              </View>
+              <View style={styles.policyCopy}>
+                <Text style={[styles.policyTitle, { color: colors.text }]}>{policy.title}</Text>
+                <Text style={[styles.policyDescription, { color: colors.textSecondary }]}>{policy.description}</Text>
+                <Text style={[styles.policyStatus, { color: colors.accent }]}>
+                  {policy.effectiveDate
+                    ? `Effective ${new Date(policy.effectiveDate).toLocaleDateString()}`
+                    : "Published"}
+                  {policy.version > 1 ? ` · Version ${policy.version}` : ""}
+                </Text>
+              </View>
+              <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
+            </Pressable>
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -123,4 +146,10 @@ const styles = StyleSheet.create({
   policyDescription: { fontSize: 12, lineHeight: 17, marginTop: 4 },
   policyStatus: { fontSize: 11, fontWeight: "700", marginTop: 6 },
   arrow: { fontSize: 26, marginLeft: 8 },
+  message: { alignItems: "center", justifyContent: "center", padding: 28 },
+  messageText: { fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 10 },
+  retryButton: { paddingHorizontal: 22, paddingVertical: 12, borderRadius: 10, marginTop: 18 },
+  retryText: { color: "#FFFFFF", fontWeight: "800", fontSize: 13 },
+  emptyCard: { borderWidth: 1, borderRadius: 14, padding: 18, alignItems: "center" },
+  emptyTitle: { fontSize: 15, fontWeight: "800", marginBottom: 6 },
 });

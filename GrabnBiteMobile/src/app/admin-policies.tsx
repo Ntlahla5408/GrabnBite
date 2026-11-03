@@ -37,7 +37,7 @@ interface PickedPdf {
 }
 
 export default function AdminPoliciesScreen() {
-  const { user, token } = useAuth();
+  const { user, token, loading: authLoading } = useAuth();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
 
@@ -66,6 +66,10 @@ export default function AdminPoliciesScreen() {
   }, [token]);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       router.replace("/login");
       return;
@@ -78,7 +82,7 @@ export default function AdminPoliciesScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Load admin policy data after the role check.
     void loadPolicies();
-  }, [user, loadPolicies]);
+  }, [user, authLoading, loadPolicies]);
 
   function resetForm() {
     setEditingId(null);
@@ -247,6 +251,14 @@ export default function AdminPoliciesScreen() {
         { text: "Cancel", style: "cancel" },
         { text: "Archive", style: "destructive", onPress: () => { void archivePolicy(policy); } },
       ],
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <View style={[styles.screen, styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
     );
   }
 

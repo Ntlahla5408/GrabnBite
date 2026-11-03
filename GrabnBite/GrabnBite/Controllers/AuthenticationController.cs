@@ -79,24 +79,44 @@ namespace GrabnBite.Controllers
                     "A user with this email already exists.");
             }
 
-            // Find the Customer role
-            var customerRole = await dbContext.Roles
-                .FirstOrDefaultAsync(r =>
-                    r.Name.ToLower() == "customer");
+            // Public registration may create only Customer or Restaurant accounts.
+            // Never trust a client-supplied role name or role ID.
+            var accountType = string.IsNullOrWhiteSpace(registerUser.AccountType)
+                ? "Customer"
+                : registerUser.AccountType.Trim();
 
-            if (customerRole == null)
+            if (!accountType.Equals("Customer", StringComparison.OrdinalIgnoreCase) &&
+                !accountType.Equals("Restaurant", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(
+                    "Account type must be either Customer or Restaurant.");
+            }
+
+            accountType = accountType.Equals(
+                "Restaurant",
+                StringComparison.OrdinalIgnoreCase)
+                    ? "Restaurant"
+                    : "Customer";
+
+            var selectedRole = await dbContext.Roles
+                .FirstOrDefaultAsync(r =>
+                    r.Name.ToLower() == accountType.ToLower());
+
+            if (selectedRole == null)
             {
                 return StatusCode(
                     StatusCodes.Status500InternalServerError,
-                    "Customer role has not been configured.");
+                    $"{accountType} role has not been configured.");
             }
 
-            // Hash password
+            // Hash password before opening the transaction.
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(
                 registerUser.Password
             );
 
-            // Create user
+            await using var transaction =
+                await dbContext.Database.BeginTransactionAsync();
+
             var user = new User
             {
                 FirstName = registerUser.FirstName.Trim(),
@@ -104,23 +124,69 @@ namespace GrabnBite.Controllers
                 Email = email,
                 PhoneNumber = registerUser.PhoneNumber.Trim(),
                 PasswordHash = passwordHash,
-                RoleId = customerRole.RoleId,
+                RoleId = selectedRole.RoleId,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
 
             dbContext.Users.Add(user);
-
             await dbContext.SaveChangesAsync();
+
+            RestaurantApplication? restaurantApplication = null;
+
+            if (accountType == "Restaurant")
+            {
+                var now = DateTime.UtcNow;
+
+                restaurantApplication = new RestaurantApplication
+                {
+                    UserId = user.UserId,
+                    ApplicationReference =
+                        $"GB-{Guid.NewGuid().ToString("N")[..20].ToUpperInvariant()}",
+                    Status = RestaurantApplicationStatus.Draft,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                dbContext.RestaurantApplications.Add(restaurantApplication);
+                await dbContext.SaveChangesAsync();
+
+                dbContext.RestaurantApplicationHistories.Add(
+                    new RestaurantApplicationHistory
+                    {
+                        RestaurantApplicationId =
+                            restaurantApplication.RestaurantApplicationId,
+                        PreviousStatus = null,
+                        NewStatus = RestaurantApplicationStatus.Draft,
+                        Action = "ApplicationCreated",
+                        Comment = "Initial restaurant partner application created during registration.",
+                        PerformedByUserId = user.UserId,
+                        CreatedAt = now
+                    });
+
+                await dbContext.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
 
             return Ok(new
             {
-                message = "User registered successfully.",
+                message = accountType == "Restaurant"
+                    ? "Restaurant account registered. Your draft application is ready to complete."
+                    : "User registered successfully.",
                 userId = user.UserId,
                 firstName = user.FirstName,
                 lastName = user.LastName,
                 email = user.Email,
-                role = customerRole.Name
+                role = selectedRole.Name,
+                restaurantApplication = restaurantApplication == null
+                    ? null
+                    : new
+                    {
+                        restaurantApplication.RestaurantApplicationId,
+                        restaurantApplication.ApplicationReference,
+                        status = restaurantApplication.Status.ToString()
+                    }
             });
         }
 

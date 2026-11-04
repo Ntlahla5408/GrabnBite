@@ -12,7 +12,7 @@ namespace GrabnBite.Models.Entities
         public string? Surname { get; set; }
         public string? PreferredName { get; set; }
         public string? IdOrPassportNumber { get; set; }
-        public DateTime? DateOfBirth { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
         public string? Nationality { get; set; }
         public string? MobileNumber { get; set; }
         public string? AlternativeContactNumber { get; set; }

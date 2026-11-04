@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Linking,
@@ -54,6 +54,7 @@ export default function OrderScreen() {
   const orderId = Number(params.orderId);
 
   const [order, setOrder] = useState<Order | null>(null);
+  const orderLoadedRef = useRef(false);
   const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
@@ -68,6 +69,7 @@ export default function OrderScreen() {
       console.log("ORDER RESULT:", result);
 
       setOrder(result);
+      orderLoadedRef.current = true;
 
       const orderStatus = String(result.status ?? "").toUpperCase();
       if (["ASSIGNED", "PICKED_UP", "DELIVERING"].includes(orderStatus)) {
@@ -89,13 +91,13 @@ export default function OrderScreen() {
     } catch (error) {
       console.error("Failed to load order:", error);
 
-      if (!order) {
+      if (!orderLoadedRef.current) {
         setError("Unable to load your order. Please try again.");
       }
     } finally {
       setLoading(false);
     }
-  }, [token, orderId, order]);
+  }, [token, orderId]);
 
   useEffect(() => {
     if (authLoading) {

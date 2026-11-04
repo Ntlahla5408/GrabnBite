@@ -18,6 +18,7 @@ import SectionHeader from "../components/home/SectionHeader";
 import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Pressable } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -166,12 +167,44 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open GrabnBite support chat"
+        onPress={() => router.push("/chatbot")}
+        style={[styles.chatButton, { backgroundColor: colors.accent }]}
+      >
+        <Text style={styles.chatButtonIcon}>✦</Text>
+        <Text style={styles.chatButtonLabel}>Help</Text>
+      </Pressable>
+
       <CustomerBottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  chatButton: {
+    position: "absolute",
+    right: 18,
+    bottom: 96,
+    zIndex: 5,
+    minWidth: 76,
+    height: 48,
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    elevation: 5,
+    shadowColor: "#000000",
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  chatButtonIcon: { color: "#FFFFFF", fontSize: 18, fontWeight: "900" },
+  chatButtonLabel: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },
+
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",

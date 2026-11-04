@@ -43,6 +43,10 @@ namespace GrabnBite.Models.Entities
         public bool? IsRoadworthy { get; set; }
         public bool? IsLicensed { get; set; }
         public bool? IsInsured { get; set; }
+        public bool RequiresDriversLicence { get; set; }
+        public bool RequiresProfessionalDrivingPermit { get; set; }
+        public bool RequiresRoadworthiness { get; set; }
+        public bool? VehicleOwnedByApplicant { get; set; }
         public string? CommercialDeliveryInsurance { get; set; }
 
         // Delivery equipment

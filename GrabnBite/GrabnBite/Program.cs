@@ -15,6 +15,9 @@ if (!builder.Environment.IsDevelopment())
     builder.WebHost.UseUrls("http://0.0.0.0:10000");
 }
 
+builder.Services.Configure<BrevoSettings>(builder.Configuration.GetSection("Brevo"));
+builder.Services.AddHttpClient<IBrevoEmailService, BrevoEmailService>();
+
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
 builder.Services.AddHttpClient<YocoPaymentService>();
 

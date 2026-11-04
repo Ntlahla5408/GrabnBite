@@ -155,6 +155,8 @@ namespace GrabnBite.Controllers
                     cancellationToken);
 
             if (document == null) return NotFound("Application document not found.");
+            if (document.DriverApplication.Status == DriverApplicationStatus.Draft)
+                return Conflict("Documents can only be reviewed after the applicant submits the application.");
             if (document.DriverApplication.Status is DriverApplicationStatus.Approved or DriverApplicationStatus.Rejected)
                 return Conflict("A completed application cannot be changed.");
 
@@ -225,6 +227,8 @@ namespace GrabnBite.Controllers
             var application = await _context.DriverApplications
                 .FirstOrDefaultAsync(item => item.DriverApplicationId == id, cancellationToken);
             if (application == null) return NotFound("Driver application not found.");
+            if (application.Status == DriverApplicationStatus.Draft)
+                return Conflict("A draft application cannot be rejected before submission.");
             if (application.Status == DriverApplicationStatus.Approved)
                 return Conflict("An approved application cannot be rejected.");
 
@@ -361,6 +365,8 @@ namespace GrabnBite.Controllers
             var application = await _context.DriverApplications
                 .FirstOrDefaultAsync(item => item.DriverApplicationId == id, cancellationToken);
             if (application == null) return NotFound("Driver application not found.");
+            if (application.Status == DriverApplicationStatus.Draft)
+                return Conflict("A draft application cannot be moved into review before submission.");
             if (application.Status is DriverApplicationStatus.Approved or DriverApplicationStatus.Rejected)
                 return Conflict("A completed application cannot be changed.");
 

@@ -277,6 +277,17 @@ namespace GrabnBite.Controllers
                     documentsToReview = unreviewedDocuments
                 });
 
+            var isBicycle = application.PartnerType?.Contains("bicycle", StringComparison.OrdinalIgnoreCase) == true;
+            if (!isBicycle)
+            {
+                if (application.IsLicensed != true || application.IsInsured != true)
+                    return BadRequest("The vehicle must be confirmed as licensed and insured before approval.");
+                if (!string.Equals(application.CommercialDeliveryInsurance, "Yes", StringComparison.OrdinalIgnoreCase))
+                    return BadRequest("Commercial delivery insurance must be confirmed before approval.");
+                if (application.RequiresRoadworthiness && application.IsRoadworthy != true)
+                    return BadRequest("Roadworthiness must be confirmed before approval.");
+            }
+
             var adminId = CurrentAdminId();
             if (adminId == null) return Unauthorized();
 

@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/authContext";
 import {
+  createDriverApplication,
   deleteDriverApplicationDocument,
   DriverApplication,
   DriverDocumentType,
@@ -234,6 +235,7 @@ export default function DriverApplicationScreen() {
   const loadApplication = useCallback(async () => {
     if (!token) return;
     try {
+      await createDriverApplication(token);
       const result = await getMyDriverApplication(token);
       setApplication(result);
       setForm({ ...initialForm, ...result, bankAccountNumber: "" });

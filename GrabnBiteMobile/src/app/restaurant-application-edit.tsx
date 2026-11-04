@@ -92,6 +92,8 @@ const emptyForm: DraftForm = {
 export default function RestaurantApplicationEditScreen() {
   const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   const { token, user, loading: authLoading } = useAuth();
+  const parsedApplicationId = Number(applicationId);
+  const hasValidApplicationId = Number.isInteger(parsedApplicationId) && parsedApplicationId > 0;
   const [application, setApplication] = useState<RestaurantApplicationDraft | null>(null);
   const [form, setForm] = useState<DraftForm>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -117,15 +119,10 @@ export default function RestaurantApplicationEditScreen() {
       return;
     }
 
-    const id = Number(applicationId);
-    if (!Number.isInteger(id) || id <= 0) {
-      setError("A valid application was not selected.");
-      setLoading(false);
-      return;
-    }
+    if (!hasValidApplicationId) return;
 
     let active = true;
-    getRestaurantApplication(id, token)
+    getRestaurantApplication(parsedApplicationId, token)
       .then((result) => {
         if (!active) return;
         setApplication(result);
@@ -238,7 +235,7 @@ export default function RestaurantApplicationEditScreen() {
     }
   };
 
-  if (loading || authLoading) {
+  if (authLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#F97316" />
@@ -248,6 +245,26 @@ export default function RestaurantApplicationEditScreen() {
   }
 
   if (!token || user?.role !== "Restaurant") return null;
+
+  if (!hasValidApplicationId) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.error}>A valid application was not selected.</Text>
+        <Pressable onPress={() => router.replace("/restaurant-profile")}>
+          <Text style={styles.backText}>‹  Back to applications</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#F97316" />
+        <Text style={styles.muted}>Loading application...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>

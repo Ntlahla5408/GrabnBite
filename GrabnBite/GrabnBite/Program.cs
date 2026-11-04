@@ -25,8 +25,29 @@ builder.Services.Configure<SupabaseStorageSettings>(
     builder.Configuration.GetSection("SupabaseStorage"));
 builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStorageService>();
 
-builder.Services.Configure<SupabaseRestaurantDocumentStorageSettings>(
-    builder.Configuration.GetSection("SupabaseRestaurantDocumentStorage"));
+builder.Services.Configure<SupabaseRestaurantDocumentStorageSettings>(options =>
+{
+    // Reuse the existing Supabase project credentials, but keep partner
+    // documents in a separate private bucket from published policy PDFs.
+    options.ProjectUrl =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:ProjectUrl"] ??
+        builder.Configuration["SupabaseStorage:ProjectUrl"] ??
+        string.Empty;
+    options.ServiceRoleKey =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:ServiceRoleKey"] ??
+        builder.Configuration["SupabaseStorage:ServiceRoleKey"] ??
+        string.Empty;
+    options.BucketName =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:BucketName"] ??
+        "grabnbite-restaurant-documents";
+
+    if (long.TryParse(
+        builder.Configuration["SupabaseRestaurantDocumentStorage:MaxFileSizeBytes"],
+        out var maximumFileSizeBytes))
+    {
+        options.MaxFileSizeBytes = maximumFileSizeBytes;
+    }
+});
 builder.Services.AddHttpClient<ISupabaseRestaurantDocumentStorageService, SupabaseRestaurantDocumentStorageService>();
 builder.Services.AddSingleton<IRestaurantBankingEncryptionService, RestaurantBankingEncryptionService>();
 

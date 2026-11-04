@@ -217,6 +217,7 @@ const initialForm: Record<string, any> = {
   requiresProfessionalDrivingPermit: false,
   requiresRoadworthiness: false,
   bankAccountNumber: "",
+  signatureMethod: "EmailVerification",
 };
 
 export default function DriverApplicationScreen() {

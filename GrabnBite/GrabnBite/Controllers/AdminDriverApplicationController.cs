@@ -265,6 +265,14 @@ namespace GrabnBite.Controllers
             if (application.Status is not DriverApplicationStatus.PendingReview and not DriverApplicationStatus.UnderVerification)
                 return Conflict("Only submitted applications under review can be approved.");
 
+            var missingApplicationItems = DriverApplicationController.GetMissingItems(application);
+            if (missingApplicationItems.Count > 0)
+                return BadRequest(new
+                {
+                    message = "The application is missing required information or supporting documents.",
+                    missingItems = missingApplicationItems
+                });
+
             var unreviewedDocuments = application.Documents
                 .Where(document => document.VerificationStatus != DriverVerificationStatus.Approved)
                 .Select(document => document.DocumentType)

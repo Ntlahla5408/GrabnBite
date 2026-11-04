@@ -36,6 +36,10 @@ export type DriverDocumentType =
   | "BankConfirmation"
   | "Other";
 
+export async function createDriverApplication(token: string) {
+  return apiRequest("/api/DriverApplication", { method: "POST" }, token);
+}
+
 export async function getMyDriverApplication(token: string): Promise<DriverApplication> {
   return apiRequest("/api/DriverApplication/me", {}, token);
 }

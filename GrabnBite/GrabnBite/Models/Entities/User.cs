@@ -20,6 +20,13 @@
 
         public bool IsActive { get; set; } = true;
 
+        // Existing accounts remain verified; public registration explicitly sets false.
+        public bool IsEmailVerified { get; set; } = true;
+
+        public DateTime? EmailVerifiedAt { get; set; }
+
+        public EmailVerificationChallenge? EmailVerificationChallenge { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

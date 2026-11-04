@@ -4,7 +4,6 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
-    TextInput,
     ScrollView,
     StyleSheet,
     Text,

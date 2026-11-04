@@ -185,7 +185,7 @@ namespace GrabnBite.Controllers
                 documents = application.Documents.Select(document => new
                 {
                     document.RestaurantDocumentId,
-                    document.DocumentType,
+                    documentType = document.DocumentType.ToString(),
                     document.DocumentDescription,
                     document.OriginalFileName,
                     document.ContentType,
@@ -325,7 +325,7 @@ namespace GrabnBite.Controllers
                 new
                 {
                     document.RestaurantDocumentId,
-                    document.DocumentType,
+                    documentType = document.DocumentType.ToString(),
                     document.OriginalFileName,
                     document.ContentType,
                     document.FileSize,

@@ -98,7 +98,8 @@ export default function RestaurantApplicationEditScreen() {
   const [application, setApplication] = useState<RestaurantApplicationDraft | null>(null);
   const [form, setForm] = useState<DraftForm>(emptyForm);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);\n  const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] =
     useState<RestaurantDocumentType>("CipcCertificate");
@@ -808,7 +809,8 @@ const styles = StyleSheet.create({
   notice: { color: "#9A3412", backgroundColor: "#FFF7ED", borderRadius: 9, padding: 12, marginBottom: 12, lineHeight: 19 },
   error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 14 },
   helper: { color: "#64748B", fontSize: 12, lineHeight: 18, marginTop: 18 },
-  saveButton: { minHeight: 50, backgroundColor: "#F97316", borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 18 },\n  submitButton: { minHeight: 50, backgroundColor: "#0F766E", borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 12 },
+  saveButton: { minHeight: 50, backgroundColor: "#F97316", borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 18 },
+  submitButton: { minHeight: 50, backgroundColor: "#0F766E", borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 12 },
   saveText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
   disabled: { opacity: 0.6 },
   center: { flex: 1, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center", padding: 24 },

@@ -106,7 +106,9 @@ namespace GrabnBite.Controllers
                     application.UpdatedAt,
                     application.DocumentsRequestedMessage,
                     application.RejectionReason,
-                    hasOperationalRestaurant = application.Restaurant != null
+                    hasOperationalRestaurant = application.Restaurant != null &&
+                        application.Restaurant.IsApproved &&
+                        application.Restaurant.IsActive
                 })
                 .ToListAsync(cancellationToken);
 

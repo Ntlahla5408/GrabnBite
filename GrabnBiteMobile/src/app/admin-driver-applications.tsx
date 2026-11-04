@@ -13,6 +13,10 @@ import {
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 
+const NAVY = "#071B2C";
+const ORANGE = "#F97316";
+const MUTED = "#64748B";
+
 type ApplicationSummary = {
   driverApplicationId: number;
   applicationReference: string;

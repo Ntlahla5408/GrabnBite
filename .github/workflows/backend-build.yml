@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - integration/release-readiness
       - fix/core-order-flow-theme
       - feature/add-policy-documents
       - feature/restaurant-partner-onboarding
   pull_request:
     branches:
+      - integration/release-readiness
       - main
 
 jobs:

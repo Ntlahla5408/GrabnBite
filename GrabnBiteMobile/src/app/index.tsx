@@ -19,10 +19,12 @@ import SectionHeader from "../components/home/SectionHeader";
 import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useAuth } from "../context/authContext";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useThemePreference();
+  const { user } = useAuth();
   const colors = AppThemeColors[theme];
 
   const [search, setSearch] = useState("");
@@ -167,6 +169,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
+      {user?.role?.toLowerCase() === "customer" && (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open GrabnBite support chat"
@@ -176,6 +179,7 @@ export default function HomeScreen() {
         <Text style={styles.chatButtonIcon}>✦</Text>
         <Text style={styles.chatButtonLabel}>Help</Text>
       </Pressable>
+      )}
 
       <CustomerBottomNav />
     </View>

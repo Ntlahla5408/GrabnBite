@@ -79,13 +79,13 @@ namespace GrabnBite.Services
                 .Where(item =>
                     !string.IsNullOrWhiteSpace(item.Content) &&
                     item.Content.Length <= 1500 &&
-                    (item.Role.Equals("user", StringComparison.OrdinalIgnoreCase) ||
-                     item.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase)))
+                    (string.Equals(item.Role, "user", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(item.Role, "assistant", StringComparison.OrdinalIgnoreCase)))
                 .TakeLast(MaximumHistoryMessages))
             {
                 contents.Add(new
                 {
-                    role = item.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase)
+                    role = string.Equals(item.Role, "assistant", StringComparison.OrdinalIgnoreCase)
                         ? "model"
                         : "user",
                     parts = new[] { new { text = item.Content } }
@@ -99,7 +99,7 @@ namespace GrabnBite.Services
                 {
                     new
                     {
-                        text = $"GrabnBite support knowledge:\n{SupportKnowledge}\n\nCustomer message:\n{message}"
+                        text = $"GrabnBite support knowledge:\\n{SupportKnowledge}\\n\\nCustomer message:\\n{message}"
                     }
                 }
             });
@@ -169,7 +169,7 @@ namespace GrabnBite.Services
             }
 
             var reply = string.Join(
-                "\n",
+                "\\n",
                 parts.EnumerateArray()
                     .Where(part => part.TryGetProperty("text", out _))
                     .Select(part => part.GetProperty("text").GetString())

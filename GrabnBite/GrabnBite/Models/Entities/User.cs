@@ -20,6 +20,13 @@
 
         public bool IsActive { get; set; } = true;
 
+        // Existing accounts remain verified; public registration explicitly sets false.
+        public bool IsEmailVerified { get; set; } = true;
+
+        public DateTime? EmailVerifiedAt { get; set; }
+
+        public EmailVerificationChallenge? EmailVerificationChallenge { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
@@ -34,8 +41,12 @@
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
         public Driver? Driver { get; set; }
+        public DriverApplication? DriverApplication { get; set; }
 
         public ICollection<Restaurant> Restaurants { get; set; } = new List<Restaurant>();
+
+        public ICollection<RestaurantApplication> RestaurantApplications { get; set; }
+            = new List<RestaurantApplication>();
 
         public ICollection<Cart> Carts { get; set; } = new List<Cart>();
     }

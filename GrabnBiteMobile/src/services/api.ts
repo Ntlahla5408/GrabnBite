@@ -96,8 +96,39 @@ export async function apiRequest(
       router.replace("/login");
     }
 
-    const message = errorText || `API Error: ${response.status}`;
-    throw new Error(`${message} (HTTP ${response.status})`);
+    let errorData: any = null;
+    if (errorText) {
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = null;
+      }
+    }
+
+    const validationMessages = errorData?.errors && typeof errorData.errors === "object"
+      ? Object.entries(errorData.errors).flatMap(([field, messages]) =>
+          (Array.isArray(messages) ? messages : [messages])
+            .filter((item) => typeof item === "string" && item.trim())
+            .map((item) => `${field}: ${item}`),
+        )
+      : [];
+
+    const message =
+      (typeof errorData === "string" && errorData) ||
+      (validationMessages.length ? validationMessages.join(" · ") : null) ||
+      errorData?.message ||
+      errorData?.title ||
+      errorData?.detail ||
+      errorText ||
+      `API Error: ${response.status}`;
+
+    const apiError = new Error(`${message} (HTTP ${response.status})`) as Error & {
+      data?: any;
+      status?: number;
+    };
+    apiError.data = errorData;
+    apiError.status = response.status;
+    throw apiError;
   }
 
   return response.json();

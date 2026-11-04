@@ -12,6 +12,7 @@ namespace GrabnBite.Data
 
         // Tables
         public DbSet<User> Users { get; set; }
+        public DbSet<EmailVerificationChallenge> EmailVerificationChallenges { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Restaurant> Restaurants { get; set; }
@@ -30,11 +31,30 @@ namespace GrabnBite.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Driver> Drivers { get; set; }
+        public DbSet<DriverApplication> DriverApplications { get; set; }
+        public DbSet<DriverApplicationDocument> DriverApplicationDocuments { get; set; }
+        public DbSet<DriverApplicationHistory> DriverApplicationHistories { get; set; }
         public DbSet<PolicyDocument> PolicyDocuments { get; set; }
+
+        // Restaurant partner onboarding
+        public DbSet<RestaurantApplication> RestaurantApplications { get; set; }
+        public DbSet<RestaurantDocument> RestaurantDocuments { get; set; }
+        public DbSet<RestaurantBankingDetail> RestaurantBankingDetails { get; set; }
+        public DbSet<RestaurantAgreementAcceptance> RestaurantAgreementAcceptances { get; set; }
+        public DbSet<RestaurantAgreementAcceptanceDocument> RestaurantAgreementAcceptanceDocuments { get; set; }
+        public DbSet<RestaurantOperatingHour> RestaurantOperatingHours { get; set; }
+        public DbSet<RestaurantApplicationHistory> RestaurantApplicationHistories { get; set; }
+        public DbSet<RestaurantApplicationReviewItem> RestaurantApplicationReviewItems { get; set; }
+        public DbSet<RestaurantCommissionSetting> RestaurantCommissionSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+
+
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<PolicyDocument>()
+    .HasIndex(p => new { p.IsArchived, p.Status });
 
             // ============================================================
             // USER → ADDRESS
@@ -123,6 +143,358 @@ namespace GrabnBite.Data
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+
+
+            // ============================================================
+            // DRIVER PARTNER APPLICATIONS
+            // ============================================================
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasOne(a => a.User)
+                .WithOne(u => u.DriverApplication)
+                .HasForeignKey<DriverApplication>(a => a.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasOne(a => a.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => a.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => a.ApplicationReference)
+                .IsUnique();
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => new { a.Status, a.UpdatedAt });
+
+            modelBuilder.Entity<DriverApplication>()
+                .Property(a => a.ApplicationReference)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            modelBuilder.Entity<DriverApplication>()
+                .Property(a => a.Status)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasOne(d => d.DriverApplication)
+                .WithMany(a => a.Documents)
+                .HasForeignKey(d => d.DriverApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasOne(d => d.VerifiedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasIndex(d => new { d.DriverApplicationId, d.DocumentType });
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .Property(d => d.VerificationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasOne(h => h.DriverApplication)
+                .WithMany(a => a.History)
+                .HasForeignKey(h => h.DriverApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasOne(h => h.PerformedByUser)
+                .WithMany()
+                .HasForeignKey(h => h.PerformedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasIndex(h => new { h.DriverApplicationId, h.CreatedAt });
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .Property(h => h.PreviousStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .Property(h => h.NewStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            // ============================================================
+            // RESTAURANT PARTNER APPLICATIONS
+            // ============================================================
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .HasOne(a => a.User)
+                .WithMany(u => u.RestaurantApplications)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .HasOne(a => a.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .HasIndex(a => a.ApplicationReference)
+                .IsUnique();
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .HasIndex(a => new { a.UserId, a.Status });
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .HasIndex(a => a.CreatedAt);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.ApplicationReference)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.TradingName)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.RegisteredBusinessName)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.CipcRegistrationNumber)
+                .HasMaxLength(100);
+
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.MaximumDeliveryDistanceKm)
+                .HasPrecision(8, 2);
+
+            // One approved application creates at most one operational restaurant.
+            // The nullable FK preserves compatibility with legacy restaurants.
+            modelBuilder.Entity<Restaurant>()
+                .HasOne(r => r.RestaurantApplication)
+                .WithOne(a => a.Restaurant)
+                .HasForeignKey<Restaurant>(r => r.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Restaurant>()
+                .HasIndex(r => r.RestaurantApplicationId)
+                .IsUnique()
+                .HasFilter("\"RestaurantApplicationId\" IS NOT NULL");
+
+            modelBuilder.Entity<Restaurant>()
+                .Property(r => r.IsActive)
+                .HasDefaultValue(true);
+
+            // Application documents; previous uploads remain as separate records.
+            modelBuilder.Entity<RestaurantDocument>()
+                .HasOne(d => d.RestaurantApplication)
+                .WithMany(a => a.Documents)
+                .HasForeignKey(d => d.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .HasOne(d => d.VerifiedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .HasIndex(d => d.RestaurantApplicationId);
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .Property(d => d.OriginalFileName)
+                .HasMaxLength(255)
+                .IsRequired();
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .Property(d => d.ContentType)
+                .HasMaxLength(150)
+                .IsRequired();
+
+            // One current banking-details record per application.
+            modelBuilder.Entity<RestaurantBankingDetail>()
+                .HasOne(b => b.RestaurantApplication)
+                .WithOne(a => a.BankingDetails)
+                .HasForeignKey<RestaurantBankingDetail>(b => b.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantBankingDetail>()
+                .HasIndex(b => b.RestaurantApplicationId)
+                .IsUnique();
+
+            modelBuilder.Entity<RestaurantBankingDetail>()
+                .HasOne(b => b.VerifiedByUser)
+                .WithMany()
+                .HasForeignKey(b => b.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Agreement acceptance and immutable accepted-document snapshots.
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+    .HasKey(d => d.AgreementAcceptanceDocumentId);
+
+            modelBuilder.Entity<RestaurantAgreementAcceptance>()
+                .HasOne(a => a.RestaurantApplication)
+                .WithMany(r => r.AgreementAcceptances)
+                .HasForeignKey(a => a.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+                .HasOne(d => d.RestaurantAgreementAcceptance)
+                .WithMany(a => a.Documents)
+                .HasForeignKey(d => d.RestaurantAgreementAcceptanceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+                .HasOne(d => d.PolicyDocument)
+                .WithMany()
+                .HasForeignKey(d => d.PolicyDocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+                .HasIndex(d => d.RestaurantAgreementAcceptanceId);
+
+            modelBuilder.Entity<RestaurantAgreementAcceptanceDocument>()
+                .Property(d => d.ContentHash)
+                .HasMaxLength(128)
+                .IsRequired();
+
+            // One operating-hours row per weekday and application.
+            modelBuilder.Entity<RestaurantOperatingHour>()
+                .HasOne(h => h.RestaurantApplication)
+                .WithMany(a => a.OperatingHours)
+                .HasForeignKey(h => h.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantOperatingHour>()
+                .HasIndex(h => new { h.RestaurantApplicationId, h.DayOfWeek })
+                .IsUnique();
+
+            // Application audit history.
+            modelBuilder.Entity<RestaurantApplicationHistory>()
+                .HasOne(h => h.RestaurantApplication)
+                .WithMany(a => a.History)
+                .HasForeignKey(h => h.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RestaurantApplicationHistory>()
+                .HasOne(h => h.PerformedByUser)
+                .WithMany()
+                .HasForeignKey(h => h.PerformedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<RestaurantApplicationHistory>()
+                .HasIndex(h => new { h.RestaurantApplicationId, h.CreatedAt });
+
+            // One checklist item per review category and application.
+            modelBuilder.Entity<RestaurantApplicationReviewItem>()
+                .HasOne(i => i.RestaurantApplication)
+                .WithMany(a => a.ReviewItems)
+                .HasForeignKey(i => i.RestaurantApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantApplicationReviewItem>()
+                .HasOne(i => i.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(i => i.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<RestaurantApplicationReviewItem>()
+                .HasIndex(i => new { i.RestaurantApplicationId, i.ReviewCategory })
+                .IsUnique();
+
+            // Each restaurant has its own commission schedule.
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .HasOne(c => c.Restaurant)
+                .WithOne(r => r.CommissionSettings)
+                .HasForeignKey<RestaurantCommissionSetting>(c => c.RestaurantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .HasIndex(c => c.RestaurantId)
+                .IsUnique();
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .Property(c => c.PromotionCommissionRate)
+                .HasPrecision(5, 4);
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .Property(c => c.CollectionCommissionRate)
+                .HasPrecision(5, 4);
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .Property(c => c.RestaurantDeliveryCommissionRate)
+                .HasPrecision(5, 4);
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .Property(c => c.GrubnBiteDeliveryCommissionRate)
+                .HasPrecision(5, 4);
+
+            modelBuilder.Entity<RestaurantCommissionSetting>()
+                .ToTable(t =>
+                {
+                    t.HasCheckConstraint(
+                        "CK_RestaurantCommissionSettings_Rates",
+                        "\"PromotionCommissionRate\" BETWEEN 0 AND 1 AND " +
+                        "\"CollectionCommissionRate\" BETWEEN 0 AND 1 AND " +
+                        "\"RestaurantDeliveryCommissionRate\" BETWEEN 0 AND 1 AND " +
+                        "\"GrubnBiteDeliveryCommissionRate\" BETWEEN 0 AND 1");
+
+                    t.HasCheckConstraint(
+                        "CK_RestaurantCommissionSettings_PromotionDates",
+                        "\"PromotionEndDateExclusive\" > \"PromotionStartDate\"");
+                });
+
+            // Store enums as readable values instead of numeric ordinals.
+            modelBuilder.Entity<RestaurantApplication>()
+                .Property(a => a.Status)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .Property(d => d.DocumentType)
+                .HasConversion<string>()
+                .HasMaxLength(40);
+
+            modelBuilder.Entity<RestaurantDocument>()
+                .Property(d => d.VerificationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantBankingDetail>()
+                .Property(b => b.VerificationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantApplicationHistory>()
+                .Property(h => h.PreviousStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantApplicationHistory>()
+                .Property(h => h.NewStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantApplicationReviewItem>()
+                .Property(i => i.ReviewCategory)
+                .HasConversion<string>()
+                .HasMaxLength(40);
+
+            modelBuilder.Entity<RestaurantApplicationReviewItem>()
+                .Property(i => i.VerificationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<RestaurantOperatingHour>()
+                .Property(h => h.DayOfWeek)
+                .HasConversion<string>()
+                .HasMaxLength(15);
 
             // ============================================================
             // RESTAURANT → MENU CATEGORY
@@ -429,6 +801,25 @@ namespace GrabnBite.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.IsEmailVerified)
+                .HasDefaultValue(true);
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .HasOne(c => c.User)
+                .WithOne(u => u.EmailVerificationChallenge)
+                .HasForeignKey<EmailVerificationChallenge>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .HasIndex(c => c.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .Property(c => c.CodeHash)
+                .HasMaxLength(128)
+                .IsRequired();
 
 
             // ============================================================

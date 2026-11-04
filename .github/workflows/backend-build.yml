@@ -6,6 +6,7 @@ on:
       - main
       - fix/core-order-flow-theme
       - feature/add-policy-documents
+      - feature/restaurant-partner-onboarding
   pull_request:
     branches:
       - main

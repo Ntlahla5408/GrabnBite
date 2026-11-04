@@ -2,178 +2,88 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
 import {
-  createRestaurant,
-  getMyRestaurant,
-} from "../services/restaurantService";
-import { Restaurant } from "../types/restaurant";
+  getMyRestaurantApplications,
+  createRestaurantApplication,
+  RestaurantApplicationSummary,
+} from "../services/restaurantApplicationService";
 
 export default function RestaurantProfileScreen() {
   const { user, token, loading: authLoading } = useAuth();
-
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [address, setAddress] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
-
-  const [existingRestaurant, setExistingRestaurant] = useState<Restaurant | null>(null);
-  const [checkingProfile, setCheckingProfile] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [applications, setApplications] = useState<RestaurantApplicationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [creatingApplication, setCreatingApplication] = useState(false);
   const [error, setError] = useState("");
 
-  const checkExistingProfile = useCallback(async () => {
-    if (!token || user?.role !== "Restaurant") return;
+  const loadApplications = useCallback(async () => {
+    if (!token) return;
 
     try {
-      const restaurant = await getMyRestaurant(token);
-      setExistingRestaurant(restaurant);
+      const results = await getMyRestaurantApplications(token);
       setError("");
-    } catch (err: any) {
-      // A 404 means this restaurant account has not created a profile yet.
-      if (!String(err?.message ?? "").includes("HTTP 404")) {
-        setError(err?.message || "Unable to check your restaurant profile.");
-      }
+      setApplications(results);
+    } catch (requestError: any) {
+      setError(requestError?.message || "Unable to load your partner applications.");
     } finally {
-      setCheckingProfile(false);
+      setLoading(false);
+      setRefreshing(false);
     }
-  }, [token, user?.role]);
+  }, [token]);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== "Restaurant") {
+    if (authLoading) return;
+
+    if (user?.role !== "Restaurant") {
       router.replace("/");
       return;
     }
 
-    if (!authLoading && token && user?.role === "Restaurant") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Load the profile after authentication is ready.
-      void checkExistingProfile();
-    }
-  }, [authLoading, token, user?.role, checkExistingProfile]);
+    if (!token) return;
 
-  async function handleSubmit() {
-    if (!token) {
-      setError("Your session has expired. Please sign in again and retry.");
-      return;
-    }
+    let active = true;
 
-    const missingFields = [
-      !name.trim() ? "restaurant name" : null,
-      !phoneNumber.trim() ? "contact phone" : null,
-      !email.trim() ? "contact email" : null,
-      !address.trim() ? "physical address" : null,
-    ].filter((field): field is string => field !== null);
+    const fetchApplications = async () => {
+      try {
+        const results = await getMyRestaurantApplications(token);
+        if (!active) return;
+        setError("");
+        setApplications(results);
+      } catch (requestError: any) {
+        if (active) {
+          setError(requestError?.message || "Unable to load your partner applications.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-    if (missingFields.length > 0) {
-      setError(
-        `Please complete the required fields: ${missingFields.join(", ")}.`,
-      );
-      return;
-    }
+    void fetchApplications();
 
-    setError("");
+    return () => {
+      active = false;
+    };
+  }, [authLoading, token, user?.role]);
 
-    const latitudeValue = latitude.trim() ? Number(latitude) : 0;
-    const longitudeValue = longitude.trim() ? Number(longitude) : 0;
-
-    if (!Number.isFinite(latitudeValue) || !Number.isFinite(longitudeValue)) {
-      setError("Enter valid numbers for latitude and longitude, or leave both fields blank.");
-      return;
-    }
-
-    if (latitudeValue < -90 || latitudeValue > 90) {
-      setError("Latitude must be between -90 and 90.");
-      return;
-    }
-
-    if (longitudeValue < -180 || longitudeValue > 180) {
-      setError("Longitude must be between -180 and 180.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-
-      const created = await createRestaurant(
-        {
-          name: name.trim(),
-          description: description.trim(),
-          phoneNumber: phoneNumber.trim(),
-          email: email.trim(),
-          address: address.trim(),
-          imageUrl: null,
-          latitude: latitudeValue,
-          longitude: longitudeValue,
-        },
-        token,
-      );
-
-      setExistingRestaurant(created);
-      Alert.alert(
-        "Profile submitted",
-        "Your restaurant profile has been created and is awaiting administrator approval.",
-        [{ text: "Continue", onPress: () => router.replace("/restaurant-dashboard") }],
-      );
-    } catch (err: any) {
-      setError(err?.message || "Unable to create your restaurant profile.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (authLoading || checkingProfile) {
+  if (authLoading || loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#F97316" />
-        <Text style={styles.muted}>Checking your restaurant profile...</Text>
+        <Text style={styles.muted}>Loading your partner applications...</Text>
       </View>
     );
   }
 
   if (!token || user?.role !== "Restaurant") return null;
-
-  if (existingRestaurant) {
-    return (
-      <View style={styles.center}>
-        <View style={styles.statusCard}>
-          <Text style={styles.title}>{existingRestaurant.name}</Text>
-          <Text style={styles.status}>
-            {existingRestaurant.isApproved ? "Approved" : "Awaiting approval"}
-          </Text>
-          <Text style={styles.muted}>
-            {existingRestaurant.isApproved
-              ? "Your restaurant profile is approved."
-              : "Your profile has been submitted. An administrator must approve it before customers can see your restaurant."}
-          </Text>
-          <Pressable
-            style={[styles.primaryButton, { marginTop: 18 }]}
-            onPress={() => router.push("/restaurant-profile-edit")}
-          >
-            <Text style={styles.primaryButtonText}>Edit restaurant profile</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.secondaryButton, { marginTop: 10 }]}
-            onPress={() => router.replace("/restaurant-dashboard")}
-          >
-            <Text style={styles.secondaryButtonText}>Back to dashboard</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.screen}>
@@ -181,96 +91,152 @@ export default function RestaurantProfileScreen() {
         <Pressable onPress={() => router.replace("/restaurant-dashboard")}>
           <Text style={styles.backText}>‹  Dashboard</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>Create restaurant profile</Text>
-        <Text style={styles.headerSubtitle}>Enter the details customers will use to identify and contact your restaurant.</Text>
+        <Text style={styles.title}>Restaurant partner applications</Text>
+        <Text style={styles.subtitle}>
+          Applications are saved against your account. You can have more than one restaurant application.
+        </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              void loadApplications();
+            }}
+          />
+        }
+      >
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable
+          style={[styles.newApplicationButton, creatingApplication && styles.disabled]}
+          disabled={creatingApplication}
+          onPress={async () => {
+            if (!token) return;
+            try {
+              setCreatingApplication(true);
+              setError("");
+              const created = await createRestaurantApplication(token);
+              router.push(
+                `/restaurant-application-edit?applicationId=${created.restaurantApplicationId}` as any,
+              );
+            } catch (createError: any) {
+              setError(createError?.message || "Unable to create another application.");
+            } finally {
+              setCreatingApplication(false);
+            }
+          }}
+        >
+          {creatingApplication
+            ? <ActivityIndicator color="#FFFFFF" />
+            : <Text style={styles.newApplicationButtonText}>+ Start another restaurant application</Text>}
+        </Pressable>
 
-        <Field label="Restaurant name *" value={name} onChangeText={setName} placeholder="e.g. The Food Spot" />
-        <Field label="Description" value={description} onChangeText={setDescription} placeholder="Tell customers what you serve" multiline />
-        <Field label="Contact phone *" value={phoneNumber} onChangeText={setPhoneNumber} placeholder="Restaurant phone number" keyboardType="phone-pad" />
-        <Field label="Contact email *" value={email} onChangeText={setEmail} placeholder="Restaurant email" keyboardType="email-address" />
-        <Field label="Physical address *" value={address} onChangeText={setAddress} placeholder="Street address and area" multiline />
-        <Text style={styles.locationNote}>You can add your restaurant photo after creating your profile, from Edit restaurant profile.</Text>
-        <Text style={styles.locationNote}>Location coordinates are optional. Leave them blank if you do not have them yet.</Text>
-        <Field label="Latitude" value={latitude} onChangeText={setLatitude} placeholder="-33.9608" keyboardType="numeric" />
-        <Field label="Longitude" value={longitude} onChangeText={setLongitude} placeholder="25.6022" keyboardType="numeric" />
+        {applications.length === 0 && !error ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>No application found</Text>
+            <Text style={styles.body}>
+              Your restaurant account does not currently have a partner application. If you registered as a restaurant partner recently, refresh this screen.
+            </Text>
+          </View>
+        ) : null}
 
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>Approval required</Text>
-          <Text style={styles.noticeText}>Your restaurant will remain hidden from customers until an administrator approves this profile.</Text>
-        </View>
+        {applications.map((application) => (
+          <View key={application.restaurantApplicationId} style={styles.card}>
+            <Text style={styles.cardTitle}>
+              {application.tradingName ||
+                application.registeredBusinessName ||
+                "New restaurant application"}
+            </Text>
+            <Text style={styles.reference}>
+              Reference: {application.applicationReference}
+            </Text>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>{formatStatus(application.status)}</Text>
+            </View>
+            {application.documentsRequestedMessage ? (
+              <Text style={styles.notice}>
+                Documents requested: {application.documentsRequestedMessage}
+              </Text>
+            ) : null}
+            {application.rejectionReason ? (
+              <Text style={styles.error}>{application.rejectionReason}</Text>
+            ) : null}
+            <Text style={styles.body}>
+              {application.status === "Draft"
+                ? "Your draft has been saved. The application details and supporting documents still need to be completed before submission."
+                : application.status === "PendingReview"
+                  ? "Your application has been submitted and is awaiting administrator review."
+                  : application.status === "DocumentsRequired"
+                    ? "The administrator has requested additional documents. Review the request before resubmitting."
+                    : application.status === "UnderVerification"
+                      ? "Your submitted information and documents are being verified."
+                      : application.status === "Approved"
+                        ? application.hasOperationalRestaurant
+                          ? "Your application has been approved and your operational restaurant profile is active. You can return to the dashboard to manage it."
+                          : "Your application has been approved, but its operational restaurant profile is not active yet. It will become available once activation is completed."
+                        : "This application was rejected. Review the administrator's feedback or contact support."}
+            </Text>
+            <Text style={styles.date}>
+              Last updated: {new Date(application.updatedAt).toLocaleDateString()}
+            </Text>
+            {application.status === "Draft" || application.status === "DocumentsRequired" ? (
+              <Pressable
+                style={styles.editButton}
+                onPress={() =>
+                  router.push(
+                    `/restaurant-application-edit?applicationId=${application.restaurantApplicationId}` as any,
+                  )
+                }
+              >
+                <Text style={styles.editButtonText}>
+                  {application.status === "Draft" ? "Continue application" : "Update application"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ))}
 
-        <Pressable style={[styles.primaryButton, saving && styles.disabled]} onPress={handleSubmit} disabled={saving}>
-          {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Submit restaurant profile</Text>}
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={() => router.replace("/restaurant-dashboard")}
+        >
+          <Text style={styles.secondaryButtonText}>Back to dashboard</Text>
         </Pressable>
       </ScrollView>
     </View>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  keyboardType,
-  autoCapitalize,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  keyboardType?: "default" | "email-address" | "phone-pad" | "numeric";
-  autoCapitalize?: "none" | "sentences";
-}) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.multiline]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
-        multiline={multiline}
-        textAlignVertical={multiline ? "top" : "center"}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-      />
-    </View>
-  );
+function formatStatus(status: string) {
+  return status.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F8FAFC" },
   header: { backgroundColor: "#071B2C", paddingHorizontal: 22, paddingTop: 54, paddingBottom: 24 },
   backText: { color: "#FDBA74", fontSize: 14, fontWeight: "700", marginBottom: 18 },
-  headerTitle: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
-  headerSubtitle: { color: "#CBD5E1", fontSize: 14, lineHeight: 20, marginTop: 7 },
+  title: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
+  subtitle: { color: "#CBD5E1", fontSize: 14, lineHeight: 20, marginTop: 7 },
   content: { width: "100%", maxWidth: 760, alignSelf: "center", padding: 20, paddingBottom: 50 },
-  field: { marginBottom: 15 },
-  label: { color: "#071B2C", fontSize: 14, fontWeight: "700", marginBottom: 7 },
-  input: { minHeight: 48, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 10, backgroundColor: "#FFFFFF", paddingHorizontal: 14, color: "#071B2C", fontSize: 15 },
-  multiline: { minHeight: 88, paddingTop: 12 },
-  locationNote: { color: "#64748B", fontSize: 13, lineHeight: 19, marginTop: 2, marginBottom: 8 },
-  notice: { backgroundColor: "#FFF7ED", borderColor: "#FED7AA", borderWidth: 1, borderRadius: 12, padding: 15, marginTop: 5, marginBottom: 20 },
-  noticeTitle: { color: "#9A3412", fontWeight: "800", fontSize: 15 },
-  noticeText: { color: "#7C2D12", fontSize: 13, lineHeight: 19, marginTop: 5 },
-  primaryButton: { backgroundColor: "#F97316", minHeight: 50, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, paddingVertical: 13 },
-  primaryButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800" },
-  secondaryButton: { minHeight: 46, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
-  secondaryButtonText: { color: "#334155", fontSize: 14, fontWeight: "700" },
+  newApplicationButton: { minHeight: 48, borderRadius: 10, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginBottom: 16 },
+  newApplicationButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
   disabled: { opacity: 0.6 },
-  error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 15 },
+  card: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 14, padding: 18, marginBottom: 14 },
+  cardTitle: { color: "#071B2C", fontSize: 18, fontWeight: "800" },
+  reference: { color: "#64748B", fontSize: 12, marginTop: 6 },
+  statusPill: { alignSelf: "flex-start", backgroundColor: "#FFF7ED", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, marginTop: 12 },
+  statusText: { color: "#9A3412", fontWeight: "800", fontSize: 12 },
+  body: { color: "#475569", fontSize: 14, lineHeight: 21, marginTop: 12 },
+  notice: { color: "#9A3412", backgroundColor: "#FFF7ED", padding: 10, borderRadius: 8, marginTop: 12, lineHeight: 19 },
+  date: { color: "#94A3B8", fontSize: 12, marginTop: 12 },
+  error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 14 },
+  secondaryButton: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", marginTop: 8 },
+  editButton: { minHeight: 44, borderRadius: 9, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", marginTop: 16 },
+  editButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  secondaryButtonText: { color: "#334155", fontSize: 14, fontWeight: "700" },
   center: { flex: 1, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center", padding: 24 },
   muted: { color: "#64748B", textAlign: "center", lineHeight: 20, marginTop: 12 },
-  statusCard: { width: "100%", maxWidth: 480, backgroundColor: "#FFFFFF", borderRadius: 16, padding: 24, alignItems: "center" },
-  title: { color: "#071B2C", fontSize: 23, fontWeight: "800", textAlign: "center" },
-  status: { color: "#9A3412", fontWeight: "800", fontSize: 16, marginTop: 12 },
 });

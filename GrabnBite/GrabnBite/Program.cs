@@ -15,15 +15,49 @@ if (!builder.Environment.IsDevelopment())
     builder.WebHost.UseUrls("http://0.0.0.0:10000");
 }
 
+builder.Services.Configure<BrevoSettings>(builder.Configuration.GetSection("Brevo"));
+builder.Services.Configure<EmailVerificationSettings>(builder.Configuration.GetSection("EmailVerification"));
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+builder.Services.AddHttpClient<IBrevoEmailService, BrevoEmailService>();
+
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));
 builder.Services.AddHttpClient<YocoPaymentService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddHttpClient<ICloudinaryImageService, CloudinaryImageService>();
 
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddHttpClient<IGeminiChatService, GeminiChatService>();
+
 builder.Services.Configure<SupabaseStorageSettings>(
     builder.Configuration.GetSection("SupabaseStorage"));
 builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStorageService>();
+
+builder.Services.Configure<SupabaseRestaurantDocumentStorageSettings>(options =>
+{
+    // Reuse the existing Supabase project credentials, but keep partner
+    // documents in a separate private bucket from published policy PDFs.
+    options.ProjectUrl =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:ProjectUrl"] ??
+        builder.Configuration["SupabaseStorage:ProjectUrl"] ??
+        string.Empty;
+    options.ServiceRoleKey =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:ServiceRoleKey"] ??
+        builder.Configuration["SupabaseStorage:ServiceRoleKey"] ??
+        string.Empty;
+    options.BucketName =
+        builder.Configuration["SupabaseRestaurantDocumentStorage:BucketName"] ??
+        "grabnbite-restaurant-documents";
+
+    if (long.TryParse(
+        builder.Configuration["SupabaseRestaurantDocumentStorage:MaxFileSizeBytes"],
+        out var maximumFileSizeBytes))
+    {
+        options.MaxFileSizeBytes = maximumFileSizeBytes;
+    }
+});
+builder.Services.AddHttpClient<ISupabaseRestaurantDocumentStorageService, SupabaseRestaurantDocumentStorageService>();
+builder.Services.AddSingleton<IRestaurantBankingEncryptionService, RestaurantBankingEncryptionService>();
 
 builder.Services.AddScoped<FakePaymentGateway>();
 

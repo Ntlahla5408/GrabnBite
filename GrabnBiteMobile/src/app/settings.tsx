@@ -33,7 +33,8 @@ export default function SettingsScreen() {
         {user?.role === "Restaurant" ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.accent }]}>Restaurant Management</Text>
-            <SettingsLink icon="🏠" title="Restaurant Profile" description="Update your restaurant details and profile picture" onPress={() => router.push("/restaurant-profile")} colors={colors} />
+            <SettingsLink icon="🏠" title="Edit Restaurant Profile" description="Update your restaurant details and cover image" onPress={() => router.push("/restaurant-profile-edit")} colors={colors} />
+            <SettingsLink icon="📋" title="Partner Applications" description="View application status or start another restaurant application" onPress={() => router.push("/restaurant-profile")} colors={colors} />
             <SettingsLink icon="🍽️" title="Manage Menu" description="Add, edit or remove menu items and pictures" onPress={() => router.push("/restaurant-menu")} colors={colors} />
             <SettingsLink icon="📂" title="Manage Menu Categories" description="Create, rename or remove menu categories" onPress={() => router.push("/restaurant-categories")} colors={colors} />
           </View>

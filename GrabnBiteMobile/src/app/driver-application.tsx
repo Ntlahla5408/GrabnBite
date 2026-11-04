@@ -234,6 +234,7 @@ export default function DriverApplicationScreen() {
   const [notice, setNotice] = useState("");
   const [policies, setPolicies] = useState<PublishedPolicyDocument[]>([]);
   const [acknowledgedPolicyIds, setAcknowledgedPolicyIds] = useState<number[]>([]);
+  const [viewedPolicyIds, setViewedPolicyIds] = useState<number[]>([]);
   const [policiesError, setPoliciesError] = useState("");
 
   const loadApplication = useCallback(async () => {
@@ -264,9 +265,11 @@ export default function DriverApplicationScreen() {
           ))
           .map((policy) => policy.policyDocumentId);
         setAcknowledgedPolicyIds(currentAcknowledgements);
+        setViewedPolicyIds(currentAcknowledgements);
       } catch (policyError: any) {
         setPolicies([]);
         setAcknowledgedPolicyIds([]);
+        setViewedPolicyIds([]);
         setPoliciesError(policyError?.message || "Unable to load current published policies.");
       }
       setError("");
@@ -555,12 +558,18 @@ export default function DriverApplicationScreen() {
               {policy.description ? <Text style={styles.body}>{policy.description}</Text> : null}
               <Pressable
                 style={styles.uploadButton}
-                onPress={() => router.push({ pathname: "/policy-reader", params: { id: String(policy.policyDocumentId) } })}
+                onPress={() => {
+                  setViewedPolicyIds((current) => current.includes(policy.policyDocumentId)
+                    ? current
+                    : [...current, policy.policyDocumentId]);
+                  router.push({ pathname: "/policy-reader", params: { id: String(policy.policyDocumentId) } });
+                }}
               >
                 <Text style={styles.uploadButtonText}>OPEN AND READ POLICY</Text>
               </Pressable>
               <Pressable
                 style={styles.toggleRow}
+                disabled={!viewedPolicyIds.includes(policy.policyDocumentId)}
                 onPress={() => setAcknowledgedPolicyIds((current) =>
                   acknowledged
                     ? current.filter((id) => id !== policy.policyDocumentId)

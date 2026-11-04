@@ -19,15 +19,18 @@ namespace GrabnBite.Controllers
         private readonly AppDbContext _context;
         private readonly ISupabaseRestaurantDocumentStorageService _documentStorage;
         private readonly SupabaseRestaurantDocumentStorageSettings _documentStorageSettings;
+        private readonly IRestaurantBankingEncryptionService _bankingEncryption;
 
         public RestaurantApplicationController(
             AppDbContext context,
             ISupabaseRestaurantDocumentStorageService documentStorage,
-            IOptions<SupabaseRestaurantDocumentStorageSettings> documentStorageSettings)
+            IOptions<SupabaseRestaurantDocumentStorageSettings> documentStorageSettings,
+            IRestaurantBankingEncryptionService bankingEncryption)
         {
             _context = context;
             _documentStorage = documentStorage;
             _documentStorageSettings = documentStorageSettings.Value;
+            _bankingEncryption = bankingEncryption;
         }
 
         // GET: api/RestaurantApplication/my-applications
@@ -370,6 +373,123 @@ namespace GrabnBite.Controllers
             return NoContent();
         }
 
+        // GET: api/RestaurantApplication/{id}/banking-details
+        // Never return the full account number or encrypted value.
+        [HttpGet("{id:int}/banking-details")]
+        public async Task<IActionResult> GetBankingDetails(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var banking = await _context.RestaurantBankingDetails
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id &&
+                        item.RestaurantApplication.UserId == userId,
+                    cancellationToken);
+
+            if (banking == null)
+                return NotFound("Banking details have not been provided.");
+
+            var accountNumber = _bankingEncryption.Decrypt(banking.AccountNumberEncrypted);
+
+            return Ok(new
+            {
+                banking.AccountHolderName,
+                banking.BankName,
+                banking.AccountType,
+                maskedAccountNumber = accountNumber.Length <= 4
+                    ? new string('*', accountNumber.Length)
+                    : new string('*', accountNumber.Length - 4) + accountNumber[^4..],
+                banking.BranchCode,
+                banking.PayoutContactEmail,
+                verificationStatus = banking.VerificationStatus.ToString(),
+                banking.VerifiedAt,
+                banking.UpdatedAt
+            });
+        }
+
+        // PUT: api/RestaurantApplication/{id}/banking-details
+        [HttpPut("{id:int}/banking-details")]
+        public async Task<IActionResult> SaveBankingDetails(
+            int id,
+            [FromBody] SaveRestaurantBankingDetailsRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var application = await _context.RestaurantApplications
+                .Include(item => item.BankingDetails)
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+                return NotFound("Restaurant application not found.");
+
+            if (application.Status is not RestaurantApplicationStatus.Draft
+                and not RestaurantApplicationStatus.DocumentsRequired)
+                return Conflict("Banking details can only be changed while the application is editable.");
+
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
+
+            var accountNumber = request.AccountNumber.Trim();
+            var encryptedAccountNumber = _bankingEncryption.Encrypt(accountNumber);
+            var now = DateTime.UtcNow;
+
+            var banking = application.BankingDetails;
+            if (banking == null)
+            {
+                banking = new RestaurantBankingDetail
+                {
+                    RestaurantApplicationId = id,
+                    CreatedAt = now
+                };
+                _context.RestaurantBankingDetails.Add(banking);
+            }
+
+            banking.AccountHolderName = request.AccountHolderName.Trim();
+            banking.BankName = request.BankName.Trim();
+            banking.AccountType = request.AccountType.Trim();
+            banking.AccountNumberEncrypted = encryptedAccountNumber;
+            banking.BranchCode = request.BranchCode.Trim();
+            banking.PayoutContactEmail = request.PayoutContactEmail.Trim();
+            banking.VerificationStatus = RestaurantVerificationStatus.Pending;
+            banking.VerifiedByUserId = null;
+            banking.VerifiedAt = null;
+            banking.UpdatedAt = now;
+            application.UpdatedAt = now;
+
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = id,
+                PreviousStatus = application.Status,
+                NewStatus = application.Status,
+                Action = "BankingDetailsSaved",
+                Comment = "Applicant saved or updated encrypted payout banking details.",
+                PerformedByUserId = userId,
+                CreatedAt = now
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok(new
+            {
+                message = "Banking details saved securely.",
+                banking.AccountHolderName,
+                banking.BankName,
+                banking.AccountType,
+                maskedAccountNumber = new string('*', Math.Max(0, accountNumber.Length - 4)) + accountNumber[^4..],
+                banking.BranchCode,
+                banking.PayoutContactEmail,
+                verificationStatus = banking.VerificationStatus.ToString()
+            });
+        }
+
         // PUT: api/RestaurantApplication/{id}/draft
         // Draft and documents-required applications can be edited and saved.
         [HttpPut("{id:int}/draft")]
@@ -597,4 +717,27 @@ namespace GrabnBite.Controllers
         public TimeOnly? OpeningTime { get; set; }
         public TimeOnly? ClosingTime { get; set; }
     }
+}
+
+public class SaveRestaurantBankingDetailsRequest
+{
+    [Required, StringLength(200)]
+    public string AccountHolderName { get; set; } = string.Empty;
+
+    [Required, StringLength(100)]
+    public string BankName { get; set; } = string.Empty;
+
+    [Required, StringLength(50)]
+    public string AccountType { get; set; } = string.Empty;
+
+    [Required, RegularExpression(@"^[0-9]{6,20}$",
+        ErrorMessage = "Account number must contain 6 to 20 digits.")]
+    public string AccountNumber { get; set; } = string.Empty;
+
+    [Required, RegularExpression(@"^[0-9]{6}$",
+        ErrorMessage = "Branch code must contain 6 digits.")]
+    public string BranchCode { get; set; } = string.Empty;
+
+    [Required, EmailAddress, StringLength(254)]
+    public string PayoutContactEmail { get; set; } = string.Empty;
 }

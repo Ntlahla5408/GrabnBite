@@ -85,6 +85,19 @@ namespace GrabnBite.Controllers
                         message = "The support assistant is temporarily unavailable. Please try again later."
                     });
             }
+            catch (OperationCanceledException exception)
+            {
+                _logger.LogWarning(
+                    exception,
+                    "The GrabnBite support assistant request timed out.");
+
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    new
+                    {
+                        message = "The support assistant took too long to respond. Please try again."
+                    });
+            }
             catch (HttpRequestException exception)
             {
                 _logger.LogWarning(

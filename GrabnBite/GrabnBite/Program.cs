@@ -16,6 +16,8 @@ if (!builder.Environment.IsDevelopment())
 }
 
 builder.Services.Configure<BrevoSettings>(builder.Configuration.GetSection("Brevo"));
+builder.Services.Configure<EmailVerificationSettings>(builder.Configuration.GetSection("EmailVerification"));
+builder.Services.AddScoped<IEmailVerificationService, EmailVerificationService>();
 builder.Services.AddHttpClient<IBrevoEmailService, BrevoEmailService>();
 
 builder.Services.Configure<YocoSettings>(builder.Configuration.GetSection("Yoco"));

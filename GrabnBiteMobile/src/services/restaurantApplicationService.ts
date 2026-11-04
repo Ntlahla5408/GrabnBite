@@ -209,3 +209,13 @@ export async function getRestaurantBankingDetails(
     token,
   );
 }
+
+export async function createRestaurantApplication(
+  token: string,
+): Promise<{ restaurantApplicationId: number; applicationReference: string; status: string }> {
+  return apiRequest(
+    "/api/RestaurantApplication",
+    { method: "POST" },
+    token,
+  );
+}

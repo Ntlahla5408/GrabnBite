@@ -249,7 +249,8 @@ namespace GrabnBite.Controllers
                 restaurant = new
                 {
                     restaurantId = delivery.Order.RestaurantId,
-                    name = delivery.Order.Restaurant.Name
+                    name = delivery.Order.Restaurant.Name,
+                    address = delivery.Order.Restaurant.Address
                 },
 
                 totalAmount = delivery.Order.TotalAmount,
@@ -688,7 +689,8 @@ namespace GrabnBite.Controllers
                     restaurant = new
                     {
                         restaurantId = d.Order.RestaurantId,
-                        name = d.Order.Restaurant.Name
+                        name = d.Order.Restaurant.Name,
+                        address = d.Order.Restaurant.Address
                     },
                     totalAmount = d.Order.TotalAmount,
                     orderDate = d.Order.OrderDate,

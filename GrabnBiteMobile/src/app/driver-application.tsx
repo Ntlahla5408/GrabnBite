@@ -121,7 +121,7 @@ const toggleGroups = [
     title: "Vehicle compliance",
     fields: [
       ["isRoadworthy", "Vehicle is roadworthy"], ["isLicensed", "Vehicle is licensed"],
-      ["isInsured", "Vehicle is insured"], ["requiresDriversLicence", "A driver's licence is required for this vehicle"],
+      ["isInsured", "Vehicle is insured"],
       ["requiresProfessionalDrivingPermit", "A professional driving permit is legally required"],
       ["requiresRoadworthiness", "Roadworthiness documentation is legally required"],
       ["vehicleOwnedByApplicant", "Vehicle is owned by the applicant"],

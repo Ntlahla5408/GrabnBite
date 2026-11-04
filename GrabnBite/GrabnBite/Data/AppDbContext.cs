@@ -12,6 +12,7 @@ namespace GrabnBite.Data
 
         // Tables
         public DbSet<User> Users { get; set; }
+        public DbSet<EmailVerificationChallenge> EmailVerificationChallenges { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Restaurant> Restaurants { get; set; }
@@ -715,6 +716,25 @@ namespace GrabnBite.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.IsEmailVerified)
+                .HasDefaultValue(true);
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .HasOne(c => c.User)
+                .WithOne(u => u.EmailVerificationChallenge)
+                .HasForeignKey<EmailVerificationChallenge>(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .HasIndex(c => c.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<EmailVerificationChallenge>()
+                .Property(c => c.CodeHash)
+                .HasMaxLength(128)
+                .IsRequired();
 
 
             // ============================================================

@@ -27,6 +27,8 @@ export default function VerifyEmailScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [verificationSucceeded, setVerificationSucceeded] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(
     params.emailSent === "true" || params.emailSent === "false" ? 60 : 0,
   );
@@ -44,27 +46,30 @@ export default function VerifyEmailScreen() {
   }, [resendCooldown]);
 
   const handleVerify = async () => {
+    setErrorMessage("");
+
     if (!email.trim()) {
-      Alert.alert("Email required", "Return to registration and enter your email address.");
+      setErrorMessage("Return to registration and enter your email address.");
       return;
     }
 
-    if (!/^\d{6}$/.test(code.trim())) {
-      Alert.alert("Invalid code", "Enter the six-digit code sent to your email.");
+    if (!/^\\d{6}$/.test(code.trim())) {
+      setErrorMessage("Enter the six-digit code sent to your email.");
       return;
     }
 
     try {
       setLoading(true);
-      await verifyEmail(email, code);
-      Alert.alert(
-        "Email verified",
-        "Your email address has been verified. You can now sign in.",
-        [{ text: "Continue", onPress: () => router.replace("/login") }],
-      );
+      const result = await verifyEmail(email, code);
+
+      if (result?.emailVerified === false) {
+        setErrorMessage(result.message || "The email address could not be verified.");
+        return;
+      }
+
+      setVerificationSucceeded(true);
     } catch (error) {
-      Alert.alert(
-        "Verification failed",
+      setErrorMessage(
         error instanceof Error ? error.message : "The code could not be verified.",
       );
     } finally {
@@ -73,8 +78,10 @@ export default function VerifyEmailScreen() {
   };
 
   const handleResend = async () => {
+    setErrorMessage("");
+
     if (!email.trim()) {
-      Alert.alert("Email required", "Return to registration and enter your email address.");
+      setErrorMessage("Return to registration and enter your email address.");
       return;
     }
 
@@ -87,8 +94,7 @@ export default function VerifyEmailScreen() {
         "If the account needs verification, a new code will be sent. Check your inbox and spam folder.",
       );
     } catch (error) {
-      Alert.alert(
-        "Unable to resend",
+      setErrorMessage(
         error instanceof Error ? error.message : "Please try again later.",
       );
     } finally {
@@ -104,68 +110,95 @@ export default function VerifyEmailScreen() {
       <View style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.brand}>GrabnBite</Text>
-          <Text style={styles.heading}>Verify your email</Text>
-          <Text style={styles.description}>
-            {emailSent
-              ? "Enter the six-digit verification code sent to:"
-              : "Your account was created, but the verification email could not be sent. You can request another code."}
-          </Text>
-          <Text style={styles.email}>{email || "No email address supplied"}</Text>
 
-          <Text style={styles.label}>Verification code</Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            onChangeText={(value) => setCode(value.replace(/[^0-9]/g, "").slice(0, 6))}
-            placeholder="000000"
-            placeholderTextColor="#94A3B8"
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            maxLength={6}
-            autoComplete="one-time-code"
-          />
-
-          <Text style={styles.hint}>The code expires after 10 minutes.</Text>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.buttonPressed,
-              loading && styles.buttonDisabled,
-            ]}
-            onPress={handleVerify}
-            disabled={loading || resending}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Verify email</Text>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              pressed && styles.buttonPressed,
-              (resending || resendCooldown > 0) && styles.buttonDisabled,
-            ]}
-            onPress={handleResend}
-            disabled={resending || loading || resendCooldown > 0}
-          >
-            {resending ? (
-              <ActivityIndicator color="#C2410C" />
-            ) : (
-              <Text style={styles.secondaryButtonText}>
-                {resendCooldown > 0
-                  ? `Resend code in ${resendCooldown}s`
-                  : "Resend verification code"}
+          {verificationSucceeded ? (
+            <>
+              <Text style={styles.heading}>Email verified</Text>
+              <Text style={styles.successMessage}>
+                Your email address has been verified successfully. You can now sign in to GrabnBite.
               </Text>
-            )}
-          </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={() => router.replace("/login")}
+              >
+                <Text style={styles.primaryButtonText}>Continue to login</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.heading}>Verify your email</Text>
+              <Text style={styles.description}>
+                {emailSent
+                  ? "Enter the six-digit verification code sent to:"
+                  : "Your account was created, but the verification email could not be sent. You can request another code."}
+              </Text>
+              <Text style={styles.email}>{email || "No email address supplied"}</Text>
 
-          <Pressable onPress={() => router.replace("/login")} style={styles.backButton}>
-            <Text style={styles.backText}>Back to login</Text>
-          </Pressable>
+              <Text style={styles.label}>Verification code</Text>
+              <TextInput
+                style={styles.input}
+                value={code}
+                onChangeText={(value) => setCode(value.replace(/[^0-9]/g, "").slice(0, 6))}
+                placeholder="000000"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                maxLength={6}
+                autoComplete="one-time-code"
+              />
+
+              <Text style={styles.hint}>The code expires after 10 minutes.</Text>
+
+              {errorMessage ? (
+                <Text accessibilityRole="alert" style={styles.errorMessage}>
+                  {errorMessage}
+                </Text>
+              ) : null}
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed && styles.buttonPressed,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={handleVerify}
+                disabled={loading || resending}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Verify email</Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  pressed && styles.buttonPressed,
+                  (resending || resendCooldown > 0) && styles.buttonDisabled,
+                ]}
+                onPress={handleResend}
+                disabled={resending || loading || resendCooldown > 0}
+              >
+                {resending ? (
+                  <ActivityIndicator color="#C2410C" />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>
+                    {resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : "Resend verification code"}
+                  </Text>
+                )}
+              </Pressable>
+
+              <Pressable onPress={() => router.replace("/login")} style={styles.backButton}>
+                <Text style={styles.backText}>Back to login</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -206,6 +239,18 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 14,
     lineHeight: 21,
+  },
+  successMessage: {
+    color: "#166534",
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  errorMessage: {
+    color: "#B91C1C",
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 14,
   },
   email: {
     color: "#071B2C",

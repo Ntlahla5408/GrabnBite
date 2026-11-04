@@ -35,12 +35,19 @@ type Delivery = {
   restaurant?: {
     restaurantId: number;
     name: string;
+    address?: string;
   };
 
   totalAmount: number;
   orderDate: string;
 
-  deliveryAddress?: any;
+  deliveryAddress?: {
+    label?: string;
+    streetAddress?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+  };
 
   items?: {
     orderItemId: number;
@@ -554,6 +561,29 @@ export default function DriverDashboard() {
 
             <View style={styles.divider} />
 
+            <View style={styles.locationBlock}>
+              <Text style={styles.locationLabel}>PICKUP FROM</Text>
+              <Text style={styles.locationName}>{activeDelivery.restaurant?.name || "Restaurant"}</Text>
+              <Text style={styles.locationAddress}>
+                {activeDelivery.restaurant?.address || "Restaurant address unavailable"}
+              </Text>
+            </View>
+
+            <View style={styles.locationBlock}>
+              <Text style={styles.locationLabel}>DELIVER TO</Text>
+              <Text style={styles.locationAddress}>
+                {[
+                  activeDelivery.deliveryAddress?.label,
+                  activeDelivery.deliveryAddress?.streetAddress,
+                  activeDelivery.deliveryAddress?.city,
+                  activeDelivery.deliveryAddress?.province,
+                  activeDelivery.deliveryAddress?.postalCode,
+                ].filter(Boolean).join(", ") || "Delivery address unavailable"}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
             {activeDelivery.items?.map((item) => (
               <View key={item.orderItemId} style={styles.itemRow}>
                 <Text style={styles.itemName}>
@@ -793,6 +823,30 @@ const styles = StyleSheet.create({
   orderNumber: {
     color: GRAY,
     marginTop: 4,
+  },
+
+  locationBlock: {
+    marginBottom: 14,
+  },
+
+  locationLabel: {
+    color: ORANGE,
+    fontSize: 11,
+    fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  locationName: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+
+  locationAddress: {
+    color: GRAY,
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   activeBadge: {

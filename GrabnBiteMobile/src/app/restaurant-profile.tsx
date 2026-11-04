@@ -41,15 +41,38 @@ export default function RestaurantProfileScreen() {
   }, [token]);
 
   useEffect(() => {
-    if (!authLoading && user?.role !== "Restaurant") {
+    if (authLoading) return;
+
+    if (user?.role !== "Restaurant") {
       router.replace("/");
       return;
     }
 
-    if (!authLoading && token && user?.role === "Restaurant") {
-      void loadApplications();
-    }
-  }, [authLoading, token, user?.role, loadApplications]);
+    if (!token) return;
+
+    let active = true;
+
+    const fetchApplications = async () => {
+      try {
+        const results = await getMyRestaurantApplications(token);
+        if (!active) return;
+        setError("");
+        setApplications(results);
+      } catch (requestError: any) {
+        if (active) {
+          setError(requestError?.message || "Unable to load your partner applications.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void fetchApplications();
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, token, user?.role]);
 
   if (authLoading || loading) {
     return (

@@ -209,7 +209,13 @@ export default function AdminDriverApplicationsScreen() {
             <View key={section.title}>
               <Text style={styles.section}>{section.title}</Text>
               {section.keys.map((key) => (
-                <Detail key={key} label={humanize(key)} value={formatValue(key === "maskedAccountNumber" ? selected.maskedAccountNumber : selected[key])} />
+                <Detail
+                  key={key}
+                  label={humanize(key)}
+                  value={key === "policyVersionsOrLinks"
+                    ? formatPolicyAcknowledgements(selected[key])
+                    : formatValue(key === "maskedAccountNumber" ? selected.maskedAccountNumber : selected[key])}
+                />
               ))}
             </View>
           ))}
@@ -283,6 +289,21 @@ export default function AdminDriverApplicationsScreen() {
 
 function humanize(value: string) {
   return value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatPolicyAcknowledgements(value: any) {
+  if (!value) return "No published policy acknowledgements recorded.";
+  try {
+    const acknowledgements = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(acknowledgements) || acknowledgements.length === 0) {
+      return "No published policy acknowledgements recorded.";
+    }
+    return acknowledgements
+      .map((item: any) => `${item.title || "Policy document"} — version ${item.version} (ID: ${item.policyDocumentId})`)
+      .join("\n");
+  } catch {
+    return "Policy acknowledgement data is invalid or unreadable.";
+  }
 }
 
 function formatValue(value: any) {

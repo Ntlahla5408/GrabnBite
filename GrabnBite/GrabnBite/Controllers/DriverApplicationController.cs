@@ -175,6 +175,7 @@ namespace GrabnBite.Controllers
             if (!string.IsNullOrWhiteSpace(request.BankAccountNumber))
                 application.AccountNumberEncrypted = _bankingEncryption.Encrypt(request.BankAccountNumber.Trim());
 
+            application.SignatureMethod = "EmailVerification";
             application.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -367,8 +368,59 @@ namespace GrabnBite.Controllers
                 return Conflict("This application has already been submitted or completed.");
 
             var missing = GetMissingItems(application);
+            var currentPolicies = await _context.PolicyDocuments
+                .AsNoTracking()
+                .Where(policy =>
+                    !policy.IsArchived &&
+                    policy.Status == "Published" &&
+                    (policy.EffectiveDate == null || policy.EffectiveDate <= DateTime.UtcNow))
+                .OrderBy(policy => policy.Title)
+                .Select(policy => new
+                {
+                    policy.PolicyDocumentId,
+                    policy.Title,
+                    policy.Version
+                })
+                .ToListAsync(cancellationToken);
+
+            List<PolicyAcknowledgement> acknowledgedPolicies;
+            try
+            {
+                acknowledgedPolicies = string.IsNullOrWhiteSpace(application.PolicyVersionsOrLinks)
+                    ? new List<PolicyAcknowledgement>()
+                    : JsonSerializer.Deserialize<List<PolicyAcknowledgement>>(application.PolicyVersionsOrLinks, WebJson)
+                        ?? new List<PolicyAcknowledgement>();
+            }
+            catch (JsonException)
+            {
+                acknowledgedPolicies = new List<PolicyAcknowledgement>();
+            }
+
+            var acknowledgedPolicyVersions = acknowledgedPolicies.GroupBy(item => item.PolicyDocumentId).ToDictionary(group => group.Key, group => group.Last().Version);
+
+            var acceptedPolicies = new List<PolicyAcknowledgement>();
+            foreach (var policy in currentPolicies)
+            {
+                if (!acknowledgedPolicyVersions.TryGetValue(policy.PolicyDocumentId, out var acknowledgedVersion) ||
+                    acknowledgedVersion != policy.Version)
+                {
+                    missing.Add($"Read and acknowledge the current version of: {policy.Title}");
+                    continue;
+                }
+
+                acceptedPolicies.Add(new PolicyAcknowledgement
+                {
+                    PolicyDocumentId = policy.PolicyDocumentId,
+                    Title = policy.Title,
+                    Version = policy.Version
+                });
+            }
+
             if (missing.Count > 0)
-                return BadRequest(new { message = "Complete the required application details and documents before submitting.", missingItems = missing });
+                return BadRequest(new { message = "Complete the required application details and acknowledge all current policies before submitting.", missingItems = missing });
+
+            application.PolicyVersionsOrLinks = JsonSerializer.Serialize(acceptedPolicies, WebJson);
+            application.SignatureMethod = "EmailVerification";
 
             if (!application.User.IsEmailVerified)
                 return BadRequest("Verify your email address before signing and submitting the application.");
@@ -401,6 +453,13 @@ namespace GrabnBite.Controllers
                 status = application.Status.ToString(),
                 message = "Your delivery partner application has been submitted and is awaiting administrator review."
             });
+        }
+
+        private sealed class PolicyAcknowledgement
+        {
+            public int PolicyDocumentId { get; set; }
+            public string Title { get; set; } = string.Empty;
+            public int Version { get; set; }
         }
 
         internal static List<string> GetMissingItems(DriverApplication application)

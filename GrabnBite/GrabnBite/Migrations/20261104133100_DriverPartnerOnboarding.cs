@@ -25,7 +25,7 @@ namespace GrabnBite.Migrations
                     Surname = table.Column<string>(type: "text", nullable: true),
                     PreferredName = table.Column<string>(type: "text", nullable: true),
                     IdOrPassportNumber = table.Column<string>(type: "text", nullable: true),
-                    DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    DateOfBirth = table.Column<DateOnly>(type: "date", nullable: true),
                     Nationality = table.Column<string>(type: "text", nullable: true),
                     MobileNumber = table.Column<string>(type: "text", nullable: true),
                     AlternativeContactNumber = table.Column<string>(type: "text", nullable: true),
@@ -247,31 +247,6 @@ namespace GrabnBite.Migrations
                 table: "DriverApplications",
                 column: "UserId",
                 unique: true);
-
-            // Protect driver application records from direct access through Supabase APIs.
-            migrationBuilder.Sql(
-                "ALTER TABLE \"DriverApplications\" ENABLE ROW LEVEL SECURITY;");
-
-            migrationBuilder.Sql(
-                "CREATE POLICY \"DriverApplications service role access\" " +
-                "ON \"DriverApplications\" FOR ALL TO service_role " +
-                "USING (true) WITH CHECK (true);");
-
-            migrationBuilder.Sql(
-                "ALTER TABLE \"DriverApplicationDocuments\" ENABLE ROW LEVEL SECURITY;");
-
-            migrationBuilder.Sql(
-                "CREATE POLICY \"DriverApplicationDocuments service role access\" " +
-                "ON \"DriverApplicationDocuments\" FOR ALL TO service_role " +
-                "USING (true) WITH CHECK (true);");
-
-            migrationBuilder.Sql(
-                "ALTER TABLE \"DriverApplicationHistories\" ENABLE ROW LEVEL SECURITY;");
-
-            migrationBuilder.Sql(
-                "CREATE POLICY \"DriverApplicationHistories service role access\" " +
-                "ON \"DriverApplicationHistories\" FOR ALL TO service_role " +
-                "USING (true) WITH CHECK (true);");
         }
 
         /// <inheritdoc />
@@ -285,7 +260,6 @@ namespace GrabnBite.Migrations
 
             migrationBuilder.Sql(
                 "DROP POLICY IF EXISTS \"DriverApplicationHistories service role access\" ON \"DriverApplicationHistories\";");
-
             migrationBuilder.DropTable(
                 name: "DriverApplicationDocuments");
 
@@ -297,3 +271,4 @@ namespace GrabnBite.Migrations
         }
     }
 }
+

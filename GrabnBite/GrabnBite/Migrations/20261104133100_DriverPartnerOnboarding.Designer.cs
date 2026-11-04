@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GrabnBite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261104130201_DriverPartnerOnboarding")]
+    [Migration("20261104133100_DriverPartnerOnboarding")]
     partial class DriverPartnerOnboarding
     {
         /// <inheritdoc />
@@ -323,8 +323,8 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
 
                     b.Property<string>("DocumentsRequestedMessage")
                         .HasColumnType("text");

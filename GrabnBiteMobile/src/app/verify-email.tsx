@@ -28,7 +28,7 @@ export default function VerifyEmailScreen() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(
-    params.emailSent === "false" ? 60 : 0,
+    params.emailSent === "true" || params.emailSent === "false" ? 60 : 0,
   );
 
   useEffect(() => {

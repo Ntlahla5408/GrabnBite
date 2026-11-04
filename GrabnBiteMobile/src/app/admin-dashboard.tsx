@@ -175,6 +175,13 @@ export default function AdminDashboard() {
               />
 
               <DashboardButton
+                title="Restaurant partner applications"
+                subtitle="Review applications, verify documents and banking details, and approve new restaurant partners."
+                colors={colors}
+                onPress={() => router.push("/admin-restaurant-applications" as any)}
+              />
+
+              <DashboardButton
                 title="Restaurants"
                 subtitle="Manage restaurants and restaurant-related information."
                 colors={colors}

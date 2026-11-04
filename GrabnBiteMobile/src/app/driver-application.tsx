@@ -401,6 +401,8 @@ export default function DriverApplicationScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+        {application.documentsRequestedMessage ? <Text style={styles.notice}>Additional information requested by GrubnBite: {application.documentsRequestedMessage}</Text> : null}
+        {application.rejectionReason ? <Text style={styles.error}>{application.rejectionReason}</Text> : null}
 
         <Text style={styles.section}>Delivery partner category</Text>
         {optionGroups.map((group) => (

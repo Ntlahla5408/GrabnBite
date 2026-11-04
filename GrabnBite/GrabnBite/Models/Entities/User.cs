@@ -41,6 +41,7 @@
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
         public Driver? Driver { get; set; }
+        public DriverApplication? DriverApplication { get; set; }
 
         public ICollection<Restaurant> Restaurants { get; set; } = new List<Restaurant>();
 

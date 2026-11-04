@@ -61,12 +61,38 @@ builder.Services.AddSingleton<IRestaurantBankingEncryptionService, RestaurantBan
 
 builder.Services.AddScoped<FakePaymentGateway>();
 
+// Native mobile clients do not enforce browser CORS. Browser origins must be
+// explicitly configured in production instead of allowing every website.
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MyPolicy", builder =>
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
+    options.AddPolicy("MyPolicy", policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                {
+                    return false;
+                }
+
+                return uri.Scheme is "http" or "https" &&
+                    (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                     uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase));
+            });
+        }
+        else if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
+        policy.AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 builder.Services.AddControllers();
@@ -173,6 +199,30 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health/live", () =>
+    Results.Ok(new { status = "Healthy" }))
+    .AllowAnonymous();
+
+app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync(cancellationToken);
+        return canConnect
+            ? Results.Ok(new { status = "Healthy", database = "Reachable" })
+            : Results.Json(
+                new { status = "Unhealthy", database = "Unreachable" },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception)
+    {
+        return Results.Json(
+            new { status = "Unhealthy", database = "Unreachable" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+})
+.AllowAnonymous();
 
 app.MapControllers();
 app.MapHub<TrackingHub>("/hubs/tracking");

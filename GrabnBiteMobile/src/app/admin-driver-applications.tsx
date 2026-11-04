@@ -196,6 +196,9 @@ export default function AdminDriverApplicationsScreen() {
           <Detail label="Account email" value={selected.applicant.email} />
           <Detail label="Account phone" value={selected.applicant.phoneNumber} />
           <Detail label="Email verified" value={selected.applicant.isEmailVerified ? "Yes" : "No"} />
+          <Detail label="Previous administrator comments" value={selected.adminComments} />
+          <Detail label="Documents requested" value={selected.documentsRequestedMessage} />
+          <Detail label="Rejection reason" value={selected.rejectionReason} />
 
           {sections.map((section) => (
             <View key={section.title}>

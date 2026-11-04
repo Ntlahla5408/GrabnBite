@@ -24,7 +24,7 @@ export default function RegisterScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [accountType, setAccountType] = useState<"Customer" | "Restaurant">("Customer");
+  const [accountType, setAccountType] = useState<"Customer" | "Restaurant" | "Driver">("Customer");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -141,7 +141,7 @@ export default function RegisterScreen() {
             <Text style={styles.heading}>Create your account</Text>
 
             <Text style={styles.description}>
-              Create an account to order meals or register your restaurant as a GrabnBite partner.
+              Create an account to order meals, register a restaurant or apply to become a delivery partner.
             </Text>
 
             <View style={styles.fieldContainer}>
@@ -163,9 +163,20 @@ export default function RegisterScreen() {
                 >
                   <Text style={[styles.accountTypeText, accountType === "Restaurant" && styles.accountTypeTextSelected]}>Restaurant partner</Text>
                 </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: accountType === "Driver" }}
+                  style={[styles.accountTypeButton, accountType === "Driver" && styles.accountTypeButtonSelected]}
+                  onPress={() => setAccountType("Driver")}
+                >
+                  <Text style={[styles.accountTypeText, accountType === "Driver" && styles.accountTypeTextSelected]}>Driver partner</Text>
+                </Pressable>
               </View>
               {accountType === "Restaurant" ? (
                 <Text style={styles.accountTypeHint}>A draft partner application will be created. Your restaurant will only become operational after administrator approval.</Text>
+              ) : null}
+              {accountType === "Driver" ? (
+                <Text style={styles.accountTypeHint}>A delivery partner application will be created. You will provide your details and supporting documents, then wait for administrator approval before accepting deliveries.</Text>
               ) : null}
             </View>
 

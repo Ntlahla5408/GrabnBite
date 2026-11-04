@@ -116,3 +116,64 @@ export async function saveRestaurantApplicationDraft(
     token,
   );
 }
+
+export type RestaurantDocumentType =
+  | "CipcCertificate"
+  | "FoodPremisesCertificate"
+  | "IdentityOrAuthority"
+  | "BankConfirmation"
+  | "Other";
+
+export async function uploadRestaurantApplicationDocument(
+  applicationId: number,
+  documentType: RestaurantDocumentType,
+  asset: { uri: string; name: string; mimeType: string },
+  token: string,
+) {
+  const formData = new FormData();
+
+  if (typeof window !== "undefined" && typeof Blob !== "undefined" && !asset.uri.startsWith("file://")) {
+    const response = await fetch(asset.uri);
+    if (!response.ok) throw new Error("Unable to read the selected document.");
+    const blob = await response.blob();
+    formData.append("file", new Blob([blob], { type: asset.mimeType }), asset.name);
+  } else {
+    formData.append("file", {
+      uri: asset.uri,
+      name: asset.name,
+      type: asset.mimeType,
+    } as any);
+  }
+
+  formData.append("documentType", documentType);
+
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/documents`,
+    { method: "POST", body: formData },
+    token,
+  );
+}
+
+export async function getRestaurantApplicationDocumentDownloadUrl(
+  applicationId: number,
+  documentId: number,
+  token: string,
+): Promise<{ signedUrl: string; originalFileName: string; contentType: string }> {
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/documents/${documentId}/download`,
+    {},
+    token,
+  );
+}
+
+export async function deleteRestaurantApplicationDocument(
+  applicationId: number,
+  documentId: number,
+  token: string,
+) {
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/documents/${documentId}`,
+    { method: "DELETE" },
+    token,
+  );
+}

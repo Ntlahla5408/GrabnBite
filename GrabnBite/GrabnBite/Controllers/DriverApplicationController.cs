@@ -107,15 +107,12 @@ namespace GrabnBite.Controllers
             await _context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            return CreatedAtAction(
-                nameof(GetMyApplication),
-                new { },
-                new
-                {
-                    application.DriverApplicationId,
-                    application.ApplicationReference,
-                    status = application.Status.ToString()
-                });
+            return Ok(new
+            {
+                application.DriverApplicationId,
+                application.ApplicationReference,
+                status = application.Status.ToString()
+            });
         }
 
         [HttpGet("me")]

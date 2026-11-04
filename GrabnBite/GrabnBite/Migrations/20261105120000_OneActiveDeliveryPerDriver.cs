@@ -9,12 +9,8 @@ namespace GrabnBite.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "IX_Deliveries_DriverId",
-                table: "Deliveries");
-
             migrationBuilder.CreateIndex(
-                name: "IX_Deliveries_DriverId",
+                name: "IX_Deliveries_DriverId_Active",
                 table: "Deliveries",
                 column: "DriverId",
                 unique: true,
@@ -24,13 +20,8 @@ namespace GrabnBite.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "IX_Deliveries_DriverId",
+                name: "IX_Deliveries_DriverId_Active",
                 table: "Deliveries");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Deliveries_DriverId",
-                table: "Deliveries",
-                column: "DriverId");
         }
     }
 }

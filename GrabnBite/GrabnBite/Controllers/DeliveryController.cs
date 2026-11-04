@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Npgsql;
 
 namespace GrabnBite.Controllers
 {
@@ -17,6 +18,17 @@ namespace GrabnBite.Controllers
     public DeliveryController(AppDbContext context)
         {
             _context = context;
+        }
+
+        private static bool IsUniqueConstraintViolation(Exception exception)
+        {
+            return exception is PostgresException
+                { SqlState: PostgresErrorCodes.UniqueViolation }
+                || exception is DbUpdateException
+                {
+                    InnerException: PostgresException
+                    { SqlState: PostgresErrorCodes.UniqueViolation }
+                };
         }
 
         private int? GetCurrentUserId()
@@ -151,29 +163,59 @@ namespace GrabnBite.Controllers
             var driverHasActiveDelivery = await _context.Deliveries
                 .AnyAsync(d =>
                     d.DriverId == driver.DriverId &&
-                    d.Status != "DELIVERED");
+                    (d.Status == "ASSIGNED"
+                        || d.Status == "PICKED_UP"
+                        || d.Status == "DELIVERING"));
 
             if (driverHasActiveDelivery)
             {
                 return Conflict("This driver already has an active delivery.");
             }
 
-            delivery.DriverId = driver.DriverId;
-            delivery.Status = "ASSIGNED";
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            // Keep the customer-facing order lifecycle aligned with delivery assignment.
-            delivery.Order.Status = "ASSIGNED";
-            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            try
             {
-                OrderId = delivery.OrderId,
-                Status = "ASSIGNED",
-                ChangedAt = DateTime.UtcNow,
-            ChangedByUserId = GetCurrentUserId(),
+                // Claim only if the delivery is still available. The partial unique
+                // index separately prevents this driver being assigned elsewhere.
+                var claimedRows = await _context.Deliveries
+                    .Where(d =>
+                        d.DeliveryId == deliveryId &&
+                        d.Status == "UNASSIGNED" &&
+                        d.DriverId == null &&
+                        d.Order.Status == "READY_FOR_PICKUP")
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(d => d.DriverId, driver.DriverId)
+                        .SetProperty(d => d.Status, "ASSIGNED"));
 
-            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
-            });
+                if (claimedRows == 0)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("This delivery is no longer available to assign.");
+                }
 
-            await _context.SaveChangesAsync();
+                delivery.DriverId = driver.DriverId;
+                delivery.Status = "ASSIGNED";
+
+                // Keep the customer-facing order lifecycle aligned with delivery assignment.
+                delivery.Order.Status = "ASSIGNED";
+                delivery.Order.StatusHistory.Add(new OrderStatusHistory
+                {
+                    OrderId = delivery.OrderId,
+                    Status = "ASSIGNED",
+                    ChangedAt = DateTime.UtcNow,
+                    ChangedByUserId = GetCurrentUserId(),
+                    ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
+                });
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception exception) when (IsUniqueConstraintViolation(exception))
+            {
+                await transaction.RollbackAsync();
+                return Conflict("This driver already has an active delivery.");
+            }
 
             return Ok(new DeliveryResponseDto
             {
@@ -224,7 +266,9 @@ namespace GrabnBite.Controllers
                     .ThenInclude(o => o.OrderItems)
                 .FirstOrDefaultAsync(d =>
                     d.DriverId == driver.DriverId &&
-                    d.Status != "DELIVERED");
+                    (d.Status == "ASSIGNED"
+                        || d.Status == "PICKED_UP"
+                        || d.Status == "DELIVERING"));
 
             if (delivery == null)
             {
@@ -761,7 +805,9 @@ namespace GrabnBite.Controllers
             var hasActiveDelivery = await _context.Deliveries
                 .AnyAsync(d =>
                     d.DriverId == driver.DriverId &&
-                    d.Status != "DELIVERED");
+                    (d.Status == "ASSIGNED"
+                        || d.Status == "PICKED_UP"
+                        || d.Status == "DELIVERING"));
 
             if (hasActiveDelivery)
             {
@@ -779,15 +825,25 @@ namespace GrabnBite.Controllers
             // Atomically claim only a delivery that is still unassigned and ready.
             await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var claimedRows = await _context.Deliveries
-                .Where(d =>
-                    d.DeliveryId == deliveryId &&
-                    d.Status == "UNASSIGNED" &&
-                    d.DriverId == null &&
-                    d.Order.Status == "READY_FOR_PICKUP")
-                .ExecuteUpdateAsync(update => update
-                    .SetProperty(d => d.DriverId, driver.DriverId)
-                    .SetProperty(d => d.Status, "ASSIGNED"));
+            int claimedRows;
+
+            try
+            {
+                claimedRows = await _context.Deliveries
+                    .Where(d =>
+                        d.DeliveryId == deliveryId &&
+                        d.Status == "UNASSIGNED" &&
+                        d.DriverId == null &&
+                        d.Order.Status == "READY_FOR_PICKUP")
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(d => d.DriverId, driver.DriverId)
+                        .SetProperty(d => d.Status, "ASSIGNED"));
+            }
+            catch (Exception exception) when (IsUniqueConstraintViolation(exception))
+            {
+                await transaction.RollbackAsync();
+                return Conflict("You already have an active delivery.");
+            }
 
             if (claimedRows == 0)
             {

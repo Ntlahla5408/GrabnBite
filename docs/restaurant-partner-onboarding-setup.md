@@ -24,11 +24,11 @@ The new bucket is separate from the existing `grabnbite-policies` bucket. Do not
 
 The backend reads the project URL and service-role key from the existing `SupabaseStorage:ProjectUrl` and `SupabaseStorage:ServiceRoleKey` settings. The bucket name defaults to `grabnbite-restaurant-documents`; it can be overridden with `SupabaseRestaurantDocumentStorage:BucketName`.
 
-No database-table RLS changes are required for this storage integration. Keep the existing 18 public tables' RLS settings as they are.
+No database-table RLS changes are required for this storage integration. This feature uses a private Storage bucket and server-side service-role access; it does not grant the mobile client direct access to application tables. Do not infer table exposure from RLS status alone: review table grants, policies, and API access together before changing database security settings.
 
 ## 2. Banking encryption key
 
-Bank account numbers are encrypted with AES-256-GCM before being written to PostgreSQL. Generate one 32-byte key in PowerShell:
+Bank account numbers are encrypted with AES-256-GCM before being written to PostgreSQL. The current encryption implementation applies to bank account numbers only; driver ID/passport and signature identity fields are not yet encrypted at rest and remain a separate security remediation item. Generate one 32-byte key in PowerShell:
 
 ```powershell
 $bytes = New-Object byte[] 32

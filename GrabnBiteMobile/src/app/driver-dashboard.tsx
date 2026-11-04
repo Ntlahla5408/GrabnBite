@@ -658,6 +658,28 @@ export default function DriverDashboard() {
 
                   <View style={styles.divider} />
 
+                  <View style={styles.locationBlock}>
+                    <Text style={styles.locationLabel}>PICKUP FROM</Text>
+                    <Text style={styles.locationAddress}>
+                      {delivery.restaurant?.address || "Restaurant address unavailable"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.locationBlock}>
+                    <Text style={styles.locationLabel}>DELIVER TO</Text>
+                    <Text style={styles.locationAddress}>
+                      {[
+                        delivery.deliveryAddress?.label,
+                        delivery.deliveryAddress?.streetAddress,
+                        delivery.deliveryAddress?.city,
+                        delivery.deliveryAddress?.province,
+                        delivery.deliveryAddress?.postalCode,
+                      ].filter(Boolean).join(", ") || "Delivery address unavailable"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+
                   {delivery.items?.map((item) => (
                     <View key={item.orderItemId} style={styles.itemRow}>
                       <Text style={styles.itemName}>

@@ -227,7 +227,7 @@ export default function RestaurantProfileEditScreen() {
       Alert.alert(
         "Profile updated",
         "Your restaurant details have been saved.",
-        [{ text: "OK", onPress: () => router.replace("/restaurant-profile") }],
+        [{ text: "OK", onPress: () => router.replace("/restaurant-dashboard") }],
       );
     } catch (err: any) {
       Alert.alert(

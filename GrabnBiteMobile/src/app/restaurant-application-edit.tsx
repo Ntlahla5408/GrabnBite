@@ -279,12 +279,19 @@ export default function RestaurantApplicationEditScreen() {
       setApplication((current) => current ? { ...current, status: result.status, submittedAt: new Date().toISOString() } : current);
       router.replace("/restaurant-profile");
     } catch (requestError: any) {
-      const missingItems = requestError?.data?.missingItems;
-      setError(
-        Array.isArray(missingItems)
-          ? `Complete these items before submitting: ${missingItems.join(", ")}.`
-          : requestError?.message || "Unable to submit your application.",
-      );
+      let responseMessage = requestError?.message || "Unable to submit your application.";
+      try {
+        const responseBody = responseMessage.match(/\\{[\\s\\S]*\\}/)?.[0];
+        if (responseBody) {
+          const parsedResponse = JSON.parse(responseBody);
+          responseMessage = Array.isArray(parsedResponse.missingItems)
+            ? `Complete these items before submitting: ${parsedResponse.missingItems.join(", ")}.`
+            : parsedResponse.message || responseMessage;
+        }
+      } catch {
+        // Keep the original API error if the response is not JSON.
+      }
+      setError(responseMessage);
     } finally {
       setSubmitting(false);
     }
@@ -666,20 +673,24 @@ export default function RestaurantApplicationEditScreen() {
           Saving stores your progress only. It does not submit the application for approval.
         </Text>
 
-        <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Save draft</Text>}
-        </Pressable>
         {(application?.status === "Draft" || application?.status === "DocumentsRequired") ? (
-          <Pressable
-            style={[styles.submitButton, submitting && styles.disabled]}
-            onPress={handleSubmit}
-            disabled={submitting || saving || uploading || savingBanking}
-          >
-            {submitting
-              ? <ActivityIndicator color="#FFFFFF" />
-              : <Text style={styles.saveText}>Submit for review</Text>}
-          </Pressable>
-        ) : null}
+          <>
+            <Pressable style={[styles.saveButton, saving && styles.disabled]} onPress={handleSave} disabled={saving || submitting}>
+              {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Save draft</Text>}
+            </Pressable>
+            <Pressable
+              style={[styles.submitButton, submitting && styles.disabled]}
+              onPress={handleSubmit}
+              disabled={submitting || saving || uploading || savingBanking}
+            >
+              {submitting
+                ? <ActivityIndicator color="#FFFFFF" />
+                : <Text style={styles.saveText}>Submit for review</Text>}
+            </Pressable>
+          </>
+        ) : (
+          <Text style={styles.helper}>This application has been submitted and is read-only while it is under review.</Text>
+        )}
       </ScrollView>
     </View>
   );

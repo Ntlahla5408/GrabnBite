@@ -18,6 +18,8 @@ import {
   DriverApplication,
   DriverDocumentType,
   getMyDriverApplication,
+  getPublishedPolicyDocuments,
+  PublishedPolicyDocument,
   saveDriverApplicationDraft,
   submitDriverApplication,
   uploadDriverApplicationDocument,
@@ -105,7 +107,6 @@ const fieldGroups = [
       ["signatureIdOrPassportNumber", "ID / passport number"],
       ["signatureEmailAddress", "Email address"],
       ["signatureMobileNumber", "Mobile number"],
-      ["signatureMethod", "Signature method (EmailVerification / SMS OTP / Other)"],
     ],
   },
 ] as const;
@@ -231,6 +232,9 @@ export default function DriverApplicationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [policies, setPolicies] = useState<PublishedPolicyDocument[]>([]);
+  const [acknowledgedPolicyIds, setAcknowledgedPolicyIds] = useState<number[]>([]);
+  const [policiesError, setPoliciesError] = useState("");
 
   const loadApplication = useCallback(async () => {
     if (!token) return;
@@ -238,7 +242,33 @@ export default function DriverApplicationScreen() {
       await createDriverApplication(token);
       const result = await getMyDriverApplication(token);
       setApplication(result);
-      setForm({ ...initialForm, ...result, bankAccountNumber: "" });
+      setForm({ ...initialForm, ...result, bankAccountNumber: "", signatureMethod: "EmailVerification" });
+
+      try {
+        const publishedPolicies = await getPublishedPolicyDocuments();
+        setPolicies(publishedPolicies);
+        setPoliciesError("");
+
+        let savedAcknowledgements: { policyDocumentId: number; version: number }[] = [];
+        try {
+          savedAcknowledgements = result.policyVersionsOrLinks
+            ? JSON.parse(result.policyVersionsOrLinks)
+            : [];
+        } catch {
+          savedAcknowledgements = [];
+        }
+
+        const currentAcknowledgements = publishedPolicies
+          .filter((policy) => savedAcknowledgements.some(
+            (saved) => saved.policyDocumentId === policy.policyDocumentId && saved.version === policy.version,
+          ))
+          .map((policy) => policy.policyDocumentId);
+        setAcknowledgedPolicyIds(currentAcknowledgements);
+      } catch (policyError: any) {
+        setPolicies([]);
+        setAcknowledgedPolicyIds([]);
+        setPoliciesError(policyError?.message || "Unable to load current published policies.");
+      }
       setError("");
     } catch (requestError: any) {
       setError(requestError?.message || "Unable to load your driver application.");
@@ -273,6 +303,16 @@ export default function DriverApplicationScreen() {
       dateOfBirth: payload.dateOfBirth || null,
       vehicleYear: payload.vehicleYear ? Number(payload.vehicleYear) : null,
       numberOfDrivers: payload.numberOfDrivers ? Number(payload.numberOfDrivers) : null,
+      signatureMethod: "EmailVerification",
+      policyVersionsOrLinks: JSON.stringify(
+        policies
+          .filter((policy) => acknowledgedPolicyIds.includes(policy.policyDocumentId))
+          .map((policy) => ({
+            policyDocumentId: policy.policyDocumentId,
+            title: policy.title,
+            version: policy.version,
+          })),
+      ),
     };
   };
 
@@ -331,6 +371,18 @@ export default function DriverApplicationScreen() {
 
   const handleSubmit = async () => {
     if (!token) return;
+    if (policiesError) {
+      setError("Current policy documents could not be loaded. Refresh the application before submitting.");
+      return;
+    }
+    const unacknowledgedPolicies = policies.filter(
+      (policy) => !acknowledgedPolicyIds.includes(policy.policyDocumentId),
+    );
+    if (unacknowledgedPolicies.length > 0) {
+      setError("Read and acknowledge every current policy document before submitting: " +
+        unacknowledgedPolicies.map((policy) => policy.title).join(", "));
+      return;
+    }
     const saved = await saveDraft(false);
     if (!saved) return;
     try {
@@ -486,10 +538,43 @@ export default function DriverApplicationScreen() {
           );
         })}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Policy versions / links supplied to applicant</Text>
-          <TextInput style={[styles.input, styles.multiline]} value={String(form.policyVersionsOrLinks ?? "")} onChangeText={(value) => update("policyVersionsOrLinks", value)} multiline placeholder="Record the policy versions or links provided to you." placeholderTextColor="#94A3B8" />
-        </View>
+        <Text style={styles.section}>11. Current GrubnBite policies</Text>
+        <Text style={styles.muted}>
+          Open each published policy document, read it carefully, then tick the acknowledgement for that exact version. Your acknowledgements and policy version numbers are recorded with this application.
+        </Text>
+        {policiesError ? <Text style={styles.error}>{policiesError}</Text> : null}
+        {policies.length === 0 && !policiesError ? (
+          <Text style={styles.muted}>There are currently no published policy documents requiring acknowledgement.</Text>
+        ) : null}
+        {policies.map((policy) => {
+          const acknowledged = acknowledgedPolicyIds.includes(policy.policyDocumentId);
+          return (
+            <View key={policy.policyDocumentId} style={styles.uploadCard}>
+              <Text style={styles.documentName}>{policy.title}</Text>
+              <Text style={styles.muted}>Version {policy.version}</Text>
+              {policy.description ? <Text style={styles.body}>{policy.description}</Text> : null}
+              <Pressable
+                style={styles.uploadButton}
+                onPress={() => router.push({ pathname: "/policy-reader", params: { id: String(policy.policyDocumentId) } })}
+              >
+                <Text style={styles.uploadButtonText}>OPEN AND READ POLICY</Text>
+              </Pressable>
+              <Pressable
+                style={styles.toggleRow}
+                onPress={() => setAcknowledgedPolicyIds((current) =>
+                  acknowledged
+                    ? current.filter((id) => id !== policy.policyDocumentId)
+                    : [...current, policy.policyDocumentId],
+                )}
+              >
+                <View style={[styles.checkbox, acknowledged && styles.checkboxSelected]}>
+                  {acknowledged ? <Text style={styles.checkmark}>✓</Text> : null}
+                </View>
+                <Text style={styles.toggleLabel}>I have read and agree to this policy, version {policy.version}.</Text>
+              </Pressable>
+            </View>
+          );
+        })}
 
         <Text style={styles.muted}>Submitting this application does not guarantee acceptance. The application will remain pending until reviewed and approved by GrubnBite.</Text>
         <Pressable style={[styles.primaryButton, (saving || submitting) && styles.disabled]} onPress={() => void saveDraft()} disabled={saving || submitting}>

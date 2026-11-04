@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../context/authContext";
 import {
   getMyRestaurantApplications,
+  createRestaurantApplication,
   RestaurantApplicationSummary,
 } from "../services/restaurantApplicationService";
 
@@ -21,6 +22,7 @@ export default function RestaurantProfileScreen() {
   const [applications, setApplications] = useState<RestaurantApplicationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creatingApplication, setCreatingApplication] = useState(false);
   const [error, setError] = useState("");
 
   const loadApplications = useCallback(async () => {
@@ -85,6 +87,29 @@ export default function RestaurantProfileScreen() {
         }
       >
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable
+          style={[styles.newApplicationButton, creatingApplication && styles.disabled]}
+          disabled={creatingApplication}
+          onPress={async () => {
+            if (!token) return;
+            try {
+              setCreatingApplication(true);
+              setError("");
+              const created = await createRestaurantApplication(token);
+              router.push(
+                `/restaurant-application-edit?applicationId=${created.restaurantApplicationId}` as any,
+              );
+            } catch (createError: any) {
+              setError(createError?.message || "Unable to create another application.");
+            } finally {
+              setCreatingApplication(false);
+            }
+          }}
+        >
+          {creatingApplication
+            ? <ActivityIndicator color="#FFFFFF" />
+            : <Text style={styles.newApplicationButtonText}>+ Start another restaurant application</Text>}
+        </Pressable>
 
         {applications.length === 0 && !error ? (
           <View style={styles.card}>
@@ -171,6 +196,9 @@ const styles = StyleSheet.create({
   title: { color: "#FFFFFF", fontSize: 25, fontWeight: "800" },
   subtitle: { color: "#CBD5E1", fontSize: 14, lineHeight: 20, marginTop: 7 },
   content: { width: "100%", maxWidth: 760, alignSelf: "center", padding: 20, paddingBottom: 50 },
+  newApplicationButton: { minHeight: 48, borderRadius: 10, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, marginBottom: 16 },
+  newApplicationButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  disabled: { opacity: 0.6 },
   card: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 14, padding: 18, marginBottom: 14 },
   cardTitle: { color: "#071B2C", fontSize: 18, fontWeight: "800" },
   reference: { color: "#64748B", fontSize: 12, marginTop: 6 },

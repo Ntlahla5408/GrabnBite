@@ -217,6 +217,7 @@ namespace GrabnBite.Controllers
                     SignatureFullLegalName = $"{user.FirstName} {user.LastName}",
                     SignatureEmailAddress = user.Email,
                     SignatureMobileNumber = user.PhoneNumber,
+                    SignatureMethod = "EmailVerification",
                     CreatedAt = now,
                     UpdatedAt = now
                 };

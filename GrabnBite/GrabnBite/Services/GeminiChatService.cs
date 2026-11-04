@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using GrabnBite.Configuration;
@@ -17,6 +18,7 @@ namespace GrabnBite.Services
     public sealed class GeminiChatService : IGeminiChatService
     {
         private const int MaximumHistoryMessages = 8;
+        private const int MaximumProviderAttempts = 3;
         private readonly HttpClient _httpClient;
         private readonly GeminiSettings _settings;
         private readonly ILogger<GeminiChatService> _logger;
@@ -121,32 +123,10 @@ namespace GrabnBite.Services
             var model = Uri.EscapeDataString(_settings.Model.Trim());
             var requestUri = $"{baseUrl}/models/{model}:generateContent";
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-            request.Headers.TryAddWithoutValidation(
-                "x-goog-api-key",
-                _settings.ApiKey);
-            request.Content = JsonContent.Create(requestBody);
-
-            using var response = await _httpClient.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
+            using var response = await SendWithRetryAsync(
+                requestUri,
+                requestBody,
                 cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var statusCode = (int)response.StatusCode;
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-
-                _logger.LogWarning(
-                    "Gemini API returned HTTP {StatusCode}. Provider response: {ProviderResponse}",
-                    statusCode,
-                    errorBody);
-
-                throw new HttpRequestException(
-                    $"The AI support service returned HTTP {statusCode}.",
-                    null,
-                    response.StatusCode);
-            }
 
             await using var responseStream =
                 await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -184,6 +164,81 @@ namespace GrabnBite.Services
             }
 
             return reply.Trim();
+        }
+
+        private async Task<HttpResponseMessage> SendWithRetryAsync(
+            string requestUri,
+            object requestBody,
+            CancellationToken cancellationToken)
+        {
+            for (var attempt = 1; attempt <= MaximumProviderAttempts; attempt++)
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+                request.Headers.TryAddWithoutValidation(
+                    "x-goog-api-key",
+                    _settings.ApiKey);
+                request.Content = JsonContent.Create(requestBody);
+
+                var response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return response;
+                }
+
+                var statusCode = (int)response.StatusCode;
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                var shouldRetry = IsTransientStatusCode(response.StatusCode) &&
+                    attempt < MaximumProviderAttempts;
+
+                if (shouldRetry)
+                {
+                    _logger.LogWarning(
+                        "Gemini API returned transient HTTP {StatusCode} on attempt {Attempt} of {MaximumAttempts}. Retrying.",
+                        statusCode,
+                        attempt,
+                        MaximumProviderAttempts);
+
+                    response.Dispose();
+
+                    // Bounded backoff: wait one second, then two seconds.
+                    await Task.Delay(
+                        TimeSpan.FromSeconds(attempt),
+                        cancellationToken);
+
+                    continue;
+                }
+
+                _logger.LogWarning(
+                    "Gemini API returned HTTP {StatusCode} after {Attempt} attempt(s). Provider response: {ProviderResponse}",
+                    statusCode,
+                    attempt,
+                    errorBody);
+
+                response.Dispose();
+
+                throw new HttpRequestException(
+                    $"The AI support service returned HTTP {statusCode}.",
+                    null,
+                    (HttpStatusCode)statusCode);
+            }
+
+            throw new InvalidOperationException(
+                "The AI support service could not be reached after the retry attempts.");
+        }
+
+        private static bool IsTransientStatusCode(HttpStatusCode statusCode)
+        {
+            return statusCode is
+                HttpStatusCode.RequestTimeout or
+                HttpStatusCode.TooManyRequests or
+                HttpStatusCode.InternalServerError or
+                HttpStatusCode.BadGateway or
+                HttpStatusCode.ServiceUnavailable or
+                HttpStatusCode.GatewayTimeout;
         }
     }
 }

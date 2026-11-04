@@ -287,13 +287,19 @@ namespace GrabnBite.Controllers
         public Task<IActionResult> RequestDocuments(
             int id,
             [FromBody] RestaurantApplicationAdminCommentRequest request,
-            CancellationToken cancellationToken) =>
-            ChangeStatus(
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.Comment))
+                return Task.FromResult<IActionResult>(
+                    BadRequest("A message explaining the required documents is required."));
+
+            return ChangeStatus(
                 id,
                 RestaurantApplicationStatus.DocumentsRequired,
                 "DocumentsRequested",
                 request.Comment,
                 cancellationToken);
+        }
 
         [HttpPut("{id:int}/under-verification")]
         public Task<IActionResult> MarkUnderVerification(
@@ -376,6 +382,7 @@ namespace GrabnBite.Controllers
             var adminId = GetCurrentUserId();
             if (adminId == null) return Unauthorized();
 
+            var previousStatus = application.Status;
             var now = DateTime.UtcNow;
             var activationDate = DateOnly.FromDateTime(now);
             var restaurant = new Restaurant
@@ -423,7 +430,7 @@ namespace GrabnBite.Controllers
             _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
             {
                 RestaurantApplicationId = id,
-                PreviousStatus = RestaurantApplicationStatus.UnderVerification,
+                PreviousStatus = previousStatus,
                 NewStatus = RestaurantApplicationStatus.Approved,
                 Action = "ApplicationApproved",
                 Comment = application.AdminComments,

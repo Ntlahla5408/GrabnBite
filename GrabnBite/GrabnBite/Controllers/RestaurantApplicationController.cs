@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using GrabnBite.Configuration;
 using GrabnBite.Data;
 using GrabnBite.Models.Entities;
+using GrabnBite.Services;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +17,17 @@ namespace GrabnBite.Controllers
     public class RestaurantApplicationController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ISupabaseRestaurantDocumentStorageService _documentStorage;
+        private readonly SupabaseRestaurantDocumentStorageSettings _documentStorageSettings;
 
-        public RestaurantApplicationController(AppDbContext context)
+        public RestaurantApplicationController(
+            AppDbContext context,
+            ISupabaseRestaurantDocumentStorageService documentStorage,
+            IOptions<SupabaseRestaurantDocumentStorageSettings> documentStorageSettings)
         {
             _context = context;
+            _documentStorage = documentStorage;
+            _documentStorageSettings = documentStorageSettings.Value;
         }
 
         // GET: api/RestaurantApplication/my-applications
@@ -136,6 +146,228 @@ namespace GrabnBite.Controllers
                 bankingDetailsProvided = application.BankingDetails != null &&
                     !string.IsNullOrWhiteSpace(application.BankingDetails.AccountNumberEncrypted)
             });
+        }
+
+        // POST: api/RestaurantApplication/{id}/documents
+        [HttpPost("{id:int}/documents")]
+        [RequestSizeLimit(11 * 1024 * 1024)]
+        public async Task<IActionResult> UploadDocument(
+            int id,
+            [FromForm] RestaurantDocumentType documentType,
+            [FromForm] string? description,
+            [FromForm] IFormFile? file,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var application = await _context.RestaurantApplications
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+                return NotFound("Restaurant application not found.");
+
+            if (application.Status is not RestaurantApplicationStatus.Draft
+                and not RestaurantApplicationStatus.DocumentsRequired)
+                return Conflict("Documents can only be uploaded while the application is editable.");
+
+            if (!Enum.IsDefined(documentType))
+                return BadRequest("Select a valid document type.");
+
+            if (file == null || file.Length == 0)
+                return BadRequest("Select a document to upload.");
+
+            var maximumFileSize = _documentStorageSettings.MaxFileSizeBytes > 0
+                ? _documentStorageSettings.MaxFileSizeBytes
+                : 10 * 1024 * 1024;
+
+            if (file.Length > maximumFileSize)
+                return BadRequest($"The document exceeds the maximum size of {maximumFileSize / (1024 * 1024)} MB.");
+
+            var contentType = file.ContentType?.ToLowerInvariant();
+            if (contentType is not ("application/pdf" or "image/jpeg" or "image/png" or "image/webp"))
+                return BadRequest("Only PDF, JPEG, PNG and WebP documents are supported.");
+
+            await using var fileStream = file.OpenReadStream();
+            var header = new byte[12];
+            var bytesRead = await fileStream.ReadAsync(header.AsMemory(0, header.Length), cancellationToken);
+            var isPdf = bytesRead >= 5 && header[0] == 0x25 && header[1] == 0x50 &&
+                header[2] == 0x44 && header[3] == 0x46 && header[4] == 0x2D;
+            var isJpeg = bytesRead >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF;
+            var isPng = bytesRead >= 8 && header[0] == 0x89 && header[1] == 0x50 &&
+                header[2] == 0x4E && header[3] == 0x47 && header[4] == 0x0D &&
+                header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A;
+            var isWebp = bytesRead >= 12 && header[0] == (byte)'R' &&
+                header[1] == (byte)'I' && header[2] == (byte)'F' && header[3] == (byte)'F' &&
+                header[8] == (byte)'W' && header[9] == (byte)'E' &&
+                header[10] == (byte)'B' && header[11] == (byte)'P';
+
+            var validSignature = (contentType == "application/pdf" && isPdf) ||
+                (contentType == "image/jpeg" && isJpeg) ||
+                (contentType == "image/png" && isPng) ||
+                (contentType == "image/webp" && isWebp);
+
+            if (!validSignature)
+                return BadRequest("The file contents do not match the selected document type.");
+
+            fileStream.Position = 0;
+            var extension = contentType switch
+            {
+                "application/pdf" => ".pdf",
+                "image/jpeg" => ".jpg",
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => throw new InvalidOperationException("Unsupported document content type.")
+            };
+
+            var storagePath = $"applications/{id}/{Guid.NewGuid():N}{extension}";
+            var originalFileName = Path.GetFileName(file.FileName);
+            if (originalFileName.Length > 255)
+                originalFileName = originalFileName[^255..];
+
+            await _documentStorage.UploadAsync(
+                fileStream, storagePath, contentType, cancellationToken);
+
+            var document = new RestaurantDocument
+            {
+                RestaurantApplicationId = id,
+                DocumentType = documentType,
+                DocumentDescription = string.IsNullOrWhiteSpace(description)
+                    ? null
+                    : description.Trim(),
+                StoragePath = storagePath,
+                OriginalFileName = originalFileName,
+                ContentType = contentType,
+                FileSize = file.Length,
+                VerificationStatus = RestaurantVerificationStatus.Pending,
+                UploadedAt = DateTime.UtcNow
+            };
+
+            try
+            {
+                _context.RestaurantDocuments.Add(document);
+                application.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                await _documentStorage.DeleteAsync(storagePath, cancellationToken);
+                throw;
+            }
+
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = id,
+                PreviousStatus = application.Status,
+                NewStatus = application.Status,
+                Action = "DocumentUploaded",
+                Comment = $"Applicant uploaded {documentType} document.",
+                PerformedByUserId = userId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return CreatedAtAction(
+                nameof(GetApplication),
+                new { id },
+                new
+                {
+                    document.RestaurantDocumentId,
+                    document.DocumentType,
+                    document.OriginalFileName,
+                    document.ContentType,
+                    document.FileSize,
+                    verificationStatus = document.VerificationStatus.ToString(),
+                    document.UploadedAt
+                });
+        }
+
+        // GET: api/RestaurantApplication/{id}/documents/{documentId}/download
+        [HttpGet("{id:int}/documents/{documentId:int}/download")]
+        public async Task<IActionResult> GetDocumentDownloadUrl(
+            int id,
+            int documentId,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var document = await _context.RestaurantDocuments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantDocumentId == documentId &&
+                        item.RestaurantApplicationId == id &&
+                        item.RestaurantApplication.UserId == userId,
+                    cancellationToken);
+
+            if (document == null)
+                return NotFound("Document not found.");
+
+            var signedUrl = await _documentStorage.CreateSignedUrlAsync(
+                document.StoragePath, 900, cancellationToken);
+
+            return Ok(new
+            {
+                document.RestaurantDocumentId,
+                document.OriginalFileName,
+                document.ContentType,
+                signedUrl,
+                expiresInSeconds = 900
+            });
+        }
+
+        // DELETE: api/RestaurantApplication/{id}/documents/{documentId}
+        [HttpDelete("{id:int}/documents/{documentId:int}")]
+        public async Task<IActionResult> DeleteDocument(
+            int id,
+            int documentId,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var application = await _context.RestaurantApplications
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+                return NotFound("Restaurant application not found.");
+
+            if (application.Status is not RestaurantApplicationStatus.Draft
+                and not RestaurantApplicationStatus.DocumentsRequired)
+                return Conflict("Documents can only be changed while the application is editable.");
+
+            var document = await _context.RestaurantDocuments
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantDocumentId == documentId &&
+                        item.RestaurantApplicationId == id,
+                    cancellationToken);
+
+            if (document == null)
+                return NotFound("Document not found.");
+
+            if (document.VerificationStatus != RestaurantVerificationStatus.Pending)
+                return Conflict("A document that has been reviewed cannot be deleted.");
+
+            await _documentStorage.DeleteAsync(document.StoragePath, cancellationToken);
+            _context.RestaurantDocuments.Remove(document);
+            application.UpdatedAt = DateTime.UtcNow;
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = id,
+                PreviousStatus = application.Status,
+                NewStatus = application.Status,
+                Action = "DocumentDeleted",
+                Comment = $"Applicant removed {document.DocumentType} document.",
+                PerformedByUserId = userId,
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return NoContent();
         }
 
         // PUT: api/RestaurantApplication/{id}/draft

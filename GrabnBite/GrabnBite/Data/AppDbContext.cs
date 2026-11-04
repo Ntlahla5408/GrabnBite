@@ -31,6 +31,9 @@ namespace GrabnBite.Data
         public DbSet<Review> Reviews { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Driver> Drivers { get; set; }
+        public DbSet<DriverApplication> DriverApplications { get; set; }
+        public DbSet<DriverApplicationDocument> DriverApplicationDocuments { get; set; }
+        public DbSet<DriverApplicationHistory> DriverApplicationHistories { get; set; }
         public DbSet<PolicyDocument> PolicyDocuments { get; set; }
 
         // Restaurant partner onboarding
@@ -141,6 +144,88 @@ namespace GrabnBite.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
+
+            // ============================================================
+            // DRIVER PARTNER APPLICATIONS
+            // ============================================================
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasOne(a => a.User)
+                .WithOne(u => u.DriverApplication)
+                .HasForeignKey<DriverApplication>(a => a.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasOne(a => a.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(a => a.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => a.UserId)
+                .IsUnique();
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => a.ApplicationReference)
+                .IsUnique();
+
+            modelBuilder.Entity<DriverApplication>()
+                .HasIndex(a => new { a.Status, a.UpdatedAt });
+
+            modelBuilder.Entity<DriverApplication>()
+                .Property(a => a.ApplicationReference)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            modelBuilder.Entity<DriverApplication>()
+                .Property(a => a.Status)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasOne(d => d.DriverApplication)
+                .WithMany(a => a.Documents)
+                .HasForeignKey(d => d.DriverApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasOne(d => d.VerifiedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .HasIndex(d => new { d.DriverApplicationId, d.DocumentType });
+
+            modelBuilder.Entity<DriverApplicationDocument>()
+                .Property(d => d.VerificationStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasOne(h => h.DriverApplication)
+                .WithMany(a => a.History)
+                .HasForeignKey(h => h.DriverApplicationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasOne(h => h.PerformedByUser)
+                .WithMany()
+                .HasForeignKey(h => h.PerformedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .HasIndex(h => new { h.DriverApplicationId, h.CreatedAt });
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .Property(h => h.PreviousStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
+
+            modelBuilder.Entity<DriverApplicationHistory>()
+                .Property(h => h.NewStatus)
+                .HasConversion<string>()
+                .HasMaxLength(30);
 
             // ============================================================
             // RESTAURANT PARTNER APPLICATIONS

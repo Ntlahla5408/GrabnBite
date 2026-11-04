@@ -471,8 +471,7 @@ namespace GrabnBite.Controllers
                 RequireDocument("VehicleRegistrationCertificate", "Vehicle registration certificate");
                 RequireDocument("VehicleLicence", "Valid vehicle licence documentation");
                 RequireDocument("ProofOfInsurance", "Proof of vehicle insurance");
-                if (application.RequiresDriversLicence)
-                    RequireDocument("DriversLicence", "Valid driver's licence");
+                RequireDocument("DriversLicence", "Valid driver's licence");
                 if (application.RequiresProfessionalDrivingPermit)
                     RequireDocument("ProfessionalDrivingPermit", "Professional driving permit");
                 if (application.RequiresRoadworthiness)

@@ -674,66 +674,6 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
-        // GET DRIVER LOCATION BY ORDER
-        // Customer only
-        // GET: api/Delivery/order/{orderId}/location
-        // ============================================================
-
-        [Authorize(Roles = "Customer")]
-        [HttpGet("order/{orderId:int}/location")]
-        public async Task<IActionResult> GetDriverLocationForOrder(
-            int orderId)
-        {
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            if (orderId <= 0)
-            {
-                return BadRequest("A valid order id is required.");
-            }
-
-            var delivery = await _context.Deliveries
-                .AsNoTracking()
-                .Where(d =>
-                    d.OrderId == orderId &&
-                    d.Order.UserId == userId.Value)
-                .Select(d => new
-                {
-                    d.DeliveryId,
-                    d.OrderId,
-                    d.Status,
-                    d.DriverId,
-                    Latitude = d.DriverLatitude,
-                    Longitude = d.DriverLongitude
-                })
-                .FirstOrDefaultAsync();
-
-            if (delivery == null)
-            {
-                return NotFound("No delivery is available for this order.");
-            }
-
-            if (delivery.Latitude == null || delivery.Longitude == null)
-            {
-                return NotFound("The driver has not shared a location yet.");
-            }
-
-            return Ok(new
-            {
-                deliveryId = delivery.DeliveryId,
-                orderId = delivery.OrderId,
-                status = delivery.Status,
-                driverId = delivery.DriverId,
-                latitude = delivery.Latitude,
-                longitude = delivery.Longitude
-            });
-        }
-
-        // ============================================================
         // GET AVAILABLE DELIVERIES
         // ============================================================
 

@@ -45,7 +45,7 @@ namespace GrabnBite.Controllers
             var application = new RestaurantApplication
             {
                 UserId = userId,
-                ApplicationReference = $"GB-{Guid.NewGuid():N}"[..23].ToUpperInvariant(),
+                ApplicationReference = $"GB-{Guid.NewGuid().ToString("N")[..20].ToUpperInvariant()}",
                 Status = RestaurantApplicationStatus.Draft,
                 CreatedAt = now,
                 UpdatedAt = now

@@ -113,7 +113,6 @@ namespace GrabnBite.Services
                 contents,
                 generationConfig = new
                 {
-                    temperature = 0.3,
                     maxOutputTokens = 700
                 }
             };
@@ -136,9 +135,12 @@ namespace GrabnBite.Services
             if (!response.IsSuccessStatusCode)
             {
                 var statusCode = (int)response.StatusCode;
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
                 _logger.LogWarning(
-                    "Gemini API returned HTTP {StatusCode}.",
-                    statusCode);
+                    "Gemini API returned HTTP {StatusCode}. Provider response: {ProviderResponse}",
+                    statusCode,
+                    errorBody);
 
                 throw new HttpRequestException(
                     $"The AI support service returned HTTP {statusCode}.",

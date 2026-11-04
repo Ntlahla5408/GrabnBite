@@ -51,8 +51,8 @@ namespace GrabnBite.Controllers
                     item != null &&
                     !string.IsNullOrWhiteSpace(item.Content) &&
                     item.Content.Length <= 1500 &&
-                    (item.Role.Equals("user", StringComparison.OrdinalIgnoreCase) ||
-                     item.Role.Equals("assistant", StringComparison.OrdinalIgnoreCase)))
+                    (string.Equals(item.Role, "user", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(item.Role, "assistant", StringComparison.OrdinalIgnoreCase)))
                 .TakeLast(MaximumHistoryItems)
                 .ToList();
 

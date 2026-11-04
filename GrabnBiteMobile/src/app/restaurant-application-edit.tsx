@@ -281,7 +281,7 @@ export default function RestaurantApplicationEditScreen() {
     } catch (requestError: any) {
       let responseMessage = requestError?.message || "Unable to submit your application.";
       try {
-        const responseBody = responseMessage.match(/\\{[\\s\\S]*\\}/)?.[0];
+        const responseBody = responseMessage.match(/\{[\s\S]*\}/)?.[0];
         if (responseBody) {
           const parsedResponse = JSON.parse(responseBody);
           responseMessage = Array.isArray(parsedResponse.missingItems)

@@ -89,7 +89,12 @@ export type SaveRestaurantApplicationDraft = Pick<
   | "deliveryInstructions"
   | "commissionOfferAccepted"
 > & {
-  operatingHours: RestaurantApplicationDraft["operatingHours"];
+  operatingHours: {
+    dayOfWeek: number;
+    isOpen: boolean;
+    openingTime: string | null;
+    closingTime: string | null;
+  }[];
 };
 
 export async function getMyRestaurantApplications(

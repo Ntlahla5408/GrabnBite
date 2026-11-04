@@ -249,6 +249,11 @@ namespace GrabnBite.Controllers
 
             if (application == null) return NotFound("Restaurant application not found.");
             if (application.BankingDetails == null) return NotFound("Banking details have not been provided.");
+            if (application.Status is RestaurantApplicationStatus.Approved
+                or RestaurantApplicationStatus.Rejected)
+                return Conflict("A completed application cannot be changed.");
+            if (!request.IsApproved && string.IsNullOrWhiteSpace(request.Comment))
+                return BadRequest("A comment is required when rejecting banking details.");
 
             var adminId = GetCurrentUserId();
             if (adminId == null) return Unauthorized();

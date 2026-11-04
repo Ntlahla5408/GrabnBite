@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
+    TextInput,
     ScrollView,
     StyleSheet,
     Text,
@@ -64,6 +65,11 @@ export default function DriverDashboard() {
   const [activeDelivery, setActiveDelivery] = useState<Delivery | null>(null);
 
   const [isOnline, setIsOnline] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [driverProfileMissing, setDriverProfileMissing] = useState(false);
+  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleRegistration, setVehicleRegistration] = useState("");
+  const [creatingProfile, setCreatingProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -75,7 +81,9 @@ export default function DriverDashboard() {
       // Get driver's current profile/status
       const driver = await apiRequest("/api/Driver/me", {}, token);
 
-      setIsOnline(driver.isOnline);
+      setDriverProfileMissing(false);
+      setIsApproved(Boolean(driver.isApproved));
+      setIsOnline(Boolean(driver.isOnline));
 
       // Get active delivery
       try {
@@ -102,8 +110,19 @@ export default function DriverDashboard() {
       } else {
         setAvailableDeliveries([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Driver dashboard error:", error);
+
+      if (
+        error?.message?.includes("Driver profile not found.") &&
+        error?.message?.includes("(HTTP 404)")
+      ) {
+        setDriverProfileMissing(true);
+        setIsApproved(false);
+        setIsOnline(false);
+        setActiveDelivery(null);
+        setAvailableDeliveries([]);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -129,6 +148,50 @@ export default function DriverDashboard() {
   const refresh = async () => {
     setRefreshing(true);
     await loadDriverData();
+  };
+
+  const createDriverProfile = async () => {
+    if (!token || creatingProfile) return;
+
+    if (!vehicleType.trim() || !vehicleRegistration.trim()) {
+      Alert.alert(
+        "Missing information",
+        "Enter your vehicle type and registration number.",
+      );
+      return;
+    }
+
+    try {
+      setCreatingProfile(true);
+
+      await apiRequest(
+        "/api/Driver",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            vehicleType: vehicleType.trim(),
+            vehicleRegistration: vehicleRegistration.trim(),
+          }),
+        },
+        token,
+      );
+
+      Alert.alert(
+        "Application submitted",
+        "Your driver profile has been submitted for administrator approval.",
+      );
+
+      setVehicleType("");
+      setVehicleRegistration("");
+      await loadDriverData();
+    } catch (error: any) {
+      Alert.alert(
+        "Unable to submit driver profile",
+        error?.message || "Something went wrong.",
+      );
+    } finally {
+      setCreatingProfile(false);
+    }
   };
 
   const toggleOnline = async () => {
@@ -379,6 +442,61 @@ export default function DriverDashboard() {
           </View>
         </View>
 
+        {driverProfileMissing ? (
+          <View style={styles.card}>
+            <Text style={styles.restaurantName}>Complete your driver profile</Text>
+            <Text style={styles.emptyText}>
+              Add your vehicle details to submit your driver profile. An administrator must approve it before you can receive deliveries.
+            </Text>
+
+            <Text style={styles.profileLabel}>Vehicle type</Text>
+            <TextInput
+              style={styles.profileInput}
+              value={vehicleType}
+              onChangeText={setVehicleType}
+              placeholder="e.g. Motorbike, car or bicycle"
+              placeholderTextColor="#94A3B8"
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.profileLabel}>Vehicle registration</Text>
+            <TextInput
+              style={styles.profileInput}
+              value={vehicleRegistration}
+              onChangeText={setVehicleRegistration}
+              placeholder="Enter registration number"
+              placeholderTextColor="#94A3B8"
+              autoCapitalize="characters"
+            />
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={createDriverProfile}
+              disabled={creatingProfile}
+            >
+              {creatingProfile ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>SUBMIT DRIVER PROFILE</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : !isApproved ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Awaiting administrator approval</Text>
+            <Text style={styles.emptyText}>
+              Your driver profile is awaiting review. You will be able to go online and accept deliveries once it has been approved.
+            </Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={refresh}
+              disabled={refreshing}
+            >
+              <Text style={styles.secondaryButtonText}>CHECK APPROVAL STATUS</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
         {/* ONLINE STATUS */}
         <View style={[styles.statusCard, { backgroundColor: isDark ? colors.surfaceElevated : NAVY }]}>
           <View>
@@ -538,6 +656,8 @@ export default function DriverDashboard() {
                 </View>
               ))
             )}
+          </>
+        )}
           </>
         )}
       </ScrollView>
@@ -735,6 +855,40 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: NAVY,
     fontSize: 17,
+  },
+
+  profileLabel: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 16,
+    marginBottom: 7,
+  },
+
+  profileInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    color: NAVY,
+    backgroundColor: "#FFFFFF",
+  },
+
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: ORANGE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+
+  secondaryButtonText: {
+    color: ORANGE,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
   },
 
   primaryButton: {

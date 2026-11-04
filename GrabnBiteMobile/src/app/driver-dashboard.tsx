@@ -148,6 +148,13 @@ export default function DriverDashboard() {
       }
 
       void loadDriverData();
+
+      // Refresh active delivery state and new offers while this screen is open.
+      const refreshInterval = setInterval(() => {
+        void loadDriverData();
+      }, 15000);
+
+      return () => clearInterval(refreshInterval);
     }, [user, router, loadDriverData]),
   );
 

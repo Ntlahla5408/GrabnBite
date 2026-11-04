@@ -55,9 +55,9 @@ Do not put this key in `appsettings.json`, source control, mobile configuration,
 
 ## 3. Database migration
 
-The restaurant partner onboarding EF migration remains unapplied. The email-verification schema changes also require a new EF migration generated locally after pulling the branch.
+The restaurant partner onboarding, Yoco idempotency and email-verification migrations were reviewed and applied to the Supabase production database on 4 November 2026. The onboarding tables, supporting indexes and email-verification columns were verified after deployment.
 
-Review both pending migrations together before applying them. They must not be applied automatically at application startup, and no production database changes are made by this feature branch. Do not test the new onboarding or email-verification database endpoints against production until the migrations have been explicitly reviewed and applied through the agreed deployment process.
+Do not reapply these migrations. Do not enable or change database Row Level Security as part of this workflow; the existing table-level RLS configuration remains unchanged. Future schema changes must be generated, reviewed and explicitly approved before application.
 
 
 ## Brevo transactional email configuration
@@ -121,3 +121,28 @@ The API endpoints are:
 - `POST /api/Authentication/resend-verification`
 
 The login endpoint refuses to issue a JWT until a new account's email is verified. The mobile registration flow opens the verification screen automatically.
+
+
+## 4. Restaurant application submission and review
+
+The applicant saves their application draft and supporting documents before using:
+
+- `POST /api/RestaurantApplication/{id}/submit`
+
+Submission is validated server-side. The current required items are:
+- Verified applicant email.
+- Business identity and contact details.
+- Authorised representative details and authority confirmation.
+- At least one fulfilment method and one open operating day.
+- Acceptance of the published commission offer.
+- CIPC certificate, food premises certificate, identity/authority document and bank confirmation.
+- Encrypted payout banking details.
+
+Administrator-only review endpoints are exposed through `/api/AdminRestaurantApplication`:
+- `GET /` and `GET /{id}` list and inspect applications.
+- `PUT /{id}/documents/{documentId}/review` approve or reject an uploaded document.
+- `PUT /{id}/banking/review` verify or reject payout details.
+- `PUT /{id}/under-verification`, `PUT /{id}/request-documents`, and `PUT /{id}/reject` record review decisions.
+- `POST /{id}/approve` creates the operational restaurant profile and its commission schedule after all required documents and banking details have been approved.
+
+Only approved and active operational restaurants are returned by the public restaurant listing. Approval activates the restaurant with ordering closed initially; the restaurant owner must open it when ready to accept orders. No database migration is required for these workflow endpoints.

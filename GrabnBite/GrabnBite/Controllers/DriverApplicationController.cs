@@ -218,6 +218,9 @@ namespace GrabnBite.Controllers
             var contentType = file.ContentType?.ToLowerInvariant();
             if (contentType is not ("application/pdf" or "image/jpeg" or "image/png" or "image/webp"))
                 return BadRequest("Only PDF, JPEG, PNG and WebP documents are supported.");
+            if (documentType == "ProfilePhotograph" &&
+                contentType is not ("image/jpeg" or "image/png" or "image/webp"))
+                return BadRequest("A profile photograph must be a JPEG, PNG or WebP image.");
 
             await using var stream = file.OpenReadStream();
             var header = new byte[12];

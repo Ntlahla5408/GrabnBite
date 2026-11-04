@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -35,11 +36,19 @@ export default function ChatbotScreen() {
   const { token, user } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { width, height } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 768;
+
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isMinimized, setIsMinimized] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  const closeChat = useCallback(() => {
+    router.back();
+  }, []);
 
   const submitMessage = useCallback(async (providedMessage?: string) => {
     const messageText = (providedMessage ?? draft).trim();
@@ -121,113 +130,240 @@ export default function ChatbotScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
-      >
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityLabel="Go back">
-            <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
-          </Pressable>
-          <View style={styles.headerCopy}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>GrabnBite Support</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>AI assistant · General help</Text>
-          </View>
-          <View style={[styles.onlineDot, { backgroundColor: "#22C55E" }]} />
-        </View>
-
-        <View style={styles.noticeWrap}>
-          <Text style={[styles.notice, { color: colors.textSecondary }]}>
-            For account-specific, order or payment issues, use the relevant section in the app. This assistant cannot view your live account or order records.
-          </Text>
-        </View>
-
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-          ListFooterComponent={
-            isSending ? (
-              <View style={[styles.typingRow]}>
-                <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-                  <Text style={[styles.avatarText, { color: colors.accent }]}>G</Text>
-                </View>
-                <View style={[styles.typingBubble, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <ActivityIndicator size="small" color={colors.accent} />
-                  <Text style={[styles.typingText, { color: colors.textSecondary }]}>Thinking...</Text>
-                </View>
-              </View>
-            ) : null
-          }
-        />
-
-        {messages.length === 1 && (
-          <View style={styles.suggestions}>
-            <Text style={[styles.suggestionHeading, { color: colors.textSecondary }]}>SUGGESTED QUESTIONS</Text>
-            <View style={styles.suggestionList}>
-              {SUGGESTED_QUESTIONS.map((question) => (
-                <Pressable
-                  key={question}
-                  disabled={isSending}
-                  onPress={() => void submitMessage(question)}
-                  style={[styles.suggestionChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
-                  <Text style={[styles.suggestionText, { color: colors.text }]}>{question}</Text>
-                </Pressable>
-              ))}
+  const chatContent = (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+    >
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        {isDesktopWeb ? (
+          <>
+            <View style={[styles.headerAvatar, { backgroundColor: colors.accentSoft }]}>
+              <Text style={[styles.avatarText, { color: colors.accent }]}>G</Text>
             </View>
-          </View>
+            <View style={styles.headerCopy}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>GrabnBite Support</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>AI assistant · General help</Text>
+            </View>
+            <Pressable
+              onPress={() => setIsMinimized(true)}
+              style={styles.headerAction}
+              accessibilityRole="button"
+              accessibilityLabel="Minimize support chat"
+            >
+              <Text style={[styles.headerActionText, { color: colors.text }]}>−</Text>
+            </Pressable>
+            <Pressable
+              onPress={closeChat}
+              style={styles.headerAction}
+              accessibilityRole="button"
+              accessibilityLabel="Close support chat"
+            >
+              <Text style={[styles.headerActionText, { color: colors.text }]}>×</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Pressable onPress={closeChat} style={styles.backButton} accessibilityLabel="Go back">
+              <Text style={[styles.backText, { color: colors.text }]}>‹</Text>
+            </Pressable>
+            <View style={styles.headerCopy}>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>GrabnBite Support</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>AI assistant · General help</Text>
+            </View>
+            <View style={[styles.onlineDot, { backgroundColor: "#22C55E" }]} />
+          </>
         )}
+      </View>
 
-        {errorMessage !== "" && (
-          <View style={[styles.errorBanner, { backgroundColor: colors.accentSoft }]}>
-            <Text style={[styles.errorText, { color: colors.text }]}>{errorMessage}</Text>
+      <View style={styles.noticeWrap}>
+        <Text style={[styles.notice, { color: colors.textSecondary }]}>
+          For account-specific, order or payment issues, use the relevant section in the app. This assistant cannot view your live account or order records.
+        </Text>
+      </View>
+
+      <FlatList
+        ref={listRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMessage}
+        contentContainerStyle={styles.messageList}
+        showsVerticalScrollIndicator={false}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        ListFooterComponent={
+          isSending ? (
+            <View style={styles.typingRow}>
+              <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
+                <Text style={[styles.avatarText, { color: colors.accent }]}>G</Text>
+              </View>
+              <View style={[styles.typingBubble, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ActivityIndicator size="small" color={colors.accent} />
+                <Text style={[styles.typingText, { color: colors.textSecondary }]}>Thinking...</Text>
+              </View>
+            </View>
+          ) : null
+        }
+      />
+
+      {messages.length === 1 && (
+        <View style={styles.suggestions}>
+          <Text style={[styles.suggestionHeading, { color: colors.textSecondary }]}>SUGGESTED QUESTIONS</Text>
+          <View style={styles.suggestionList}>
+            {SUGGESTED_QUESTIONS.map((question) => (
+              <Pressable
+                key={question}
+                disabled={isSending}
+                onPress={() => void submitMessage(question)}
+                style={[styles.suggestionChip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <Text style={[styles.suggestionText, { color: colors.text }]}>{question}</Text>
+              </Pressable>
+            ))}
           </View>
-        )}
-
-        <View style={[styles.composer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Ask us anything..."
-            placeholderTextColor={colors.textSecondary}
-            style={[styles.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
-            multiline
-            maxLength={2000}
-            editable={!isSending}
-            returnKeyType="send"
-            blurOnSubmit
-            onSubmitEditing={() => void submitMessage()}
-          />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Send message"
-            disabled={!draft.trim() || isSending}
-            onPress={() => void submitMessage()}
-            style={[
-              styles.sendButton,
-              { backgroundColor: colors.accent },
-              (!draft.trim() || isSending) && styles.sendDisabled,
-            ]}
-          >
-            <Text style={styles.sendIcon}>➤</Text>
-          </Pressable>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      )}
+
+      {errorMessage !== "" && (
+        <View style={[styles.errorBanner, { backgroundColor: colors.accentSoft }]}>
+          <Text style={[styles.errorText, { color: colors.text }]}>{errorMessage}</Text>
+        </View>
+      )}
+
+      <View style={[styles.composer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Ask us anything..."
+          placeholderTextColor={colors.textSecondary}
+          style={[styles.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+          multiline
+          maxLength={2000}
+          editable={!isSending}
+          returnKeyType="send"
+          blurOnSubmit
+          onSubmitEditing={() => void submitMessage()}
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
+          disabled={!draft.trim() || isSending}
+          onPress={() => void submitMessage()}
+          style={[
+            styles.sendButton,
+            { backgroundColor: colors.accent },
+            (!draft.trim() || isSending) && styles.sendDisabled,
+          ]}
+        >
+          <Text style={styles.sendIcon}>➤</Text>
+        </Pressable>
+      </View>
+    </KeyboardAvoidingView>
+  );
+
+  if (isDesktopWeb) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            presentation: "transparentModal",
+            animation: "fade",
+            contentStyle: { backgroundColor: "transparent" },
+          }}
+        />
+        <View style={styles.desktopOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={closeChat}
+            accessibilityRole="button"
+            accessibilityLabel="Close support chat"
+          />
+          {isMinimized ? (
+            <Pressable
+              onPress={() => setIsMinimized(false)}
+              style={[styles.minimizedChat, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Restore support chat"
+            >
+              <View style={[styles.headerAvatar, { backgroundColor: colors.accentSoft }]}>
+                <Text style={[styles.avatarText, { color: colors.accent }]}>G</Text>
+              </View>
+              <View style={styles.headerCopy}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>GrabnBite Support</Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Chat minimized · Open chat</Text>
+              </View>
+              <Text style={[styles.headerActionText, { color: colors.text }]}>⌃</Text>
+            </Pressable>
+          ) : (
+            <View
+              style={[
+                styles.desktopPanel,
+                {
+                  width: Math.min(width - 40, 420),
+                  height: Math.min(height - 48, 680),
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+                {chatContent}
+              </SafeAreaView>
+            </View>
+          )}
+        </View>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Stack.Screen options={{ presentation: "card" }} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={["top", "bottom"]}>
+        {chatContent}
+      </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
+  desktopOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(10, 20, 30, 0.18)",
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+    padding: 24,
+  },
+  desktopPanel: {
+    maxWidth: "100%",
+    maxHeight: "100%",
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: "hidden",
+    elevation: 12,
+    shadowColor: "#000000",
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  minimizedChat: {
+    width: 300,
+    maxWidth: "100%",
+    minHeight: 68,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    elevation: 10,
+    shadowColor: "#000000",
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+  },
   header: {
     minHeight: 66,
     flexDirection: "row",
@@ -235,6 +371,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
+  headerAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  headerAction: { width: 34, height: 38, alignItems: "center", justifyContent: "center", marginLeft: 4 },
+  headerActionText: { fontSize: 25, lineHeight: 30, fontWeight: "500" },
   backButton: { width: 38, height: 42, justifyContent: "center" },
   backText: { fontSize: 36, lineHeight: 40 },
   headerCopy: { flex: 1 },

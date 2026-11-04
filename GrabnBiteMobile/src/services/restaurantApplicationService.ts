@@ -177,3 +177,35 @@ export async function deleteRestaurantApplicationDocument(
     token,
   );
 }
+
+export interface SaveRestaurantBankingDetails {
+  accountHolderName: string;
+  bankName: string;
+  accountType: string;
+  accountNumber: string;
+  branchCode: string;
+  payoutContactEmail: string;
+}
+
+export async function saveRestaurantBankingDetails(
+  applicationId: number,
+  details: SaveRestaurantBankingDetails,
+  token: string,
+) {
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/banking-details`,
+    { method: "PUT", body: JSON.stringify(details) },
+    token,
+  );
+}
+
+export async function getRestaurantBankingDetails(
+  applicationId: number,
+  token: string,
+) {
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/banking-details`,
+    {},
+    token,
+  );
+}

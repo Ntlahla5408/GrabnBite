@@ -132,6 +132,17 @@ export default function RestaurantApplicationEditScreen() {
     payoutContactEmail: "",
   });
   const [error, setError] = useState("");
+  const uploadedDocumentTypes = new Set(
+    (application?.documents ?? []).map((document) => document.documentType),
+  );
+  const missingSubmissionItems = [
+    !form.registeredBusinessName.trim() ? "Registered business name" : null,
+    !form.cipcRegistrationNumber.trim() ? "CIPC registration number" : null,
+    !form.restaurantCategory.trim() ? "Restaurant category" : null,
+    !uploadedDocumentTypes.has("FoodPremisesCertificate") ? "FoodPremisesCertificate document" : null,
+    !uploadedDocumentTypes.has("BankConfirmation") ? "BankConfirmation document" : null,
+  ].filter((item): item is string => item !== null);
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -264,6 +275,11 @@ export default function RestaurantApplicationEditScreen() {
   const handleSubmit = async () => {
     if (!token || !application) return;
 
+    if (missingSubmissionItems.length > 0) {
+      setError(`Complete these items before submitting: ${missingSubmissionItems.join(", ")}.`);
+      return;
+    }
+
     const preparationTime = form.averagePreparationTimeMinutes.trim()
       ? Number(form.averagePreparationTimeMinutes)
       : null;
@@ -373,6 +389,12 @@ export default function RestaurantApplicationEditScreen() {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {missingSubmissionItems.length > 0 &&
+        (application?.status === "Draft" || application?.status === "DocumentsRequired") ? (
+          <Text style={styles.requiredNotice}>
+            Complete these items before submitting: {missingSubmissionItems.join(", ")}.
+          </Text>
+        ) : null}
         {application?.documentsRequestedMessage ? (
           <Text style={styles.notice}>Administrator request: {application.documentsRequestedMessage}</Text>
         ) : null}
@@ -382,9 +404,9 @@ export default function RestaurantApplicationEditScreen() {
 
         <Text style={styles.sectionTitle}>Business information</Text>
         <Field label="Trading name *" value={form.tradingName} onChangeText={(value) => update("tradingName", value)} />
-        <Field label="Registered business name" value={form.registeredBusinessName} onChangeText={(value) => update("registeredBusinessName", value)} />
-        <Field label="CIPC registration number" value={form.cipcRegistrationNumber} onChangeText={(value) => update("cipcRegistrationNumber", value)} />
-        <Field label="Restaurant category" value={form.restaurantCategory} onChangeText={(value) => update("restaurantCategory", value)} placeholder="e.g. Fast food, Café, Bakery" />
+        <Field label="Registered business name *" value={form.registeredBusinessName} onChangeText={(value) => update("registeredBusinessName", value)} />
+        <Field label="CIPC registration number *" value={form.cipcRegistrationNumber} onChangeText={(value) => update("cipcRegistrationNumber", value)} />
+        <Field label="Restaurant category *" value={form.restaurantCategory} onChangeText={(value) => update("restaurantCategory", value)} placeholder="e.g. Fast food, Café, Bakery" />
         <Field label="Physical address *" value={form.physicalAddress} onChangeText={(value) => update("physicalAddress", value)} />
         <Field label="City *" value={form.city} onChangeText={(value) => update("city", value)} />
         <Field label="Business contact number" value={form.restaurantContactNumber} onChangeText={(value) => update("restaurantContactNumber", value)} keyboardType="phone-pad" />
@@ -463,6 +485,9 @@ export default function RestaurantApplicationEditScreen() {
         ))}
 
         <Text style={styles.sectionTitle}>Supporting documents</Text>
+        <Text style={styles.helper}>
+          Food premises certificate * and bank confirmation * are required before submission. CIPC certificate and identity / authority documents may be requested where applicable.
+        </Text>
         <Text style={styles.helper}>
           Upload clear PDF or image copies. Files are stored privately and can only be accessed through an authenticated, short-lived download link.
         </Text>
@@ -836,6 +861,7 @@ const styles = StyleSheet.create({
   checkmark: { color: "#FFFFFF", fontWeight: "900" },
   choiceText: { color: "#334155", fontSize: 14, flex: 1 },
   notice: { color: "#9A3412", backgroundColor: "#FFF7ED", borderRadius: 9, padding: 12, marginBottom: 12, lineHeight: 19 },
+  requiredNotice: { color: "#9A3412", backgroundColor: "#FFF7ED", borderWidth: 1, borderColor: "#FDBA74", borderRadius: 9, padding: 12, marginBottom: 14, lineHeight: 20, fontSize: 13, fontWeight: "600" },
   error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginBottom: 14 },
   helper: { color: "#64748B", fontSize: 12, lineHeight: 18, marginTop: 18 },
   saveButton: { minHeight: 50, backgroundColor: "#F97316", borderRadius: 10, alignItems: "center", justifyContent: "center", marginTop: 18 },

@@ -99,7 +99,7 @@ namespace GrabnBite.Services
                 {
                     new
                     {
-                        text = $"GrabnBite support knowledge:\\n{SupportKnowledge}\\n\\nCustomer message:\\n{message}"
+                        text = $"GrabnBite support knowledge:\n{SupportKnowledge}\n\nCustomer message:\n{message}"
                     }
                 }
             });
@@ -169,7 +169,7 @@ namespace GrabnBite.Services
             }
 
             var reply = string.Join(
-                "\\n",
+                "\n",
                 parts.EnumerateArray()
                     .Where(part => part.TryGetProperty("text", out _))
                     .Select(part => part.GetProperty("text").GetString())

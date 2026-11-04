@@ -174,7 +174,9 @@ export default function RestaurantProfileScreen() {
                     : application.status === "UnderVerification"
                       ? "Your submitted information and documents are being verified."
                       : application.status === "Approved"
-                        ? "Your application has been approved. Your operational restaurant profile will be available once activation is completed."
+                        ? application.hasOperationalRestaurant
+                          ? "Your application has been approved and your operational restaurant profile is active. You can return to the dashboard to manage it."
+                          : "Your application has been approved, but its operational restaurant profile is not active yet. It will become available once activation is completed."
                         : "This application was rejected. Review the administrator's feedback or contact support."}
             </Text>
             <Text style={styles.date}>

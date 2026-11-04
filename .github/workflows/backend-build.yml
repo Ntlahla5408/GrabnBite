@@ -8,6 +8,7 @@ on:
       - fix/core-order-flow-theme
       - feature/add-policy-documents
       - feature/restaurant-partner-onboarding
+      - fix/release-readiness-driver-workflows
   pull_request:
     branches:
       - integration/release-readiness

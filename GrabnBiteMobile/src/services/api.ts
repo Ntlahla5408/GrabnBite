@@ -105,8 +105,17 @@ export async function apiRequest(
       }
     }
 
+    const validationMessages = errorData?.errors && typeof errorData.errors === "object"
+      ? Object.entries(errorData.errors).flatMap(([field, messages]) =>
+          (Array.isArray(messages) ? messages : [messages])
+            .filter((item) => typeof item === "string" && item.trim())
+            .map((item) => `${field}: ${item}`),
+        )
+      : [];
+
     const message =
       (typeof errorData === "string" && errorData) ||
+      (validationMessages.length ? validationMessages.join(" · ") : null) ||
       errorData?.message ||
       errorData?.title ||
       errorData?.detail ||

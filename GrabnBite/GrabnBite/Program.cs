@@ -28,6 +28,7 @@ builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStor
 builder.Services.Configure<SupabaseRestaurantDocumentStorageSettings>(
     builder.Configuration.GetSection("SupabaseRestaurantDocumentStorage"));
 builder.Services.AddHttpClient<ISupabaseRestaurantDocumentStorageService, SupabaseRestaurantDocumentStorageService>();
+builder.Services.AddSingleton<IRestaurantBankingEncryptionService, RestaurantBankingEncryptionService>();
 
 builder.Services.AddScoped<FakePaymentGateway>();
 

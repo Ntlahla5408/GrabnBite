@@ -226,7 +226,7 @@ namespace GrabnBite.Controllers
             };
 
             var storagePath = $"applications/{id}/{Guid.NewGuid():N}{extension}";
-            var originalFileName = Path.GetFileName(file.FileName);
+            var originalFileName = Path.GetFileName(file.FileName.Replace('\\', '/'));
             if (originalFileName.Length > 255)
                 originalFileName = originalFileName[^255..];
 
@@ -248,18 +248,8 @@ namespace GrabnBite.Controllers
                 UploadedAt = DateTime.UtcNow
             };
 
-            try
-            {
-                _context.RestaurantDocuments.Add(document);
-                application.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync(cancellationToken);
-            }
-            catch
-            {
-                await _documentStorage.DeleteAsync(storagePath, cancellationToken);
-                throw;
-            }
-
+            _context.RestaurantDocuments.Add(document);
+            application.UpdatedAt = DateTime.UtcNow;
             _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
             {
                 RestaurantApplicationId = id,
@@ -270,7 +260,16 @@ namespace GrabnBite.Controllers
                 PerformedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             });
-            await _context.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                await _documentStorage.DeleteAsync(storagePath, cancellationToken);
+                throw;
+            }
 
             return CreatedAtAction(
                 nameof(GetApplication),
@@ -355,7 +354,6 @@ namespace GrabnBite.Controllers
             if (document.VerificationStatus != RestaurantVerificationStatus.Pending)
                 return Conflict("A document that has been reviewed cannot be deleted.");
 
-            await _documentStorage.DeleteAsync(document.StoragePath, cancellationToken);
             _context.RestaurantDocuments.Remove(document);
             application.UpdatedAt = DateTime.UtcNow;
             _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
@@ -719,25 +717,28 @@ namespace GrabnBite.Controllers
     }
 }
 
-public class SaveRestaurantBankingDetailsRequest
+namespace GrabnBite.Controllers
 {
-    [Required, StringLength(200)]
-    public string AccountHolderName { get; set; } = string.Empty;
+    public class SaveRestaurantBankingDetailsRequest
+    {
+        [Required, StringLength(200)]
+        public string AccountHolderName { get; set; } = string.Empty;
 
-    [Required, StringLength(100)]
-    public string BankName { get; set; } = string.Empty;
+        [Required, StringLength(100)]
+        public string BankName { get; set; } = string.Empty;
 
-    [Required, StringLength(50)]
-    public string AccountType { get; set; } = string.Empty;
+        [Required, StringLength(50)]
+        public string AccountType { get; set; } = string.Empty;
 
-    [Required, RegularExpression(@"^[0-9]{6,20}$",
-        ErrorMessage = "Account number must contain 6 to 20 digits.")]
-    public string AccountNumber { get; set; } = string.Empty;
+        [Required, RegularExpression(@"^[0-9]{6,20}$",
+            ErrorMessage = "Account number must contain 6 to 20 digits.")]
+        public string AccountNumber { get; set; } = string.Empty;
 
-    [Required, RegularExpression(@"^[0-9]{6}$",
-        ErrorMessage = "Branch code must contain 6 digits.")]
-    public string BranchCode { get; set; } = string.Empty;
+        [Required, RegularExpression(@"^[0-9]{6}$",
+            ErrorMessage = "Branch code must contain 6 digits.")]
+        public string BranchCode { get; set; } = string.Empty;
 
-    [Required, EmailAddress, StringLength(254)]
-    public string PayoutContactEmail { get; set; } = string.Empty;
+        [Required, EmailAddress, StringLength(254)]
+        public string PayoutContactEmail { get; set; } = string.Empty;
+    }
 }

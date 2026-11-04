@@ -651,9 +651,12 @@ export default function DriverDashboard() {
                       </Text>
                     </View>
 
-                    <Text style={styles.offerAmount}>
-                      R{Number(delivery.totalAmount).toFixed(2)}
-                    </Text>
+                    <View>
+                      <Text style={styles.amountLabel}>Order total</Text>
+                      <Text style={styles.offerAmount}>
+                        R{Number(delivery.totalAmount).toFixed(2)}
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={styles.divider} />
@@ -882,6 +885,13 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: "800",
     fontSize: 11,
+  },
+
+  amountLabel: {
+    color: GRAY,
+    fontSize: 10,
+    textAlign: "right",
+    marginBottom: 2,
   },
 
   offerAmount: {

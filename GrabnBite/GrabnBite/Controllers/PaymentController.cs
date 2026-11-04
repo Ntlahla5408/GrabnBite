@@ -52,141 +52,31 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
-        // CREATE PAYMENT
+        // LEGACY PAYMENT ROUTE
         // POST: /api/Payment/{orderId}
         // ============================================================
 
+        // Keep the old route for compatibility, but never create a local
+        // PENDING payment for CARD/EFT/CASH without a payment provider.
+        // That would reserve the order's one-to-one Payment record and block
+        // the supported Yoco checkout flow.
         [Authorize(Roles = "Customer")]
         [HttpPost("{orderId}")]
         public async Task<IActionResult> CreatePayment(
             int orderId,
-            CreatePaymentDto dto)
+            CreatePaymentDto? dto)
         {
-            if (orderId <= 0)
-            {
-                return BadRequest("Invalid order ID.");
-            }
-
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
-            if (dto == null || string.IsNullOrWhiteSpace(dto.PaymentMethod))
-            {
-                return BadRequest("Payment method is required.");
-            }
-
-            var paymentMethod = dto.PaymentMethod.Trim().ToUpper();
-
-            var validMethods = new[]
-            {
-                "CARD",
-                "EFT",
-                "CASH"
-            };
-
-            if (!validMethods.Contains(paymentMethod))
+            if (dto == null ||
+                !string.Equals(
+                    dto.PaymentMethod?.Trim(),
+                    "YOCO",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
-                    "Invalid payment method. Use CARD, EFT, or CASH.");
+                    "Only verified Yoco online payments are supported. Use POST /api/Payment/yoco/{orderId}.");
             }
 
-            // --------------------------------------------------------
-            // Find order belonging to logged-in customer
-            // --------------------------------------------------------
-
-            var order = await _context.Orders
-                .Include(o => o.Payment)
-                .FirstOrDefaultAsync(o =>
-                    o.OrderId == orderId &&
-                    o.UserId == userId.Value);
-
-            if (order == null)
-            {
-                return NotFound("Order not found.");
-            }
-
-            // --------------------------------------------------------
-            // Don't allow payment for cancelled orders
-            // --------------------------------------------------------
-
-            if (order.Status == "CANCELLED")
-            {
-                return BadRequest(
-                    "A cancelled order cannot be paid.");
-            }
-
-            // --------------------------------------------------------
-            // Validate order amount
-            // --------------------------------------------------------
-
-            if (order.TotalAmount <= 0)
-            {
-                return BadRequest(
-                    "Order amount must be greater than zero.");
-            }
-
-            // --------------------------------------------------------
-            // Don't create duplicate payment
-            // --------------------------------------------------------
-
-            if (order.Payment != null)
-            {
-                return BadRequest(
-                    "A payment already exists for this order.");
-            }
-
-            // --------------------------------------------------------
-            // Create payment
-            // --------------------------------------------------------
-
-            var payment = new Payment
-            {
-                OrderId = order.OrderId,
-
-                // NEVER trust payment amount from frontend.
-                Amount = order.TotalAmount,
-
-                PaymentStatus = "PENDING",
-
-                PaymentMethod = paymentMethod,
-
-                PaymentReference =
-                    $"GNB-PAY-{Guid.NewGuid():N}"
-                        .Substring(0, 16)
-                        .ToUpper(),
-
-                PaymentDate = DateTime.UtcNow
-            };
-
-            _context.Payments.Add(payment);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                // The unique OrderId index is the final guard if two requests
-                // try to create the payment at the same time.
-                _logger.LogWarning(ex, "Concurrent payment creation detected for order {OrderId}", orderId);
-                return Conflict("A payment was created for this order by another request. Refresh and check its status.");
-            }
-
-            return Ok(new PaymentResponseDto
-            {
-                PaymentId = payment.PaymentId,
-                OrderId = payment.OrderId,
-                Amount = payment.Amount,
-                PaymentStatus = payment.PaymentStatus,
-                PaymentMethod = payment.PaymentMethod,
-                PaymentReference = payment.PaymentReference,
-                TransactionReference = payment.TransactionReference,
-                PaymentDate = payment.PaymentDate
-            });
+            return await CreateYocoPayment(orderId);
         }
 
         // ============================================================

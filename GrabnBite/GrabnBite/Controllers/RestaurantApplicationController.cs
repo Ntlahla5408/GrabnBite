@@ -710,6 +710,120 @@ namespace GrabnBite.Controllers
             });
         }
 
+        // POST: api/RestaurantApplication/{id}/submit
+        // Submission is only allowed after all required information is complete.
+        [HttpPost("{id:int}/submit")]
+        public async Task<IActionResult> SubmitApplication(
+            int id,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var application = await _context.RestaurantApplications
+                .Include(item => item.User)
+                .Include(item => item.Documents)
+                .Include(item => item.OperatingHours)
+                .Include(item => item.BankingDetails)
+                .FirstOrDefaultAsync(
+                    item => item.RestaurantApplicationId == id && item.UserId == userId,
+                    cancellationToken);
+
+            if (application == null)
+                return NotFound("Restaurant application not found.");
+
+            if (application.Status is not RestaurantApplicationStatus.Draft
+                and not RestaurantApplicationStatus.DocumentsRequired)
+                return Conflict("This application cannot be submitted in its current status.");
+
+            var missingItems = new List<string>();
+            void Require(bool condition, string label)
+            {
+                if (!condition) missingItems.Add(label);
+            }
+
+            Require(application.User.IsEmailVerified, "Verify your account email address");
+            Require(!string.IsNullOrWhiteSpace(application.TradingName), "Trading name");
+            Require(!string.IsNullOrWhiteSpace(application.RegisteredBusinessName), "Registered business name");
+            Require(!string.IsNullOrWhiteSpace(application.CipcRegistrationNumber), "CIPC registration number");
+            Require(!string.IsNullOrWhiteSpace(application.RestaurantCategory), "Restaurant category");
+            Require(!string.IsNullOrWhiteSpace(application.PhysicalAddress), "Physical address");
+            Require(!string.IsNullOrWhiteSpace(application.City), "City");
+            Require(!string.IsNullOrWhiteSpace(application.RestaurantContactNumber), "Restaurant contact number");
+            Require(!string.IsNullOrWhiteSpace(application.BusinessEmail), "Business email");
+            Require(!string.IsNullOrWhiteSpace(application.RepresentativeFullName), "Authorised representative name");
+            Require(!string.IsNullOrWhiteSpace(application.RepresentativePosition), "Representative position");
+            Require(!string.IsNullOrWhiteSpace(application.RepresentativeMobileNumber), "Representative mobile number");
+            Require(!string.IsNullOrWhiteSpace(application.RepresentativeEmail), "Representative email");
+            Require(application.HasAuthorityToRepresent == true, "Confirmation of authority to represent the business");
+            Require(
+                application.OffersCustomerCollection == true ||
+                application.OffersRestaurantDelivery == true ||
+                application.OffersGrubnBiteDelivery == true,
+                "At least one fulfilment option");
+            Require(application.AveragePreparationTimeMinutes is >= 1 and <= 600, "Valid average preparation time");
+            Require(application.CommissionOfferAccepted == true, "Acceptance of the commission terms");
+            Require(application.OperatingHours.Any(hour => hour.IsOpen), "At least one operating day");
+
+            var requiredDocuments = new[]
+            {
+                RestaurantDocumentType.CipcCertificate,
+                RestaurantDocumentType.FoodPremisesCertificate,
+                RestaurantDocumentType.IdentityOrAuthority,
+                RestaurantDocumentType.BankConfirmation
+            };
+
+            foreach (var requiredDocument in requiredDocuments)
+            {
+                if (!application.Documents.Any(document => document.DocumentType == requiredDocument))
+                    missingItems.Add($"{requiredDocument} document");
+            }
+
+            Require(
+                application.BankingDetails != null &&
+                !string.IsNullOrWhiteSpace(application.BankingDetails.AccountNumberEncrypted),
+                "Payout banking details");
+
+            if (missingItems.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Complete the following items before submitting your application.",
+                    missingItems
+                });
+            }
+
+            var now = DateTime.UtcNow;
+            var previousStatus = application.Status;
+            application.Status = RestaurantApplicationStatus.PendingReview;
+            application.SubmittedAt = now;
+            application.UpdatedAt = now;
+            application.DocumentsRequestedMessage = null;
+            application.RejectionReason = null;
+
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = id,
+                PreviousStatus = previousStatus,
+                NewStatus = RestaurantApplicationStatus.PendingReview,
+                Action = "ApplicationSubmitted",
+                Comment = "Applicant submitted the restaurant partner application for review.",
+                PerformedByUserId = userId,
+                CreatedAt = now
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok(new
+            {
+                application.RestaurantApplicationId,
+                application.ApplicationReference,
+                status = application.Status.ToString(),
+                application.SubmittedAt,
+                message = "Your restaurant partner application has been submitted for review."
+            });
+        }
+
         private bool TryGetCurrentUserId(out int userId)
         {
             return int.TryParse(

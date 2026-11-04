@@ -84,4 +84,40 @@ Before enabling OTP delivery:
 
 Never commit the API key, place it in appsettings files, or expose it to the mobile application. The sender address must be verified in Brevo before sending production email.
 
-The email client is infrastructure only at this stage. OTP generation, challenge storage, verification endpoints, login enforcement, and mobile verification screens have not yet been implemented.
+## Email verification OTP configuration
+
+New public registrations require email verification before login. Existing accounts are marked verified by the migration default so current customers, restaurants, drivers and administrators are not locked out.
+
+The backend uses a cryptographically generated six-digit code. Only an HMAC-SHA256 hash is stored in PostgreSQL. Codes expire after 10 minutes, verification is limited to five incorrect attempts per code, resends have a 60-second cooldown, and no more than five resends are allowed in a rolling hour.
+
+Generate a separate 32-byte OTP pepper in PowerShell:
+
+```powershell
+$bytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($bytes)
+$pepper = [Convert]::ToBase64String($bytes)
+$rng.Dispose()
+$pepper
+```
+
+Add the generated value to the Render backend service as:
+
+```text
+EmailVerification__OtpPepper
+```
+
+For local development, use .NET User Secrets:
+
+```powershell
+dotnet user-secrets set "EmailVerification:OtpPepper" "<generated-base64-key>"
+```
+
+Use a different key from the banking encryption key. Do not commit it, put it in appsettings files, or expose it to the mobile application. Back it up securely; changing or losing it prevents outstanding verification codes from being validated.
+
+The API endpoints are:
+
+- `POST /api/Authentication/verify-email`
+- `POST /api/Authentication/resend-verification`
+
+The login endpoint refuses to issue a JWT until a new account's email is verified. The mobile registration flow opens the verification screen automatically.

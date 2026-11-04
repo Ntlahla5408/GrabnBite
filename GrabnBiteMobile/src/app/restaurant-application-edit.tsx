@@ -560,7 +560,35 @@ export default function RestaurantApplicationEditScreen() {
         </Pressable>
 
         <Text style={styles.sectionTitle}>Commission offer</Text>
-        <Choice label="I acknowledge and accept the commission offer presented during onboarding" value={form.commissionOfferAccepted} onChange={(value) => update("commissionOfferAccepted", value)} />
+        <View style={styles.commissionCard}>
+          <Text style={styles.commissionIntro}>
+            The promotional period starts on the date your restaurant is officially activated.
+          </Text>
+          <Text style={styles.commissionRate}>0% commission for the first 3 calendar months</Text>
+          <Text style={styles.commissionIntro}>
+            After the promotional period, the following standard restaurant commissions apply:
+          </Text>
+          <View style={styles.commissionRow}>
+            <Text style={styles.commissionLabel}>Customer collection</Text>
+            <Text style={styles.commissionValue}>8%</Text>
+          </View>
+          <View style={styles.commissionRow}>
+            <Text style={styles.commissionLabel}>Restaurant-managed delivery</Text>
+            <Text style={styles.commissionValue}>10%</Text>
+          </View>
+          <View style={styles.commissionRow}>
+            <Text style={styles.commissionLabel}>GrubnBite-arranged delivery</Text>
+            <Text style={styles.commissionValue}>15%</Text>
+          </View>
+          <Text style={styles.commissionFootnote}>
+            These are restaurant commission rates. Any customer-facing delivery service fee is separate and is not included in these percentages.
+          </Text>
+        </View>
+        <Choice
+          label="I acknowledge and accept these restaurant commission terms"
+          value={form.commissionOfferAccepted}
+          onChange={(value) => update("commissionOfferAccepted", value)}
+        />
 
         <Text style={styles.helper}>
           Saving stores your progress only. It does not submit the application for approval.
@@ -649,6 +677,13 @@ const styles = StyleSheet.create({
   input: { minHeight: 46, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 10, color: "#0F172A", fontSize: 14 },
   multiline: { minHeight: 88, textAlignVertical: "top" },
   choiceGroup: { marginBottom: 14 },
+  commissionCard: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, padding: 14, marginBottom: 14 },
+  commissionIntro: { color: "#475569", fontSize: 13, lineHeight: 19 },
+  commissionRate: { color: "#C2410C", fontSize: 17, fontWeight: "900", marginVertical: 12 },
+  commissionRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#E2E8F0", paddingVertical: 10 },
+  commissionLabel: { color: "#334155", fontSize: 13 },
+  commissionValue: { color: "#071B2C", fontSize: 14, fontWeight: "900" },
+  commissionFootnote: { color: "#64748B", fontSize: 11, lineHeight: 17, marginTop: 8 },
   documentTypes: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
   documentTypeButton: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FFFFFF" },
   documentTypeSelected: { borderColor: "#F97316", backgroundColor: "#FFF7ED" },

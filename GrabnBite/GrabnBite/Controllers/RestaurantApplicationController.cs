@@ -33,6 +33,54 @@ namespace GrabnBite.Controllers
             _bankingEncryption = bankingEncryption;
         }
 
+        // POST: api/RestaurantApplication
+        // A restaurant account may apply for more than one restaurant.
+        [HttpPost]
+        public async Task<IActionResult> CreateApplication(CancellationToken cancellationToken)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized();
+
+            var now = DateTime.UtcNow;
+            var application = new RestaurantApplication
+            {
+                UserId = userId,
+                ApplicationReference = $"GB-{Guid.NewGuid():N}"[..23].ToUpperInvariant(),
+                Status = RestaurantApplicationStatus.Draft,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            _context.RestaurantApplications.Add(application);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
+            {
+                RestaurantApplicationId = application.RestaurantApplicationId,
+                PreviousStatus = null,
+                NewStatus = RestaurantApplicationStatus.Draft,
+                Action = "ApplicationCreated",
+                Comment = "Applicant created an additional restaurant partner application.",
+                PerformedByUserId = userId,
+                CreatedAt = now
+            });
+
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return CreatedAtAction(
+                nameof(GetApplication),
+                new { id = application.RestaurantApplicationId },
+                new
+                {
+                    application.RestaurantApplicationId,
+                    application.ApplicationReference,
+                    status = application.Status.ToString(),
+                    application.CreatedAt
+                });
+        }
+
         // GET: api/RestaurantApplication/my-applications
         [HttpGet("my-applications")]
         public async Task<IActionResult> GetMyApplications(CancellationToken cancellationToken)

@@ -1,10 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 import { useAuth } from "../context/authContext";

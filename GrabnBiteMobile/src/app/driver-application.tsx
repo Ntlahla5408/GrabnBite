@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -230,6 +229,7 @@ export default function DriverApplicationScreen() {
   const [saving, setSaving] = useState(false);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [policies, setPolicies] = useState<PublishedPolicyDocument[]>([]);
@@ -326,7 +326,7 @@ export default function DriverApplicationScreen() {
       setError("");
       await saveDriverApplicationDraft(buildPayload(), token);
       await loadApplication();
-      if (showAlert) Alert.alert("Draft saved", "Your driver partner application has been saved.");
+      if (showAlert) setNotice("Your driver partner application draft has been saved.");
       return true;
     } catch (requestError: any) {
       setError(requestError?.message || "Unable to save your application.");
@@ -589,9 +589,40 @@ export default function DriverApplicationScreen() {
         <Pressable style={[styles.primaryButton, (saving || submitting) && styles.disabled]} onPress={() => void saveDraft()} disabled={saving || submitting}>
           {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>SAVE APPLICATION DRAFT</Text>}
         </Pressable>
-        <Pressable style={[styles.submitButton, (saving || submitting) && styles.disabled]} onPress={() => Alert.alert("Submit application", "Submit your completed delivery partner application for administrator review?", [{ text: "Cancel", style: "cancel" }, { text: "Submit", onPress: () => void handleSubmit() }])} disabled={saving || submitting}>
-          {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>SUBMIT FOR APPROVAL</Text>}
-        </Pressable>
+        {showSubmitConfirmation ? (
+          <View style={styles.confirmationCard}>
+            <Text style={styles.confirmationText}>
+              Submit your completed delivery partner application for administrator review? You will not be able to edit it unless the administrator requests additional information.
+            </Text>
+            <View style={styles.confirmationActions}>
+              <Pressable
+                style={styles.cancelSubmitButton}
+                onPress={() => setShowSubmitConfirmation(false)}
+                disabled={saving || submitting}
+              >
+                <Text style={styles.cancelSubmitText}>CANCEL</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.confirmSubmitButton, (saving || submitting) && styles.disabled]}
+                onPress={() => {
+                  setShowSubmitConfirmation(false);
+                  void handleSubmit();
+                }}
+                disabled={saving || submitting}
+              >
+                {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>CONFIRM SUBMISSION</Text>}
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            style={[styles.submitButton, (saving || submitting) && styles.disabled]}
+            onPress={() => setShowSubmitConfirmation(true)}
+            disabled={saving || submitting}
+          >
+            <Text style={styles.primaryButtonText}>SUBMIT FOR APPROVAL</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -635,6 +666,12 @@ const styles = StyleSheet.create({
   error: { color: "#B91C1C", backgroundColor: "#FEE2E2", borderRadius: 9, padding: 12, marginVertical: 10, lineHeight: 19 },
   primaryButton: { minHeight: 50, backgroundColor: NAVY, borderRadius: 10, justifyContent: "center", alignItems: "center", marginTop: 20 },
   submitButton: { minHeight: 50, backgroundColor: ORANGE, borderRadius: 10, justifyContent: "center", alignItems: "center", marginTop: 10 },
+  confirmationCard: { backgroundColor: "#FFF7ED", borderWidth: 1, borderColor: "#FDBA74", borderRadius: 10, padding: 14, marginTop: 12 },
+  confirmationText: { color: NAVY, fontSize: 13, lineHeight: 20 },
+  confirmationActions: { flexDirection: "row", gap: 10, marginTop: 14 },
+  cancelSubmitButton: { flex: 1, minHeight: 46, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
+  cancelSubmitText: { color: NAVY, fontWeight: "800", fontSize: 12 },
+  confirmSubmitButton: { flex: 1, minHeight: 46, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: ORANGE, paddingHorizontal: 8 },
   primaryButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 13 },
   secondaryButton: { minHeight: 46, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", borderRadius: 9, alignItems: "center", justifyContent: "center", marginTop: 18 },
   secondaryText: { color: NAVY, fontWeight: "700" },

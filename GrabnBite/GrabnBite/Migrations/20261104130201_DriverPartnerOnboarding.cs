@@ -247,11 +247,45 @@ namespace GrabnBite.Migrations
                 table: "DriverApplications",
                 column: "UserId",
                 unique: true);
+
+            // Protect driver application records from direct access through Supabase APIs.
+            migrationBuilder.Sql(
+                "ALTER TABLE \"DriverApplications\" ENABLE ROW LEVEL SECURITY;");
+
+            migrationBuilder.Sql(
+                "CREATE POLICY \"DriverApplications service role access\" " +
+                "ON \"DriverApplications\" FOR ALL TO service_role " +
+                "USING (true) WITH CHECK (true);");
+
+            migrationBuilder.Sql(
+                "ALTER TABLE \"DriverApplicationDocuments\" ENABLE ROW LEVEL SECURITY;");
+
+            migrationBuilder.Sql(
+                "CREATE POLICY \"DriverApplicationDocuments service role access\" " +
+                "ON \"DriverApplicationDocuments\" FOR ALL TO service_role " +
+                "USING (true) WITH CHECK (true);");
+
+            migrationBuilder.Sql(
+                "ALTER TABLE \"DriverApplicationHistories\" ENABLE ROW LEVEL SECURITY;");
+
+            migrationBuilder.Sql(
+                "CREATE POLICY \"DriverApplicationHistories service role access\" " +
+                "ON \"DriverApplicationHistories\" FOR ALL TO service_role " +
+                "USING (true) WITH CHECK (true);");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                "DROP POLICY IF EXISTS \"DriverApplications service role access\" ON \"DriverApplications\";");
+
+            migrationBuilder.Sql(
+                "DROP POLICY IF EXISTS \"DriverApplicationDocuments service role access\" ON \"DriverApplicationDocuments\";");
+
+            migrationBuilder.Sql(
+                "DROP POLICY IF EXISTS \"DriverApplicationHistories service role access\" ON \"DriverApplicationHistories\";");
+
             migrationBuilder.DropTable(
                 name: "DriverApplicationDocuments");
 

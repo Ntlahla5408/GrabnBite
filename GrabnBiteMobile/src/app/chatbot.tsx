@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
   desktopOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10, 20, 30, 0.18)",
     justifyContent: "flex-end",
     alignItems: "flex-end",

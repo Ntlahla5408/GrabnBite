@@ -40,66 +40,11 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Driver")]
         [HttpPost]
-        public async Task<IActionResult> CreateDriver(
-            [FromBody] CreateDriverDto dto)
+        public IActionResult CreateDriver([FromBody] CreateDriverDto dto)
         {
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
+            return Conflict(new
             {
-                return Unauthorized();
-            }
-
-            if (dto == null)
-            {
-                return BadRequest("Driver data is required.");
-            }
-
-            var existingDriver = await _context.Drivers
-                .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
-
-            if (existingDriver != null)
-            {
-                return BadRequest(
-                    "A driver profile already exists for this user.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.VehicleType))
-            {
-                return BadRequest("Vehicle type is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(dto.VehicleRegistration))
-            {
-                return BadRequest(
-                    "Vehicle registration is required.");
-            }
-
-            var driver = new Driver
-            {
-                UserId = userId.Value,
-                VehicleType = dto.VehicleType.Trim(),
-                VehicleRegistration =
-                    dto.VehicleRegistration.Trim(),
-                IsOnline = false,
-                IsApproved = false,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Drivers.Add(driver);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new DriverResponseDto
-            {
-                DriverId = driver.DriverId,
-                UserId = driver.UserId,
-                VehicleType = driver.VehicleType,
-                VehicleRegistration = driver.VehicleRegistration,
-                IsOnline = driver.IsOnline,
-                IsApproved = driver.IsApproved,
-                CreatedAt = driver.CreatedAt
+                message = "Driver profiles are created only after a delivery partner application has been reviewed and approved. Complete your driver application first."
             });
         }
 
@@ -255,33 +200,11 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("{driverId:int}/approve")]
-        public async Task<IActionResult> ApproveDriver(
-            int driverId)
+        public IActionResult ApproveDriver(int driverId)
         {
-            if (driverId <= 0)
+            return Conflict(new
             {
-                return BadRequest(
-                    "A valid driverId is required.");
-            }
-
-            var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d =>
-                    d.DriverId == driverId);
-
-            if (driver == null)
-            {
-                return NotFound("Driver not found.");
-            }
-
-            driver.IsApproved = true;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Driver approved successfully.",
-                driverId = driver.DriverId,
-                isApproved = driver.IsApproved
+                message = "Drivers must be approved through the driver partner application review process."
             });
         }
     }

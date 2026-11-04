@@ -86,18 +86,13 @@ export default function RegisterScreen() {
 
       console.log("REGISTER SUCCESS:", result);
 
-      Alert.alert(
-        "Account created",
-        accountType === "Restaurant"
-          ? "Your restaurant account has been created and a draft partner application is ready. Please log in to continue onboarding."
-          : "Your GrabnBite account has been created. Please log in.",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/login"),
-          },
-        ],
-      );
+      router.replace({
+        pathname: "/verify-email",
+        params: {
+          email: result.email,
+          emailSent: String(result.emailSent),
+        },
+      });
     } catch (error) {
       console.error("REGISTER ERROR:", error);
 

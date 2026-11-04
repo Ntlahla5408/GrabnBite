@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -20,6 +21,14 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+}
+
+interface DriverLocation {
+  deliveryId: number;
+  orderId: number;
+  status: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface Order {
@@ -45,6 +54,7 @@ export default function OrderScreen() {
   const orderId = Number(params.orderId);
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [driverLocation, setDriverLocation] = useState<DriverLocation | null>(null);
   const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
 
@@ -58,14 +68,34 @@ export default function OrderScreen() {
       console.log("ORDER RESULT:", result);
 
       setOrder(result);
+
+      const orderStatus = String(result.status ?? "").toUpperCase();
+      if (["ASSIGNED", "PICKED_UP", "DELIVERING"].includes(orderStatus)) {
+        try {
+          const location = await apiRequest(
+            `/api/Delivery/order/${orderId}/location`,
+            {},
+            token,
+          );
+          setDriverLocation(location);
+        } catch {
+          // A driver may not have shared a GPS position yet. Keep the order
+          // status visible while waiting for the first location update.
+          setDriverLocation(null);
+        }
+      } else {
+        setDriverLocation(null);
+      }
     } catch (error) {
       console.error("Failed to load order:", error);
 
-      setError("Unable to load your order. Please try again.");
+      if (!order) {
+        setError("Unable to load your order. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [token, orderId]);
+  }, [token, orderId, order]);
 
   useEffect(() => {
     if (authLoading) {
@@ -82,6 +112,20 @@ export default function OrderScreen() {
       void loadOrder();
     }
   }, [authLoading, token, orderId, loadOrder]);
+
+  // Keep the customer view current even when a real-time connection is
+  // temporarily unavailable. The API remains the authoritative source.
+  useEffect(() => {
+    if (!token || !Number.isInteger(orderId) || orderId <= 0) {
+      return;
+    }
+
+    const refreshInterval = setInterval(() => {
+      void loadOrder();
+    }, 10000);
+
+    return () => clearInterval(refreshInterval);
+  }, [token, orderId, loadOrder]);
 
   if (loading) {
     return (
@@ -319,6 +363,33 @@ export default function OrderScreen() {
           <Text style={styles.deliverySubtext}>
             Your selected delivery address
           </Text>
+
+          {["ASSIGNED", "PICKED_UP", "DELIVERING"].includes(status) && (
+            <View style={styles.liveTracking}>
+              <Text style={styles.liveTrackingTitle}>Driver tracking</Text>
+              {driverLocation ? (
+                <>
+                  <Text style={styles.deliverySubtext}>
+                    Latest driver location received
+                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      void Linking.openURL(
+                        `https://www.google.com/maps/search/?api=1&query=${driverLocation.latitude},${driverLocation.longitude}`,
+                      )
+                    }
+                    style={styles.trackButton}
+                  >
+                    <Text style={styles.trackButtonText}>VIEW DRIVER LOCATION</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Text style={styles.deliverySubtext}>
+                  Waiting for the driver&apos;s first location update. This screen checks for updates automatically.
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         <Pressable
@@ -586,6 +657,35 @@ const styles = StyleSheet.create({
     color: "#888",
     fontSize: 13,
     marginTop: 5,
+  },
+
+  liveTracking: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#EEEEEE",
+  },
+
+  liveTrackingTitle: {
+    color: "#071B2C",
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  trackButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF7ED",
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+
+  trackButtonText: {
+    color: "#F28C28",
+    fontSize: 12,
+    fontWeight: "800",
   },
 
   button: {

@@ -337,7 +337,7 @@ namespace GrabnBite.Controllers
             });
         }
 
-        private static List<string> GetMissingItems(DriverApplication application)
+        internal static List<string> GetMissingItems(DriverApplication application)
         {
             var missing = new List<string>();
             void Require(bool condition, string label) { if (!condition) missing.Add(label); }
@@ -397,10 +397,16 @@ namespace GrabnBite.Controllers
             var isBicycle = application.PartnerType?.Contains("bicycle", StringComparison.OrdinalIgnoreCase) == true;
             if (!isBicycle)
             {
-                RequireDocument("DriversLicence", "Valid driver's licence");
+                Require(!string.IsNullOrWhiteSpace(application.VehicleMake), "Vehicle make");
+                Require(!string.IsNullOrWhiteSpace(application.VehicleModel), "Vehicle model");
+                Require(application.VehicleYear.HasValue, "Vehicle year");
+                Require(!string.IsNullOrWhiteSpace(application.VehicleRegistration), "Vehicle registration number");
+                Require(!string.IsNullOrWhiteSpace(application.VehicleColour), "Vehicle colour");
                 RequireDocument("VehicleRegistrationCertificate", "Vehicle registration certificate");
                 RequireDocument("VehicleLicence", "Valid vehicle licence documentation");
                 RequireDocument("ProofOfInsurance", "Proof of vehicle insurance");
+                if (application.RequiresDriversLicence)
+                    RequireDocument("DriversLicence", "Valid driver's licence");
                 if (application.RequiresProfessionalDrivingPermit)
                     RequireDocument("ProfessionalDrivingPermit", "Professional driving permit");
                 if (application.RequiresRoadworthiness)

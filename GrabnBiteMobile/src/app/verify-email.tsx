@@ -53,7 +53,7 @@ export default function VerifyEmailScreen() {
       return;
     }
 
-    if (!/^\\d{6}$/.test(code.trim())) {
+    if (!/^\d{6}$/.test(code.trim())) {
       setErrorMessage("Enter the six-digit code sent to your email.");
       return;
     }

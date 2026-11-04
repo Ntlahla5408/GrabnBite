@@ -271,13 +271,21 @@ export default function ChatbotScreen() {
             contentStyle: { backgroundColor: "transparent" },
           }}
         />
-        <View style={styles.desktopOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={closeChat}
-            accessibilityRole="button"
-            accessibilityLabel="Close support chat"
-          />
+        <View
+          pointerEvents="box-none"
+          style={[
+            styles.desktopOverlay,
+            isMinimized && styles.desktopOverlayMinimized,
+          ]}
+        >
+          {!isMinimized && (
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={closeChat}
+              accessibilityRole="button"
+              accessibilityLabel="Close support chat"
+            />
+          )}
           {isMinimized ? (
             <Pressable
               onPress={() => setIsMinimized(false)}
@@ -335,6 +343,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     alignItems: "flex-end",
     padding: 24,
+  },
+  desktopOverlayMinimized: {
+    backgroundColor: "transparent",
   },
   desktopPanel: {
     maxWidth: "100%",

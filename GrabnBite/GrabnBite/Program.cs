@@ -26,6 +26,9 @@ builder.Services.AddHttpClient<YocoPaymentService>();
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
 builder.Services.AddHttpClient<ICloudinaryImageService, CloudinaryImageService>();
 
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddHttpClient<IGeminiChatService, GeminiChatService>();
+
 builder.Services.Configure<SupabaseStorageSettings>(
     builder.Configuration.GetSection("SupabaseStorage"));
 builder.Services.AddHttpClient<ISupabasePolicyStorageService, SupabasePolicyStorageService>();

@@ -245,7 +245,7 @@ namespace GrabnBite.Controllers
                 _ => ".bin"
             };
             var storagePath = $"driver-applications/{application.DriverApplicationId}/{Guid.NewGuid():N}{extension}";
-            var originalFileName = Path.GetFileName(file.FileName.Replace('\\\\', '/'));
+            var originalFileName = Path.GetFileName(file.FileName.Replace('\\', '/'));
             if (originalFileName.Length > 255) originalFileName = originalFileName[^255..];
 
             await _documentStorage.UploadAsync(stream, storagePath, contentType!, cancellationToken);

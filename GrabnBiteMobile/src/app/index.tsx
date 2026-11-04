@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +19,6 @@ import SectionHeader from "../components/home/SectionHeader";
 import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
-import { Pressable } from "react-native";
 
 export default function HomeScreen() {
   const router = useRouter();

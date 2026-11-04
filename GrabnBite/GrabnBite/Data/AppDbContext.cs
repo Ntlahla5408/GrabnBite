@@ -624,6 +624,13 @@ namespace GrabnBite.Data
                 .HasForeignKey(d => d.DriverId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // A driver may hold only one active delivery at a time.
+            // PostgreSQL enforces this under concurrent assignment requests.
+            modelBuilder.Entity<Delivery>()
+                .HasIndex(d => d.DriverId)
+                .IsUnique()
+                .HasFilter(""DriverId" IS NOT NULL AND "Status" IN ('ASSIGNED', 'PICKED_UP', 'DELIVERING')");
+
 
             // ============================================================
             // RESTAURANT → REVIEW

@@ -74,9 +74,6 @@ export default function DriverDashboard() {
   const [isOnline, setIsOnline] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [driverProfileMissing, setDriverProfileMissing] = useState(false);
-  const [vehicleType, setVehicleType] = useState("");
-  const [vehicleRegistration, setVehicleRegistration] = useState("");
-  const [creatingProfile, setCreatingProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -157,49 +154,6 @@ export default function DriverDashboard() {
     await loadDriverData();
   };
 
-  const createDriverProfile = async () => {
-    if (!token || creatingProfile) return;
-
-    if (!vehicleType.trim() || !vehicleRegistration.trim()) {
-      Alert.alert(
-        "Missing information",
-        "Enter your vehicle type and registration number.",
-      );
-      return;
-    }
-
-    try {
-      setCreatingProfile(true);
-
-      await apiRequest(
-        "/api/Driver",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            vehicleType: vehicleType.trim(),
-            vehicleRegistration: vehicleRegistration.trim(),
-          }),
-        },
-        token,
-      );
-
-      Alert.alert(
-        "Application submitted",
-        "Your driver profile has been submitted for administrator approval.",
-      );
-
-      setVehicleType("");
-      setVehicleRegistration("");
-      await loadDriverData();
-    } catch (error: any) {
-      Alert.alert(
-        "Unable to submit driver profile",
-        error?.message || "Something went wrong.",
-      );
-    } finally {
-      setCreatingProfile(false);
-    }
-  };
 
   const toggleOnline = async () => {
     if (!token || actionLoading) return;
@@ -450,42 +404,16 @@ export default function DriverDashboard() {
         </View>
 
         {driverProfileMissing ? (
-          <View style={styles.card}>
-            <Text style={styles.restaurantName}>Complete your driver profile</Text>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Complete your delivery partner application</Text>
             <Text style={styles.emptyText}>
-              Add your vehicle details to submit your driver profile. An administrator must approve it before you can receive deliveries.
+              Submit your personal information, vehicle details and required supporting documents. An administrator must review and approve your application before you can go online or accept deliveries.
             </Text>
-
-            <Text style={styles.profileLabel}>Vehicle type</Text>
-            <TextInput
-              style={styles.profileInput}
-              value={vehicleType}
-              onChangeText={setVehicleType}
-              placeholder="e.g. Motorbike, car or bicycle"
-              placeholderTextColor="#94A3B8"
-              autoCapitalize="words"
-            />
-
-            <Text style={styles.profileLabel}>Vehicle registration</Text>
-            <TextInput
-              style={styles.profileInput}
-              value={vehicleRegistration}
-              onChangeText={setVehicleRegistration}
-              placeholder="Enter registration number"
-              placeholderTextColor="#94A3B8"
-              autoCapitalize="characters"
-            />
-
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={createDriverProfile}
-              disabled={creatingProfile}
+              onPress={() => router.push("/driver-application" as any)}
             >
-              {creatingProfile ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.primaryButtonText}>SUBMIT DRIVER PROFILE</Text>
-              )}
+              <Text style={styles.primaryButtonText}>OPEN DRIVER APPLICATION</Text>
             </TouchableOpacity>
           </View>
         ) : !isApproved ? (

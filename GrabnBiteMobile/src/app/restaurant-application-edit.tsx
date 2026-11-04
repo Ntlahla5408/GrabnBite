@@ -58,6 +58,16 @@ type DraftForm = {
   }[];
 };
 
+const dayOfWeekToNumber: Record<string, number> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
 const emptyForm: DraftForm = {
   tradingName: "",
   registeredBusinessName: "",
@@ -221,7 +231,10 @@ export default function RestaurantApplicationEditScreen() {
       maximumDeliveryDistanceKm: deliveryDistance,
       deliveryInstructions: form.deliveryInstructions,
       commissionOfferAccepted: form.commissionOfferAccepted,
-      operatingHours: form.operatingHours,
+      operatingHours: form.operatingHours.map((hour) => ({
+        ...hour,
+        dayOfWeek: dayOfWeekToNumber[hour.dayOfWeek],
+      })),
     };
 
     try {
@@ -269,7 +282,10 @@ export default function RestaurantApplicationEditScreen() {
       maximumDeliveryDistanceKm: deliveryDistance,
       deliveryInstructions: form.deliveryInstructions,
       commissionOfferAccepted: form.commissionOfferAccepted,
-      operatingHours: form.operatingHours,
+      operatingHours: form.operatingHours.map((hour) => ({
+        ...hour,
+        dayOfWeek: dayOfWeekToNumber[hour.dayOfWeek],
+      })),
     };
 
     try {

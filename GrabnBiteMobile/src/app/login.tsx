@@ -56,6 +56,17 @@ export default function LoginScreen() {
     } catch (error) {
       console.error("LOGIN ERROR:", error);
 
+      if (
+        error instanceof Error &&
+        error.message.includes("EMAIL_NOT_VERIFIED")
+      ) {
+        router.push({
+          pathname: "/verify-email",
+          params: { email: email.trim() },
+        });
+        return;
+      }
+
       Alert.alert("Login failed", "Please check your email and password.");
     } finally {
       setLoading(false);

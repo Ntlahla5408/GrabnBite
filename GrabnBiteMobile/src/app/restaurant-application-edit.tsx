@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,10 @@ import {
   RestaurantApplicationDraft,
   saveRestaurantApplicationDraft,
   SaveRestaurantApplicationDraft,
+  RestaurantDocumentType,
+  uploadRestaurantApplicationDocument,
+  getRestaurantApplicationDocumentDownloadUrl,
+  deleteRestaurantApplicationDocument,
 } from "../services/restaurantApplicationService";
 
 type DraftForm = {
@@ -88,6 +94,9 @@ export default function RestaurantApplicationEditScreen() {
   const [form, setForm] = useState<DraftForm>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] =
+    useState<RestaurantDocumentType>("CipcCertificate");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -333,6 +342,130 @@ export default function RestaurantApplicationEditScreen() {
           </View>
         ))}
 
+        <Text style={styles.sectionTitle}>Supporting documents</Text>
+        <Text style={styles.helper}>
+          Upload clear PDF or image copies. Files are stored privately and can only be accessed through an authenticated, short-lived download link.
+        </Text>
+        <View style={styles.documentTypes}>
+          {([
+            ["CipcCertificate", "CIPC certificate"],
+            ["FoodPremisesCertificate", "Food premises certificate"],
+            ["IdentityOrAuthority", "Identity / authority"],
+            ["BankConfirmation", "Bank confirmation"],
+            ["Other", "Other"],
+          ] as [RestaurantDocumentType, string][]).map(([value, label]) => (
+            <Pressable
+              key={value}
+              style={[styles.documentTypeButton, selectedDocumentType === value && styles.documentTypeSelected]}
+              onPress={() => setSelectedDocumentType(value)}
+            >
+              <Text style={[styles.documentTypeText, selectedDocumentType === value && styles.documentTypeTextSelected]}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <Pressable
+          style={[styles.uploadButton, uploading && styles.disabled]}
+          disabled={uploading || !application || (application.status !== "Draft" && application.status !== "DocumentsRequired")}
+          onPress={async () => {
+            if (!token || !application) return;
+            try {
+              const result = await DocumentPicker.getDocumentAsync({
+                type: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
+                copyToCacheDirectory: true,
+                multiple: false,
+              });
+              if (result.canceled || !result.assets?.[0]) return;
+              const asset = result.assets[0];
+              const mimeType = asset.mimeType || "application/octet-stream";
+              if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+                setError("Choose a PDF, JPEG, PNG or WebP file.");
+                return;
+              }
+              setUploading(true);
+              setError("");
+              await uploadRestaurantApplicationDocument(
+                application.restaurantApplicationId,
+                selectedDocumentType,
+                { uri: asset.uri, name: asset.name, mimeType },
+                token,
+              );
+              const refreshed = await getRestaurantApplication(application.restaurantApplicationId, token);
+              setApplication(refreshed);
+              Alert.alert("Document uploaded", "Your supporting document has been uploaded.");
+            } catch (uploadError: any) {
+              setError(uploadError?.message || "Unable to upload this document.");
+            } finally {
+              setUploading(false);
+            }
+          }}
+        >
+          {uploading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Choose and upload document</Text>}
+        </Pressable>
+        {application?.documents.length ? (
+          application.documents.map((document) => (
+            <View key={document.restaurantDocumentId} style={styles.documentCard}>
+              <Text style={styles.documentName}>{document.originalFileName}</Text>
+              <Text style={styles.documentMeta}>
+                {document.documentType.replace(/([a-z])([A-Z])/g, "$1 $2")} · {document.verificationStatus}
+              </Text>
+              {document.adminComment ? <Text style={styles.notice}>{document.adminComment}</Text> : null}
+              <View style={styles.documentActions}>
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      const result = await getRestaurantApplicationDocumentDownloadUrl(
+                        application.restaurantApplicationId,
+                        document.restaurantDocumentId,
+                        token!,
+                      );
+                      await Linking.openURL(result.signedUrl);
+                    } catch (downloadError: any) {
+                      setError(downloadError?.message || "Unable to open this document.");
+                    }
+                  }}
+                >
+                  <Text style={styles.documentActionText}>View</Text>
+                </Pressable>
+                {(application.status === "Draft" || application.status === "DocumentsRequired") &&
+                  document.verificationStatus === "Pending" ? (
+                    <Pressable
+                      onPress={() => Alert.alert(
+                        "Remove document?",
+                        "This will permanently remove the uploaded file.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Remove",
+                            style: "destructive",
+                            onPress: async () => {
+                              try {
+                                await deleteRestaurantApplicationDocument(
+                                  application.restaurantApplicationId,
+                                  document.restaurantDocumentId,
+                                  token!,
+                                );
+                                const refreshed = await getRestaurantApplication(application.restaurantApplicationId, token!);
+                                setApplication(refreshed);
+                              } catch (deleteError: any) {
+                                setError(deleteError?.message || "Unable to remove this document.");
+                              }
+                            },
+                          },
+                        ],
+                      )}
+                    >
+                      <Text style={styles.documentDeleteText}>Remove</Text>
+                    </Pressable>
+                  ) : null}
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyDocuments}>No supporting documents uploaded yet.</Text>
+        )}
+
         <Text style={styles.sectionTitle}>Commission offer</Text>
         <Choice label="I acknowledge and accept the commission offer presented during onboarding" value={form.commissionOfferAccepted} onChange={(value) => update("commissionOfferAccepted", value)} />
 
@@ -423,6 +556,19 @@ const styles = StyleSheet.create({
   input: { minHeight: 46, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 10, color: "#0F172A", fontSize: 14 },
   multiline: { minHeight: 88, textAlignVertical: "top" },
   choiceGroup: { marginBottom: 14 },
+  documentTypes: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
+  documentTypeButton: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FFFFFF" },
+  documentTypeSelected: { borderColor: "#F97316", backgroundColor: "#FFF7ED" },
+  documentTypeText: { color: "#475569", fontSize: 12, fontWeight: "700" },
+  documentTypeTextSelected: { color: "#9A3412" },
+  uploadButton: { minHeight: 46, borderRadius: 9, backgroundColor: "#F97316", alignItems: "center", justifyContent: "center", marginTop: 14 },
+  documentCard: { borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 9, padding: 12, marginTop: 10, backgroundColor: "#FFFFFF" },
+  documentName: { color: "#0F172A", fontWeight: "700", fontSize: 13 },
+  documentMeta: { color: "#64748B", fontSize: 11, marginTop: 5 },
+  documentActions: { flexDirection: "row", gap: 18, marginTop: 12 },
+  documentActionText: { color: "#C2410C", fontSize: 13, fontWeight: "800" },
+  documentDeleteText: { color: "#B91C1C", fontSize: 13, fontWeight: "800" },
+  emptyDocuments: { color: "#64748B", fontSize: 13, marginTop: 12 },
   hoursRow: { borderBottomWidth: 1, borderBottomColor: "#E2E8F0", paddingVertical: 7 },
   timeFields: { flexDirection: "row", alignItems: "center", gap: 8, marginLeft: 32, marginBottom: 8 },
   timeInput: { width: 86, minHeight: 38, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 8, backgroundColor: "#FFFFFF", paddingHorizontal: 8, color: "#0F172A", textAlign: "center" },

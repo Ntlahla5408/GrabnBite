@@ -321,6 +321,26 @@ export default function DriverApplicationScreen() {
 
   const saveDraft = async (showAlert = true) => {
     if (!token) return false;
+
+    const numberOfDriversValue = String(form.numberOfDrivers ?? "").trim();
+    if (numberOfDriversValue) {
+      const numberOfDrivers = Number(numberOfDriversValue);
+      if (!Number.isSafeInteger(numberOfDrivers) || numberOfDrivers < 1 || numberOfDrivers > 1000) {
+        setError("Number of drivers must be a whole number between 1 and 1,000.");
+        return false;
+      }
+    }
+
+    const vehicleYearValue = String(form.vehicleYear ?? "").trim();
+    if (vehicleYearValue) {
+      const vehicleYear = Number(vehicleYearValue);
+      const latestAllowedYear = new Date().getFullYear() + 1;
+      if (!Number.isInteger(vehicleYear) || vehicleYear < 1900 || vehicleYear > latestAllowedYear) {
+        setError(`Vehicle year must be between 1900 and ${latestAllowedYear}.`);
+        return false;
+      }
+    }
+
     try {
       setSaving(true);
       setError("");

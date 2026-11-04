@@ -68,6 +68,15 @@ const dayOfWeekToNumber: Record<string, number> = {
   Saturday: 6,
 };
 
+const normalizeTimeOnly = (value: string | null): string | null => {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) return null;
+
+  return /^\d{2}:\d{2}$/.test(trimmedValue)
+    ? `${trimmedValue}:00`
+    : trimmedValue;
+};
+
 const emptyForm: DraftForm = {
   tradingName: "",
   registeredBusinessName: "",
@@ -167,8 +176,8 @@ export default function RestaurantApplicationEditScreen() {
             return {
               dayOfWeek,
               isOpen: saved?.isOpen ?? false,
-              openingTime: saved?.openingTime ?? null,
-              closingTime: saved?.closingTime ?? null,
+              openingTime: saved?.openingTime?.slice(0, 5) ?? null,
+              closingTime: saved?.closingTime?.slice(0, 5) ?? null,
             };
           }),
         });
@@ -234,6 +243,8 @@ export default function RestaurantApplicationEditScreen() {
       operatingHours: form.operatingHours.map((hour) => ({
         ...hour,
         dayOfWeek: dayOfWeekToNumber[hour.dayOfWeek],
+        openingTime: normalizeTimeOnly(hour.openingTime),
+        closingTime: normalizeTimeOnly(hour.closingTime),
       })),
     };
 
@@ -285,6 +296,8 @@ export default function RestaurantApplicationEditScreen() {
       operatingHours: form.operatingHours.map((hour) => ({
         ...hour,
         dayOfWeek: dayOfWeekToNumber[hour.dayOfWeek],
+        openingTime: normalizeTimeOnly(hour.openingTime),
+        closingTime: normalizeTimeOnly(hour.closingTime),
       })),
     };
 

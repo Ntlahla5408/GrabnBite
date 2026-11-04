@@ -580,7 +580,10 @@ namespace GrabnBite.Controllers
                     "Delivery distance must be between 0 and 500 km.");
             }
 
-            if (request.OperatingHours == null || request.OperatingHours.Count > 7)
+            var operatingHours = request.OperatingHours
+                ?? new List<RestaurantOperatingHourDraftRequest>();
+
+            if (request.OperatingHours == null || operatingHours.Count > 7)
             {
                 ModelState.AddModelError(
                     nameof(request.OperatingHours),
@@ -588,7 +591,7 @@ namespace GrabnBite.Controllers
             }
             else
             {
-                var duplicateDays = request.OperatingHours
+                var duplicateDays = operatingHours
                     .GroupBy(hour => hour.DayOfWeek)
                     .Any(group => group.Count() > 1);
 
@@ -599,7 +602,7 @@ namespace GrabnBite.Controllers
                         "Only one operating-hours entry is allowed per day.");
                 }
 
-                foreach (var hour in request.OperatingHours)
+                foreach (var hour in operatingHours)
                 {
                     if (!Enum.IsDefined(hour.DayOfWeek))
                     {
@@ -649,7 +652,7 @@ namespace GrabnBite.Controllers
             application.CommissionOfferAccepted = request.CommissionOfferAccepted;
             application.UpdatedAt = DateTime.UtcNow;
 
-            var submittedHours = request.OperatingHours.ToDictionary(hour => hour.DayOfWeek);
+            var submittedHours = operatingHours.ToDictionary(hour => hour.DayOfWeek);
             foreach (var existingHour in application.OperatingHours.ToList())
             {
                 if (!submittedHours.ContainsKey(existingHour.DayOfWeek))
@@ -658,7 +661,7 @@ namespace GrabnBite.Controllers
                 }
             }
 
-            foreach (var submittedHour in request.OperatingHours)
+            foreach (var submittedHour in operatingHours)
             {
                 var existingHour = application.OperatingHours
                     .FirstOrDefault(hour => hour.DayOfWeek == submittedHour.DayOfWeek);

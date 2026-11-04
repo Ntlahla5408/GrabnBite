@@ -55,9 +55,9 @@ Do not put this key in `appsettings.json`, source control, mobile configuration,
 
 ## 3. Database migration
 
-The restaurant partner onboarding EF migration is intentionally not applied by this feature. The new application, document, banking, agreement, review, history, operating-hours and commission tables do not exist in the production database until the migration is explicitly reviewed and applied.
+The restaurant partner onboarding EF migration remains unapplied. The email-verification schema changes also require a new EF migration generated locally after pulling the branch.
 
-Do not test the new database endpoints against production before the migration has been applied through the agreed deployment process.
+Review both pending migrations together before applying them. They must not be applied automatically at application startup, and no production database changes are made by this feature branch. Do not test the new onboarding or email-verification database endpoints against production until the migrations have been explicitly reviewed and applied through the agreed deployment process.
 
 
 ## Brevo transactional email configuration

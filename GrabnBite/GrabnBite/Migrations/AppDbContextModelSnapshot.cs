@@ -208,6 +208,48 @@ namespace GrabnBite.Migrations
                     b.ToTable("Drivers");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.EmailVerificationChallenge", b =>
+                {
+                    b.Property<int>("EmailVerificationChallengeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EmailVerificationChallengeId"));
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ResendCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ResendWindowStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("EmailVerificationChallengeId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("EmailVerificationChallenges");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.MenuCategory", b =>
                 {
                     b.Property<int>("MenuCategoryId")
@@ -1316,12 +1358,20 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -1424,6 +1474,17 @@ namespace GrabnBite.Migrations
                         .WithOne("Driver")
                         .HasForeignKey("GrabnBite.Models.Entities.Driver", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.EmailVerificationChallenge", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithOne("EmailVerificationChallenge")
+                        .HasForeignKey("GrabnBite.Models.Entities.EmailVerificationChallenge", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -1843,6 +1904,8 @@ namespace GrabnBite.Migrations
                     b.Navigation("Carts");
 
                     b.Navigation("Driver");
+
+                    b.Navigation("EmailVerificationChallenge");
 
                     b.Navigation("Notifications");
 

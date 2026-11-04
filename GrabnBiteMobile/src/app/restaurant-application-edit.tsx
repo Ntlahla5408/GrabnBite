@@ -23,6 +23,8 @@ import {
   uploadRestaurantApplicationDocument,
   getRestaurantApplicationDocumentDownloadUrl,
   deleteRestaurantApplicationDocument,
+  saveRestaurantBankingDetails,
+  SaveRestaurantBankingDetails,
 } from "../services/restaurantApplicationService";
 
 type DraftForm = {
@@ -97,6 +99,15 @@ export default function RestaurantApplicationEditScreen() {
   const [uploading, setUploading] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] =
     useState<RestaurantDocumentType>("CipcCertificate");
+  const [savingBanking, setSavingBanking] = useState(false);
+  const [bankingForm, setBankingForm] = useState<SaveRestaurantBankingDetails>({
+    accountHolderName: "",
+    bankName: "",
+    accountType: "",
+    accountNumber: "",
+    branchCode: "",
+    payoutContactEmail: "",
+  });
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -465,6 +476,88 @@ export default function RestaurantApplicationEditScreen() {
         ) : (
           <Text style={styles.emptyDocuments}>No supporting documents uploaded yet.</Text>
         )}
+
+        <Text style={styles.sectionTitle}>Payout banking details</Text>
+        <Text style={styles.helper}>
+          Your account number is encrypted by the backend before it is stored. The full number is never returned to the app. If you are updating existing details, enter the account number again.
+        </Text>
+        {application?.bankingDetailsProvided ? (
+          <Text style={styles.notice}>Banking details have been saved. Updating them requires re-entering the account number and will restart verification.</Text>
+        ) : null}
+        <Field
+          label="Account holder name"
+          value={bankingForm.accountHolderName}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, accountHolderName: value }))}
+        />
+        <Field
+          label="Bank name"
+          value={bankingForm.bankName}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, bankName: value }))}
+        />
+        <Field
+          label="Account type"
+          value={bankingForm.accountType}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, accountType: value }))}
+          placeholder="e.g. Cheque, Savings, Transmission"
+        />
+        <Field
+          label="Account number (6–20 digits)"
+          value={bankingForm.accountNumber}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, accountNumber: value.replace(/[^0-9]/g, "") }))}
+          keyboardType="numeric"
+          autoCapitalize="none"
+        />
+        <Field
+          label="Branch code (6 digits)"
+          value={bankingForm.branchCode}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, branchCode: value.replace(/[^0-9]/g, "") }))}
+          keyboardType="numeric"
+          autoCapitalize="none"
+        />
+        <Field
+          label="Payout contact email"
+          value={bankingForm.payoutContactEmail}
+          onChangeText={(value) => setBankingForm((current) => ({ ...current, payoutContactEmail: value }))}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <Pressable
+          style={[styles.uploadButton, savingBanking && styles.disabled]}
+          disabled={savingBanking || !application || (application.status !== "Draft" && application.status !== "DocumentsRequired")}
+          onPress={async () => {
+            if (!token || !application) return;
+            if (
+              !bankingForm.accountHolderName.trim() ||
+              !bankingForm.bankName.trim() ||
+              !bankingForm.accountType.trim() ||
+              !/^[0-9]{6,20}$/.test(bankingForm.accountNumber) ||
+              !/^[0-9]{6}$/.test(bankingForm.branchCode) ||
+              !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bankingForm.payoutContactEmail)
+            ) {
+              setError("Complete all banking fields. Account number must be 6–20 digits and branch code must be 6 digits.");
+              return;
+            }
+            try {
+              setSavingBanking(true);
+              setError("");
+              await saveRestaurantBankingDetails(
+                application.restaurantApplicationId,
+                bankingForm,
+                token,
+              );
+              const refreshed = await getRestaurantApplication(application.restaurantApplicationId, token);
+              setApplication(refreshed);
+              setBankingForm((current) => ({ ...current, accountNumber: "" }));
+              Alert.alert("Banking details saved", "Your banking details were encrypted and saved. They will require verification.");
+            } catch (bankingError: any) {
+              setError(bankingError?.message || "Unable to save banking details.");
+            } finally {
+              setSavingBanking(false);
+            }
+          }}
+        >
+          {savingBanking ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Save banking details</Text>}
+        </Pressable>
 
         <Text style={styles.sectionTitle}>Commission offer</Text>
         <Choice label="I acknowledge and accept the commission offer presented during onboarding" value={form.commissionOfferAccepted} onChange={(value) => update("commissionOfferAccepted", value)} />

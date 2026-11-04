@@ -367,7 +367,7 @@ namespace GrabnBite.Controllers
             Require(!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber), "Electronic signature ID/passport number");
             Require(!string.IsNullOrWhiteSpace(application.SignatureEmailAddress), "Electronic signature email");
             Require(!string.IsNullOrWhiteSpace(application.SignatureMobileNumber), "Electronic signature mobile number");
-            Require(!string.IsNullOrWhiteSpace(application.SignatureMethod), "Electronic signature method");
+            Require(string.Equals(application.SignatureMethod, "EmailVerification", StringComparison.OrdinalIgnoreCase), "Email-verified electronic signature");
 
             Require(application.AcknowledgedDeliveryPartnerAgreement, "Delivery Partner Agreement acknowledgement");
             Require(application.AcknowledgedCollectionProcedures, "Delivery and Collection Procedures acknowledgement");

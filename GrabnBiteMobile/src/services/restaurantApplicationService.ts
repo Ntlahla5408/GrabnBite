@@ -210,6 +210,17 @@ export async function getRestaurantBankingDetails(
   );
 }
 
+export async function submitRestaurantApplication(
+  applicationId: number,
+  token: string,
+): Promise<{ restaurantApplicationId: number; applicationReference: string; status: string; message: string; missingItems?: string[] }> {
+  return apiRequest(
+    `/api/RestaurantApplication/${applicationId}/submit`,
+    { method: "POST" },
+    token,
+  );
+}
+
 export async function createRestaurantApplication(
   token: string,
 ): Promise<{ restaurantApplicationId: number; applicationReference: string; status: string }> {

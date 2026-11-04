@@ -627,9 +627,9 @@ namespace GrabnBite.Data
             // A driver may hold only one active delivery at a time.
             // PostgreSQL enforces this under concurrent assignment requests.
             modelBuilder.Entity<Delivery>()
-                .HasIndex(d => d.DriverId)
+                .HasIndex(d => d.DriverId, "IX_Deliveries_DriverId_Active")
                 .IsUnique()
-                .HasFilter(""DriverId" IS NOT NULL AND "Status" IN ('ASSIGNED', 'PICKED_UP', 'DELIVERING')");
+                .HasFilter("\"DriverId\" IS NOT NULL AND \"Status\" IN ('ASSIGNED', 'PICKED_UP', 'DELIVERING')");
 
 
             // ============================================================

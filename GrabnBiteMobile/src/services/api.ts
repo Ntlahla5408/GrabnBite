@@ -96,8 +96,30 @@ export async function apiRequest(
       router.replace("/login");
     }
 
-    const message = errorText || `API Error: ${response.status}`;
-    throw new Error(`${message} (HTTP ${response.status})`);
+    let errorData: any = null;
+    if (errorText) {
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = null;
+      }
+    }
+
+    const message =
+      (typeof errorData === "string" && errorData) ||
+      errorData?.message ||
+      errorData?.title ||
+      errorData?.detail ||
+      errorText ||
+      `API Error: ${response.status}`;
+
+    const apiError = new Error(`${message} (HTTP ${response.status})`) as Error & {
+      data?: any;
+      status?: number;
+    };
+    apiError.data = errorData;
+    apiError.status = response.status;
+    throw apiError;
   }
 
   return response.json();

@@ -473,14 +473,13 @@ const styles = StyleSheet.create({
   },
   restaurantImage: {
     width: "100%",
-    height: 180,
     aspectRatio: 16 / 9,
     borderRadius: 10,
     backgroundColor: "#E2E8F0",
   },
   imagePlaceholder: {
     width: "100%",
-    height: 150,
+    aspectRatio: 16 / 9,
     borderRadius: 10,
     backgroundColor: "#F1F5F9",
     alignItems: "center",

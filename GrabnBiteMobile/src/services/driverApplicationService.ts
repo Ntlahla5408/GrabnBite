@@ -21,6 +21,21 @@ export interface DriverApplication {
   [key: string]: any;
 }
 
+export interface PublishedPolicyDocument {
+  policyDocumentId: number;
+  title: string;
+  description: string;
+  fileUrl: string;
+  originalFileName: string;
+  status: string;
+  effectiveDate: string | null;
+  version: number;
+}
+
+export async function getPublishedPolicyDocuments(): Promise<PublishedPolicyDocument[]> {
+  return apiRequest("/api/Policies", {});
+}
+
 export type DriverDocumentType =
   | "IdentityDocument"
   | "ProofOfAddress"

@@ -307,6 +307,7 @@ namespace GrabnBite.Controllers
             if (!application.User.IsEmailVerified)
                 return BadRequest("Verify your email address before signing and submitting the application.");
 
+            var previousStatus = application.Status;
             var now = DateTime.UtcNow;
             application.Status = DriverApplicationStatus.PendingReview;
             application.SubmittedAt = now;
@@ -318,7 +319,7 @@ namespace GrabnBite.Controllers
             _context.DriverApplicationHistories.Add(new DriverApplicationHistory
             {
                 DriverApplicationId = application.DriverApplicationId,
-                PreviousStatus = application.Status == DriverApplicationStatus.PendingReview ? DriverApplicationStatus.Draft : application.Status,
+                PreviousStatus = previousStatus,
                 NewStatus = DriverApplicationStatus.PendingReview,
                 Action = "ApplicationSubmitted",
                 Comment = "Applicant submitted the delivery partner application for review.",

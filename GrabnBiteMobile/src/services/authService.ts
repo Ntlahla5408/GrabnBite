@@ -32,11 +32,37 @@ export interface RegisterResponse {
   lastName: string;
   email: string;
   role: string;
+  emailVerificationRequired: boolean;
+  emailSent: boolean;
   restaurantApplication?: {
     restaurantApplicationId: number;
     applicationReference: string;
     status: string;
   } | null;
+}
+
+export interface EmailVerificationResponse {
+  message: string;
+  emailVerified?: boolean;
+}
+
+export async function verifyEmail(
+  email: string,
+  code: string,
+): Promise<EmailVerificationResponse> {
+  return apiRequest("/api/Authentication/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+  });
+}
+
+export async function resendEmailVerification(
+  email: string,
+): Promise<EmailVerificationResponse> {
+  return apiRequest("/api/Authentication/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim() }),
+  });
 }
 
 export async function register(

@@ -171,7 +171,7 @@ export default function RestaurantApplicationEditScreen() {
     return () => {
       active = false;
     };
-  }, [applicationId, authLoading, token, user?.role]);
+  }, [applicationId, parsedApplicationId, hasValidApplicationId, authLoading, token, user?.role]);
 
   const update = <K extends keyof DraftForm,>(key: K, value: DraftForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));

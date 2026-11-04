@@ -532,27 +532,44 @@ namespace GrabnBite.Controllers
                     "Delivery distance must be between 0 and 500 km.");
             }
 
-            var duplicateDays = request.OperatingHours
-                .GroupBy(hour => hour.DayOfWeek)
-                .Any(group => group.Count() > 1);
-
-            if (duplicateDays)
+            if (request.OperatingHours == null || request.OperatingHours.Count > 7)
             {
                 ModelState.AddModelError(
                     nameof(request.OperatingHours),
-                    "Only one operating-hours entry is allowed per day.");
+                    "Provide no more than seven operating-hours entries.");
             }
-
-            foreach (var hour in request.OperatingHours)
+            else
             {
-                if (hour.IsOpen &&
-                    (!hour.OpeningTime.HasValue ||
-                     !hour.ClosingTime.HasValue ||
-                     hour.OpeningTime >= hour.ClosingTime))
+                var duplicateDays = request.OperatingHours
+                    .GroupBy(hour => hour.DayOfWeek)
+                    .Any(group => group.Count() > 1);
+
+                if (duplicateDays)
                 {
                     ModelState.AddModelError(
                         nameof(request.OperatingHours),
-                        $"Valid opening and closing times are required for {hour.DayOfWeek}.");
+                        "Only one operating-hours entry is allowed per day.");
+                }
+
+                foreach (var hour in request.OperatingHours)
+                {
+                    if (!Enum.IsDefined(hour.DayOfWeek))
+                    {
+                        ModelState.AddModelError(
+                            nameof(request.OperatingHours),
+                            "An operating-hours entry contains an invalid weekday.");
+                        continue;
+                    }
+
+                    if (hour.IsOpen &&
+                        (!hour.OpeningTime.HasValue ||
+                         !hour.ClosingTime.HasValue ||
+                         hour.OpeningTime >= hour.ClosingTime))
+                    {
+                        ModelState.AddModelError(
+                            nameof(request.OperatingHours),
+                            $"Valid opening and closing times are required for {hour.DayOfWeek}.");
+                    }
                 }
             }
 

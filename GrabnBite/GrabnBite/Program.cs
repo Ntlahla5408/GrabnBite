@@ -196,7 +196,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Render performs health checks over the service's internal HTTP listener.
+// Keep health endpoints reachable without an HTTPS redirect.
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/health"),
+    branch => branch.UseHttpsRedirection());
 app.UseAuthentication();
 app.UseAuthorization();
 

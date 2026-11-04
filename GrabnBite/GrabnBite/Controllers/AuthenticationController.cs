@@ -91,23 +91,24 @@ namespace GrabnBite.Controllers
                     "A user with this email already exists.");
             }
 
-            // Public registration may create only Customer or Restaurant accounts.
+            // Public registration may create Customer, Restaurant or Driver accounts.
             // Never trust a client-supplied role name or role ID.
             var accountType = string.IsNullOrWhiteSpace(registerUser.AccountType)
                 ? "Customer"
                 : registerUser.AccountType.Trim();
 
             if (!accountType.Equals("Customer", StringComparison.OrdinalIgnoreCase) &&
-                !accountType.Equals("Restaurant", StringComparison.OrdinalIgnoreCase))
+                !accountType.Equals("Restaurant", StringComparison.OrdinalIgnoreCase) &&
+                !accountType.Equals("Driver", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
-                    "Account type must be either Customer or Restaurant.");
+                    "Account type must be Customer, Restaurant or Driver.");
             }
 
-            accountType = accountType.Equals(
-                "Restaurant",
-                StringComparison.OrdinalIgnoreCase)
-                    ? "Restaurant"
+            accountType = accountType.Equals("Restaurant", StringComparison.OrdinalIgnoreCase)
+                ? "Restaurant"
+                : accountType.Equals("Driver", StringComparison.OrdinalIgnoreCase)
+                    ? "Driver"
                     : "Customer";
 
             var selectedRole = await dbContext.Roles
@@ -199,6 +200,45 @@ namespace GrabnBite.Controllers
                 await dbContext.SaveChangesAsync();
             }
 
+            DriverApplication? driverApplication = null;
+
+            if (accountType == "Driver")
+            {
+                driverApplication = new DriverApplication
+                {
+                    UserId = user.UserId,
+                    ApplicationReference =
+                        $"GBD-{Guid.NewGuid().ToString("N")[..20].ToUpperInvariant()}",
+                    Status = DriverApplicationStatus.Draft,
+                    FullLegalName = $"{user.FirstName} {user.LastName}",
+                    Surname = user.LastName,
+                    MobileNumber = user.PhoneNumber,
+                    EmailAddress = user.Email,
+                    SignatureFullLegalName = $"{user.FirstName} {user.LastName}",
+                    SignatureEmailAddress = user.Email,
+                    SignatureMobileNumber = user.PhoneNumber,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
+
+                dbContext.DriverApplications.Add(driverApplication);
+                await dbContext.SaveChangesAsync();
+
+                dbContext.DriverApplicationHistories.Add(
+                    new DriverApplicationHistory
+                    {
+                        DriverApplicationId = driverApplication.DriverApplicationId,
+                        PreviousStatus = null,
+                        NewStatus = DriverApplicationStatus.Draft,
+                        Action = "ApplicationCreated",
+                        Comment = "Initial delivery partner application created during registration.",
+                        PerformedByUserId = user.UserId,
+                        CreatedAt = now
+                    });
+
+                await dbContext.SaveChangesAsync();
+            }
+
             await transaction.CommitAsync();
 
             var emailSent = true;
@@ -236,6 +276,14 @@ namespace GrabnBite.Controllers
                         restaurantApplication.RestaurantApplicationId,
                         restaurantApplication.ApplicationReference,
                         status = restaurantApplication.Status.ToString()
+                    },
+                driverApplication = driverApplication == null
+                    ? null
+                    : new
+                    {
+                        driverApplication.DriverApplicationId,
+                        driverApplication.ApplicationReference,
+                        status = driverApplication.Status.ToString()
                     }
             });
         }

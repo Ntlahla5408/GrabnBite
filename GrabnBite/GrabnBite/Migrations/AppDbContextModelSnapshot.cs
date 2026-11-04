@@ -164,9 +164,11 @@ namespace GrabnBite.Migrations
 
                     b.HasKey("DeliveryId");
 
-                    b.HasIndex("DriverId")
+                    b.HasIndex("DriverId");
+
+                    b.HasIndex("DriverId", "IX_Deliveries_DriverId_Active")
                         .IsUnique()
-                        .HasFilter(""DriverId" IS NOT NULL AND "Status" IN ('ASSIGNED', 'PICKED_UP', 'DELIVERING')");
+                        .HasFilter("\"DriverId\" IS NOT NULL AND \"Status\" IN ('ASSIGNED', 'PICKED_UP', 'DELIVERING')");
 
                     b.HasIndex("OrderId")
                         .IsUnique();

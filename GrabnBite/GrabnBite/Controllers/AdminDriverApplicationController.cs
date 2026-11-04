@@ -43,6 +43,10 @@ namespace GrabnBite.Controllers
                 .Include(application => application.User)
                 .AsQueryable();
 
+            // Drafts belong to the applicant and must never appear in the
+            // administrator review queue, even if a Draft status is requested.
+            query = query.Where(application => application.Status != DriverApplicationStatus.Draft);
+
             if (status.HasValue)
                 query = query.Where(application => application.Status == status.Value);
 
@@ -76,7 +80,8 @@ namespace GrabnBite.Controllers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item => item.DriverApplicationId == id, cancellationToken);
 
-            if (application == null) return NotFound("Driver application not found.");
+            if (application == null || application.Status == DriverApplicationStatus.Draft)
+                return NotFound("Submitted driver application not found.");
 
             var applicant = await _context.Users
                 .AsNoTracking()

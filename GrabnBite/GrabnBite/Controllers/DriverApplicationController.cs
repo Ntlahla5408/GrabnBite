@@ -52,6 +52,71 @@ namespace GrabnBite.Controllers
             return int.TryParse(claim, out var userId) ? userId : null;
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CreateOrGetApplication(CancellationToken cancellationToken)
+        {
+            var userId = CurrentUserId();
+            if (userId == null) return Unauthorized();
+
+            var existing = await _context.DriverApplications
+                .FirstOrDefaultAsync(item => item.UserId == userId.Value, cancellationToken);
+            if (existing != null)
+                return Ok(new
+                {
+                    existing.DriverApplicationId,
+                    existing.ApplicationReference,
+                    status = existing.Status.ToString()
+                });
+
+            var user = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.UserId == userId.Value, cancellationToken);
+            if (user == null) return NotFound("User account not found.");
+
+            var now = DateTime.UtcNow;
+            var application = new DriverApplication
+            {
+                UserId = userId.Value,
+                ApplicationReference = $"GBD-{Guid.NewGuid().ToString("N")[..20].ToUpperInvariant()}",
+                Status = DriverApplicationStatus.Draft,
+                FullLegalName = $"{user.FirstName} {user.LastName}",
+                Surname = user.LastName,
+                MobileNumber = user.PhoneNumber,
+                EmailAddress = user.Email,
+                SignatureFullLegalName = $"{user.FirstName} {user.LastName}",
+                SignatureEmailAddress = user.Email,
+                SignatureMobileNumber = user.PhoneNumber,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            _context.DriverApplications.Add(application);
+            await _context.SaveChangesAsync(cancellationToken);
+            _context.DriverApplicationHistories.Add(new DriverApplicationHistory
+            {
+                DriverApplicationId = application.DriverApplicationId,
+                PreviousStatus = null,
+                NewStatus = DriverApplicationStatus.Draft,
+                Action = "ApplicationCreated",
+                Comment = "Delivery partner application draft created for an existing driver account.",
+                PerformedByUserId = userId,
+                CreatedAt = now
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return CreatedAtAction(
+                nameof(GetMyApplication),
+                new { },
+                new
+                {
+                    application.DriverApplicationId,
+                    application.ApplicationReference,
+                    status = application.Status.ToString()
+                });
+        }
+
         [HttpGet("me")]
         public async Task<IActionResult> GetMyApplication(CancellationToken cancellationToken)
         {

@@ -114,17 +114,20 @@ export default function DriverDashboard() {
         setAvailableDeliveries([]);
       }
     } catch (error: any) {
-      console.error("Driver dashboard error:", error);
-
-      if (
+      const profileDoesNotExist =
         error?.message?.includes("Driver profile not found.") &&
-        error?.message?.includes("(HTTP 404)")
-      ) {
+        error?.message?.includes("(HTTP 404)");
+
+      if (profileDoesNotExist) {
+        // A newly registered driver has an application, not an operational
+        // Driver profile. This 404 is an expected onboarding state.
         setDriverProfileMissing(true);
         setIsApproved(false);
         setIsOnline(false);
         setActiveDelivery(null);
         setAvailableDeliveries([]);
+      } else {
+        console.error("Driver dashboard error:", error);
       }
     } finally {
       setLoading(false);

@@ -158,9 +158,10 @@ export default function AdminRestaurantApplicationsScreen() {
         },
         token,
       );
-      setMessage(result?.message || "Application updated successfully.");
+      const successMessage = result?.message || "Application updated successfully.";
       await openApplication(selected.restaurantApplicationId);
       await loadApplications();
+      setMessage(successMessage);
     } catch (requestError: any) {
       setError(requestError?.message || "The requested action could not be completed.");
     } finally {

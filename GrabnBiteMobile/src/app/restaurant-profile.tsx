@@ -29,8 +29,8 @@ export default function RestaurantProfileScreen() {
     if (!token) return;
 
     try {
-      setError("");
       const results = await getMyRestaurantApplications(token);
+      setError("");
       setApplications(results);
     } catch (requestError: any) {
       setError(requestError?.message || "Unable to load your partner applications.");

@@ -1,4 +1,6 @@
 ﻿using GrabnBite.Data;
+using GrabnBite.Configuration;
+using GrabnBite.Services;
 using GrabnBite.Dto.AuthenticationDto;
 using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Options;
 
 namespace GrabnBite.Controllers
 {
@@ -17,13 +20,22 @@ namespace GrabnBite.Controllers
     {
         private readonly AppDbContext dbContext;
         private readonly IConfiguration configuration;
+        private readonly IEmailVerificationService emailVerificationService;
+        private readonly EmailVerificationSettings emailVerificationSettings;
+        private readonly ILogger<AuthenticationController> logger;
 
         public AuthenticationController(
             AppDbContext dbContext,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailVerificationService emailVerificationService,
+            IOptions<EmailVerificationSettings> emailVerificationSettings,
+            ILogger<AuthenticationController> logger)
         {
             this.dbContext = dbContext;
             this.configuration = configuration;
+            this.emailVerificationService = emailVerificationService;
+            this.emailVerificationSettings = emailVerificationSettings.Value;
+            this.logger = logger;
         }
 
         // ============================================================
@@ -126,18 +138,38 @@ namespace GrabnBite.Controllers
                 PasswordHash = passwordHash,
                 RoleId = selectedRole.RoleId,
                 IsActive = true,
+                IsEmailVerified = false,
                 CreatedAt = DateTime.UtcNow
             };
 
             dbContext.Users.Add(user);
             await dbContext.SaveChangesAsync();
 
+            var now = DateTime.UtcNow;
+            var verificationCode = emailVerificationService.GenerateCode();
+
+            dbContext.EmailVerificationChallenges.Add(
+                new EmailVerificationChallenge
+                {
+                    UserId = user.UserId,
+                    CodeHash = emailVerificationService.HashCode(
+                        user.UserId,
+                        verificationCode),
+                    CreatedAt = now,
+                    LastSentAt = now,
+                    ExpiresAt = now.AddMinutes(
+                        emailVerificationSettings.CodeLifetimeMinutes),
+                    FailedAttempts = 0,
+                    ResendCount = 0,
+                    ResendWindowStartedAt = now
+                });
+
+            await dbContext.SaveChangesAsync();
+
             RestaurantApplication? restaurantApplication = null;
 
             if (accountType == "Restaurant")
             {
-                var now = DateTime.UtcNow;
-
                 restaurantApplication = new RestaurantApplication
                 {
                     UserId = user.UserId,
@@ -169,11 +201,29 @@ namespace GrabnBite.Controllers
 
             await transaction.CommitAsync();
 
+            var emailSent = true;
+            try
+            {
+                await emailVerificationService.SendVerificationCodeAsync(
+                    user,
+                    verificationCode);
+            }
+            catch (Exception exception)
+            {
+                emailSent = false;
+                logger.LogError(
+                    exception,
+                    "Email verification delivery failed for newly registered user {UserId}.",
+                    user.UserId);
+            }
+
             return Ok(new
             {
-                message = accountType == "Restaurant"
-                    ? "Restaurant account registered. Your draft application is ready to complete."
-                    : "User registered successfully.",
+                message = emailSent
+                    ? "Account created. A verification code has been sent to your email address."
+                    : "Account created, but the verification email could not be sent. You can request another code.",
+                emailVerificationRequired = true,
+                emailSent,
                 userId = user.UserId,
                 firstName = user.FirstName,
                 lastName = user.LastName,
@@ -245,6 +295,17 @@ namespace GrabnBite.Controllers
                 return Unauthorized("Invalid credentials.");
             }
 
+            if (!user.IsEmailVerified)
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        code = "EMAIL_NOT_VERIFIED",
+                        message = "Verify your email address before signing in."
+                    });
+            }
+
             var token = GenerateJwtToken(user);
 
             return Ok(new
@@ -256,6 +317,204 @@ namespace GrabnBite.Controllers
                 email = user.Email,
                 role = user.Role.Name
             });
+        }
+
+        // ============================================================
+        // VERIFY EMAIL
+        // POST: api/Authentication/verify-email
+        // Public endpoint
+        // ============================================================
+
+        [AllowAnonymous]
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail(
+            [FromBody] VerifyEmailDto request)
+        {
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.Email) ||
+                string.IsNullOrWhiteSpace(request.Code))
+            {
+                return BadRequest("Email and verification code are required.");
+            }
+
+            var code = request.Code.Trim();
+            if (code.Length != 6 || code.Any(character =>
+                character < '0' || character > '9'))
+            {
+                return BadRequest("Enter the six-digit verification code.");
+            }
+
+            var email = request.Email.Trim().ToLowerInvariant();
+            var user = await dbContext.Users.FirstOrDefaultAsync(
+                candidate => candidate.Email.ToLower() == email);
+
+            if (user == null)
+            {
+                return BadRequest("The verification code is invalid or expired.");
+            }
+
+            if (user.IsEmailVerified)
+            {
+                return Ok(new
+                {
+                    message = "Your email address is already verified.",
+                    emailVerified = true
+                });
+            }
+
+            var challenge = await dbContext.EmailVerificationChallenges
+                .FirstOrDefaultAsync(candidate => candidate.UserId == user.UserId);
+
+            if (challenge == null)
+            {
+                return BadRequest("The verification code is invalid or expired. Request a new code.");
+            }
+
+            if (challenge.ExpiresAt <= DateTime.UtcNow)
+            {
+                return BadRequest("The verification code has expired. Request a new code.");
+            }
+
+            if (challenge.FailedAttempts >= emailVerificationSettings.MaxFailedAttempts)
+            {
+                return BadRequest("Too many incorrect attempts. Request a new code.");
+            }
+
+            if (!emailVerificationService.VerifyCode(
+                user.UserId,
+                code,
+                challenge.CodeHash))
+            {
+                challenge.FailedAttempts++;
+                await dbContext.SaveChangesAsync();
+
+                return BadRequest(
+                    challenge.FailedAttempts >= emailVerificationSettings.MaxFailedAttempts
+                        ? "Too many incorrect attempts. Request a new code."
+                        : "The verification code is incorrect.");
+            }
+
+            await using var transaction =
+                await dbContext.Database.BeginTransactionAsync();
+
+            user.IsEmailVerified = true;
+            user.EmailVerifiedAt = DateTime.UtcNow;
+            dbContext.EmailVerificationChallenges.Remove(challenge);
+
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return Ok(new
+            {
+                message = "Your email address has been verified. You can now sign in.",
+                emailVerified = true
+            });
+        }
+
+        // ============================================================
+        // RESEND EMAIL VERIFICATION
+        // POST: api/Authentication/resend-verification
+        // Public endpoint
+        // ============================================================
+
+        [AllowAnonymous]
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> ResendVerification(
+            [FromBody] ResendEmailVerificationDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            const string genericMessage =
+                "If this account exists and still needs verification, a new code will be sent.";
+
+            var email = request.Email.Trim().ToLowerInvariant();
+            var user = await dbContext.Users.FirstOrDefaultAsync(
+                candidate => candidate.Email.ToLower() == email);
+
+            if (user == null || user.IsEmailVerified)
+            {
+                return Ok(new { message = genericMessage });
+            }
+
+            var now = DateTime.UtcNow;
+            var challenge = await dbContext.EmailVerificationChallenges
+                .FirstOrDefaultAsync(candidate => candidate.UserId == user.UserId);
+
+            if (challenge != null &&
+                now - challenge.LastSentAt <
+                    TimeSpan.FromSeconds(emailVerificationSettings.ResendCooldownSeconds))
+            {
+                return Ok(new { message = genericMessage });
+            }
+
+            if (challenge != null &&
+                now - challenge.ResendWindowStartedAt >= TimeSpan.FromHours(1))
+            {
+                challenge.ResendWindowStartedAt = now;
+                challenge.ResendCount = 0;
+            }
+
+            if (challenge != null &&
+                challenge.ResendCount >= emailVerificationSettings.MaxResendsPerHour)
+            {
+                return Ok(new { message = genericMessage });
+            }
+
+            var verificationCode = emailVerificationService.GenerateCode();
+
+            if (challenge == null)
+            {
+                challenge = new EmailVerificationChallenge
+                {
+                    UserId = user.UserId,
+                    CreatedAt = now,
+                    ResendWindowStartedAt = now,
+                    ResendCount = 0
+                };
+
+                dbContext.EmailVerificationChallenges.Add(challenge);
+            }
+            else
+            {
+                challenge.ResendCount++;
+            }
+
+            challenge.CodeHash = emailVerificationService.HashCode(
+                user.UserId,
+                verificationCode);
+            challenge.LastSentAt = now;
+            challenge.ExpiresAt = now.AddMinutes(
+                emailVerificationSettings.CodeLifetimeMinutes);
+            challenge.FailedAttempts = 0;
+
+            await dbContext.SaveChangesAsync();
+
+            try
+            {
+                await emailVerificationService.SendVerificationCodeAsync(
+                    user,
+                    verificationCode);
+
+                return Ok(new { message = genericMessage });
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Email verification resend failed for user {UserId}.",
+                    user.UserId);
+
+                return StatusCode(
+                    StatusCodes.Status503ServiceUnavailable,
+                    new
+                    {
+                        code = "EMAIL_DELIVERY_UNAVAILABLE",
+                        message = "The verification email could not be sent right now. Please try again later."
+                    });
+            }
         }
 
         // ============================================================

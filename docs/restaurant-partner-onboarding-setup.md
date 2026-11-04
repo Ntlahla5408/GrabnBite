@@ -58,3 +58,30 @@ Do not put this key in `appsettings.json`, source control, mobile configuration,
 The restaurant partner onboarding EF migration is intentionally not applied by this feature. The new application, document, banking, agreement, review, history, operating-hours and commission tables do not exist in the production database until the migration is explicitly reviewed and applied.
 
 Do not test the new database endpoints against production before the migration has been applied through the agreed deployment process.
+
+
+## Brevo transactional email configuration
+
+The backend now includes a server-side Brevo transactional email client. It sends through Brevo's REST API and does not require a separate NuGet package.
+
+Before enabling OTP delivery:
+
+1. Verify `primenaturesolutions@gmail.com` as a sender in Brevo.
+2. Create a Brevo API key in the Brevo account.
+3. Configure these backend settings in Render:
+
+   - `Brevo__ApiKey` — the Brevo API key (secret).
+   - `Brevo__SenderEmail` — `primenaturesolutions@gmail.com`.
+   - `Brevo__SenderName` — `GrabnBite`.
+
+4. Configure the same values locally with .NET user-secrets:
+
+   ```powershell
+   dotnet user-secrets set "Brevo:ApiKey" "<brevo-api-key>"
+   dotnet user-secrets set "Brevo:SenderEmail" "primenaturesolutions@gmail.com"
+   dotnet user-secrets set "Brevo:SenderName" "GrabnBite"
+   ```
+
+Never commit the API key, place it in appsettings files, or expose it to the mobile application. The sender address must be verified in Brevo before sending production email.
+
+The email client is infrastructure only at this stage. OTP generation, challenge storage, verification endpoints, login enforcement, and mobile verification screens have not yet been implemented.

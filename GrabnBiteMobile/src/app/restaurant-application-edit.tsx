@@ -494,9 +494,9 @@ export default function RestaurantApplicationEditScreen() {
         <View style={styles.documentTypes}>
           {([
             ["CipcCertificate", "CIPC certificate"],
-            ["FoodPremisesCertificate", "Food premises certificate"],
+            ["FoodPremisesCertificate", "Food premises certificate *"],
             ["IdentityOrAuthority", "Identity / authority"],
-            ["BankConfirmation", "Bank confirmation"],
+            ["BankConfirmation", "Bank confirmation *"],
             ["Other", "Other"],
           ] as [RestaurantDocumentType, string][]).map(([value, label]) => (
             <Pressable

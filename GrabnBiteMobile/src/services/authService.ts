@@ -22,7 +22,7 @@ export interface RegisterRequest {
   email: string;
   phoneNumber: string;
   password: string;
-  accountType: "Customer" | "Restaurant";
+  accountType: "Customer" | "Restaurant" | "Driver";
 }
 
 export interface RegisterResponse {
@@ -71,7 +71,7 @@ export async function register(
   email: string,
   phoneNumber: string,
   password: string,
-  accountType: "Customer" | "Restaurant" = "Customer",
+  accountType: "Customer" | "Restaurant" | "Driver" = "Customer",
 ): Promise<RegisterResponse> {
   const body: RegisterRequest = {
     firstName: firstName.trim(),

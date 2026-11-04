@@ -179,12 +179,27 @@ namespace GrabnBite.Controllers
             application.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);
 
-            return Ok(new
-            {
-                message = "Driver application draft saved.",
-                application.ApplicationReference,
-                status = application.Status.ToString()
-            });
+            var documents = await _context.DriverApplicationDocuments
+                .AsNoTracking()
+                .Where(document => document.DriverApplicationId == application.DriverApplicationId)
+                .OrderBy(document => document.UploadedAt)
+                .Select(document => new
+                {
+                    document.DriverApplicationDocumentId,
+                    document.DocumentType,
+                    document.DocumentDescription,
+                    document.OriginalFileName,
+                    document.ContentType,
+                    document.FileSize,
+                    verificationStatus = document.VerificationStatus.ToString(),
+                    document.AdminComment,
+                    document.UploadedAt
+                })
+                .ToListAsync(cancellationToken);
+
+            var response = ToApplicationJson(application, documents);
+            response["message"] = JsonValue.Create("Driver application draft saved.");
+            return Ok(response);
         }
 
         [HttpPost("documents")]

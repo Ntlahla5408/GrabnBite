@@ -58,17 +58,17 @@ type ApplicationDetail = Record<string, any> & {
 };
 
 const sections: { title: string; keys: string[] }[] = [
-  { title: "Personal information", keys: ["fullLegalName", "surname", "preferredName", "idOrPassportNumber", "dateOfBirth", "nationality", "mobileNumber", "alternativeContactNumber", "emailAddress", "residentialAddress", "suburbOrTownship", "cityOrTown", "province", "postalCode"] },
+  { title: "Personal information", keys: ["fullLegalName", "surname", "preferredName", "identityNumberOnFile", "dateOfBirth", "nationality", "mobileNumber", "alternativeContactNumber", "emailAddress", "residentialAddress", "suburbOrTownship", "cityOrTown", "province", "postalCode"] },
   { title: "Partner and business details", keys: ["partnerType", "applyingAs", "registeredBusinessName", "companyRegistrationNumber", "businessAddress", "businessRepresentative", "numberOfDrivers"] },
   { title: "Vehicle information", keys: ["vehicleMake", "vehicleModel", "vehicleYear", "vehicleRegistration", "vehicleColour", "vehicleType", "vehicleOwner", "isRoadworthy", "isLicensed", "isInsured", "commercialDeliveryInsurance", "requiresDriversLicence", "requiresProfessionalDrivingPermit", "requiresRoadworthiness", "vehicleOwnedByApplicant"] },
   { title: "Delivery equipment", keys: ["hasInsulatedDeliveryBag", "hasSecureTransportContainer", "hasSmartphone", "hasMobileInternet", "hasPhoneHolder", "hasProtectiveClothing", "hasHelmet", "hasReflectiveEquipment", "otherEquipment", "needsEquipmentAssistance"] },
   { title: "Availability and service area", keys: ["preferredProvince", "preferredCityOrTown", "preferredAreas", "workingDays", "availability", "outsidePreferredArea"] },
-  { title: "Banking details", keys: ["accountHolderName", "bankName", "maskedAccountNumber", "accountType", "branchCode", "accountHolderIdOrRegistrationNumber"] },
+  { title: "Banking details", keys: ["accountHolderName", "bankName", "maskedAccountNumber", "accountType", "branchCode", "accountHolderIdentityNumberOnFile"] },
   { title: "Emergency contact", keys: ["emergencyContactName", "emergencyContactRelationship", "emergencyContactNumber", "emergencyContactAlternativeNumber"] },
   { title: "Experience and background", keys: ["hasDeliveryExperience", "previousCompanyOrPlatform", "experienceDuration", "previousDeliveryTypes", "hasFoodDeliveryExperience", "hasRelevantTraining", "trainingDetails"] },
   { title: "Policy acknowledgements", keys: ["acknowledgedDeliveryPartnerAgreement", "acknowledgedCollectionProcedures", "acknowledgedCodeOfConduct", "acknowledgedFailedDeliveryPolicy", "acknowledgedAccidentAndLiabilityPolicy", "acknowledgedPaymentSchedule", "policyVersionsOrLinks"] },
   { title: "Declarations and consent", keys: ["confirmedInformationAccurate", "confirmedDocumentAuthority", "consentedToVerification", "confirmedLegalCompliance", "acknowledgedNoGuaranteedAcceptance", "acceptedPlatformPolicies", "acknowledgedCompensationSeparation", "acknowledgedWorkingRelationship", "consentedToPersonalInformationProcessing", "acknowledgedPopia"] },
-  { title: "Electronic signature", keys: ["signatureFullLegalName", "signatureIdOrPassportNumber", "signatureEmailAddress", "signatureMobileNumber", "signatureMethod", "acceptedAt"] },
+  { title: "Electronic signature", keys: ["signatureFullLegalName", "signatureIdentityNumberOnFile", "signatureEmailAddress", "signatureMobileNumber", "signatureMethod", "acceptedAt"] },
 ];
 
 export default function AdminDriverApplicationsScreen() {
@@ -288,7 +288,12 @@ export default function AdminDriverApplicationsScreen() {
 }
 
 function humanize(value: string) {
-  return value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
+  const labels: Record<string, string> = {
+    identityNumberOnFile: "ID / passport number on file (value hidden)",
+    signatureIdentityNumberOnFile: "Signature ID / passport on file (value hidden)",
+    accountHolderIdentityNumberOnFile: "Account holder ID / registration number on file (value hidden)",
+  };
+  return labels[value] || value.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function formatPolicyAcknowledgements(value: any) {

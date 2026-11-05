@@ -440,8 +440,8 @@ namespace GrabnBite.Controllers
                 UpdatedAt = now
             });
 
-            // Public registration creates Customer accounts. Promote only after
-            // all application, document and banking checks have succeeded.
+            // Restaurant accounts may already receive this role during registration.
+            // Reassert it here so role and approved profile remain consistent.
             application.User.RoleId = restaurantRole.RoleId;
             application.User.UpdatedAt = now;
 

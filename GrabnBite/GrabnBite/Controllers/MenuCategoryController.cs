@@ -77,12 +77,6 @@ namespace GrabnBite.Controllers
                     "This restaurant is not currently available for menu management.");
             }
 
-            if (!restaurant.IsApproved || !restaurant.IsActive)
-            {
-                return BadRequest(
-                    "This restaurant is not currently available for menu management.");
-            }
-
             var category = new MenuCategory
             {
                 Name = dto.Name.Trim(),

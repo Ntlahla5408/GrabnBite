@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Npgsql;
+using System.Data;
 
 namespace GrabnBite.Controllers
 {
@@ -325,27 +326,20 @@ namespace GrabnBite.Controllers
             });
         }
 
-        // ============================================================
-        // DRIVER PICKS UP ORDER
-        // Driver only
-        // PUT: api/Delivery/{deliveryId}/pickup
-        // ============================================================
-
-        [Authorize(Roles = "Driver")]
-        [HttpPut("{deliveryId:int}/pickup")]
-        public async Task<IActionResult> PickUpOrder(
-            int deliveryId)
+        private async Task<IActionResult> TransitionDeliveryAsync(
+            int deliveryId,
+            int userId,
+            string expectedDeliveryStatus,
+            string expectedOrderStatus,
+            string nextStatus,
+            string successMessage,
+            bool recordPickupTime = false,
+            bool recordDeliveredTime = false,
+            bool markDriverOnline = false)
         {
-            var userId = GetCurrentUserId();
-
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
-
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.UserId == userId);
 
             if (driver == null)
             {
@@ -353,9 +347,17 @@ namespace GrabnBite.Controllers
             }
 
             var delivery = await _context.Deliveries
-                .Include(d => d.Order)
-                .FirstOrDefaultAsync(d =>
-                    d.DeliveryId == deliveryId);
+                .AsNoTracking()
+                .Where(d => d.DeliveryId == deliveryId)
+                .Select(d => new
+                {
+                    d.DeliveryId,
+                    d.OrderId,
+                    d.DriverId,
+                    d.Status,
+                    OrderStatus = d.Order.Status
+                })
+                .FirstOrDefaultAsync();
 
             if (delivery == null)
             {
@@ -367,35 +369,116 @@ namespace GrabnBite.Controllers
                 return Forbid();
             }
 
-            if (delivery.Status != "ASSIGNED")
+            if (!string.Equals(delivery.Status, expectedDeliveryStatus, StringComparison.Ordinal) ||
+                !string.Equals(delivery.OrderStatus, expectedOrderStatus, StringComparison.Ordinal))
             {
-                return BadRequest(
-                    "Only assigned deliveries can be picked up.");
+                return Conflict("The delivery or order status has changed. Refresh and try again.");
             }
 
-            delivery.Status = "PICKED_UP";
-            delivery.PickedUpAt = DateTime.UtcNow;
-            delivery.Order.Status = "PICKED_UP";
-            delivery.Order.StatusHistory.Add(new OrderStatusHistory
+            var changedAt = DateTime.UtcNow;
+
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+
+            try
             {
-                OrderId = delivery.OrderId,
-                Status = "PICKED_UP",
-                ChangedAt = DateTime.UtcNow,
-            ChangedByUserId = GetCurrentUserId(),
+                // Conditional updates make the state transition a single-winner claim.
+                // The order update and history insert share this transaction, so a failed
+                // order transition rolls the delivery update back as well.
+                var changedDeliveries = await _context.Deliveries
+                    .Where(d =>
+                        d.DeliveryId == deliveryId &&
+                        d.DriverId == driver.DriverId &&
+                        d.Status == expectedDeliveryStatus &&
+                        d.Order.Status == expectedOrderStatus)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(d => d.Status, nextStatus)
+                        .SetProperty(d => d.PickedUpAt,
+                            d => recordPickupTime ? changedAt : d.PickedUpAt)
+                        .SetProperty(d => d.DeliveredAt,
+                            d => recordDeliveredTime ? changedAt : d.DeliveredAt));
 
-            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
-            });
+                if (changedDeliveries != 1)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("The delivery is no longer in the expected state. Refresh and try again.");
+                }
 
-            await _context.SaveChangesAsync();
+                var changedOrders = await _context.Orders
+                    .Where(o =>
+                        o.OrderId == delivery.OrderId &&
+                        o.Status == expectedOrderStatus)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(o => o.Status, nextStatus));
 
-            return Ok(new
+                if (changedOrders != 1)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("The order status changed while the delivery was being updated. Refresh and try again.");
+                }
+
+                _context.OrderStatusHistories.Add(new OrderStatusHistory
+                {
+                    OrderId = delivery.OrderId,
+                    Status = nextStatus,
+                    ChangedAt = changedAt,
+                    ChangedByUserId = userId,
+                    ChangedByRole = "Driver"
+                });
+
+                if (markDriverOnline)
+                {
+                    await _context.Drivers
+                        .Where(d => d.DriverId == driver.DriverId)
+                        .ExecuteUpdateAsync(update => update
+                            .SetProperty(d => d.IsOnline, true));
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = successMessage,
+                    deliveryId = delivery.DeliveryId,
+                    orderId = delivery.OrderId,
+                    deliveryStatus = nextStatus,
+                    orderStatus = nextStatus,
+                    changedAt
+                });
+            }
+            catch (PostgresException exception) when (
+                exception.SqlState == PostgresErrorCodes.SerializationFailure)
             {
-                message = "Order picked up successfully.",
-                deliveryId = delivery.DeliveryId,
-                orderId = delivery.OrderId,
-                deliveryStatus = delivery.Status,
-                orderStatus = delivery.Order.Status
-            });
+                await transaction.RollbackAsync();
+                return Conflict("Another request changed this delivery or order. Refresh and check the latest status.");
+            }
+        }
+
+        // ============================================================
+        // DRIVER PICKS UP ORDER
+        // Driver only
+        // PUT: api/Delivery/{deliveryId}/pickup
+        // ============================================================
+
+        [Authorize(Roles = "Driver")]
+        [HttpPut("{deliveryId:int}/pickup")]
+        public async Task<IActionResult> PickUpOrder(int deliveryId)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            return await TransitionDeliveryAsync(
+                deliveryId,
+                userId.Value,
+                expectedDeliveryStatus: "ASSIGNED",
+                expectedOrderStatus: "ASSIGNED",
+                nextStatus: "PICKED_UP",
+                successMessage: "Order picked up successfully.",
+                recordPickupTime: true);
         }
 
         // ============================================================
@@ -406,68 +489,21 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Driver")]
         [HttpPut("{deliveryId:int}/start")]
-        public async Task<IActionResult> StartDelivery(
-            int deliveryId)
+        public async Task<IActionResult> StartDelivery(int deliveryId)
         {
             var userId = GetCurrentUserId();
-
             if (userId == null)
             {
                 return Unauthorized();
             }
 
-            var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
-
-            if (driver == null)
-            {
-                return NotFound("Driver profile not found.");
-            }
-
-            var delivery = await _context.Deliveries
-                .Include(d => d.Order)
-                .FirstOrDefaultAsync(d =>
-                    d.DeliveryId == deliveryId);
-
-            if (delivery == null)
-            {
-                return NotFound("Delivery not found.");
-            }
-
-            if (delivery.DriverId != driver.DriverId)
-            {
-                return Forbid();
-            }
-
-            if (delivery.Status != "PICKED_UP")
-            {
-                return BadRequest(
-                    "The order must be picked up first.");
-            }
-
-            delivery.Status = "DELIVERING";
-            delivery.Order.Status = "DELIVERING";
-            delivery.Order.StatusHistory.Add(new OrderStatusHistory
-            {
-                OrderId = delivery.OrderId,
-                Status = "DELIVERING",
-                ChangedAt = DateTime.UtcNow,
-            ChangedByUserId = GetCurrentUserId(),
-
-            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
-            });
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Delivery started.",
-                deliveryId = delivery.DeliveryId,
-                orderId = delivery.OrderId,
-                deliveryStatus = delivery.Status,
-                orderStatus = delivery.Order.Status
-            });
+            return await TransitionDeliveryAsync(
+                deliveryId,
+                userId.Value,
+                expectedDeliveryStatus: "PICKED_UP",
+                expectedOrderStatus: "PICKED_UP",
+                nextStatus: "DELIVERING",
+                successMessage: "Delivery started.");
         }
 
         // ============================================================
@@ -478,72 +514,23 @@ namespace GrabnBite.Controllers
 
         [Authorize(Roles = "Driver")]
         [HttpPut("{deliveryId:int}/complete")]
-        public async Task<IActionResult> CompleteDelivery(
-            int deliveryId)
+        public async Task<IActionResult> CompleteDelivery(int deliveryId)
         {
             var userId = GetCurrentUserId();
-
             if (userId == null)
             {
                 return Unauthorized();
             }
 
-            var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
-
-            if (driver == null)
-            {
-                return NotFound("Driver profile not found.");
-            }
-
-            var delivery = await _context.Deliveries
-                .Include(d => d.Order)
-                .FirstOrDefaultAsync(d =>
-                    d.DeliveryId == deliveryId);
-
-            if (delivery == null)
-            {
-                return NotFound("Delivery not found.");
-            }
-
-            if (delivery.DriverId != driver.DriverId)
-            {
-                return Forbid();
-            }
-
-            if (delivery.Status != "DELIVERING")
-            {
-                return BadRequest(
-                    "Only active deliveries can be completed.");
-            }
-
-            delivery.Status = "DELIVERED";
-            delivery.DeliveredAt = DateTime.UtcNow;
-            delivery.Order.Status = "DELIVERED";
-            delivery.Order.StatusHistory.Add(new OrderStatusHistory
-            {
-                OrderId = delivery.OrderId,
-                Status = "DELIVERED",
-                ChangedAt = DateTime.UtcNow,
-            ChangedByUserId = GetCurrentUserId(),
-
-            ChangedByRole = User.FindFirstValue(ClaimTypes.Role)
-            });
-
-            driver.IsOnline = true;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Delivery completed successfully.",
-                deliveryId = delivery.DeliveryId,
-                orderId = delivery.OrderId,
-                deliveryStatus = delivery.Status,
-                orderStatus = delivery.Order.Status,
-                deliveredAt = delivery.DeliveredAt
-            });
+            return await TransitionDeliveryAsync(
+                deliveryId,
+                userId.Value,
+                expectedDeliveryStatus: "DELIVERING",
+                expectedOrderStatus: "DELIVERING",
+                nextStatus: "DELIVERED",
+                successMessage: "Delivery completed successfully.",
+                recordDeliveredTime: true,
+                markDriverOnline: true);
         }
 
         // ============================================================

@@ -266,9 +266,14 @@ namespace GrabnBite.Controllers
         {
             var application = await _context.DriverApplications
                 .Include(item => item.Documents)
+                .Include(item => item.User)
                 .FirstOrDefaultAsync(item => item.DriverApplicationId == id, cancellationToken);
 
             if (application == null) return NotFound("Driver application not found.");
+            if (!application.User.IsActive)
+                return Conflict("An inactive user account cannot be approved as a delivery partner.");
+            if (!application.User.IsEmailVerified)
+                return Conflict("The applicant must verify their email address before approval.");
             if (application.Status is DriverApplicationStatus.Approved or DriverApplicationStatus.Rejected)
                 return Conflict("This application has already been completed.");
             if (application.Status is not DriverApplicationStatus.PendingReview and not DriverApplicationStatus.UnderVerification)

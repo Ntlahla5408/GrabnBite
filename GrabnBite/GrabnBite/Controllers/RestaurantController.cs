@@ -68,7 +68,7 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetRestaurants()
         {
             var restaurants = await _context.Restaurants
-                .Where(r => r.IsApproved && r.IsActive)
+                .Where(r => r.IsApproved && r.IsActive && r.User.IsActive && r.User.IsEmailVerified)
                 .ToListAsync();
 
             var response = restaurants
@@ -97,7 +97,9 @@ namespace GrabnBite.Controllers
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
                     r.IsApproved &&
-                    r.IsActive);
+                    r.IsActive &&
+                    r.User.IsActive &&
+                    r.User.IsEmailVerified);
 
             if (restaurant == null)
             {

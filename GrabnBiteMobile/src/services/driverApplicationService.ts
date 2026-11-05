@@ -30,10 +30,11 @@ export interface PublishedPolicyDocument {
   status: string;
   effectiveDate: string | null;
   version: number;
+  audience: "Customer" | "Driver" | "Restaurant" | "All";
 }
 
-export async function getPublishedPolicyDocuments(): Promise<PublishedPolicyDocument[]> {
-  return apiRequest("/api/Policies", {});
+export async function getPublishedPolicyDocuments(token: string): Promise<PublishedPolicyDocument[]> {
+  return apiRequest("/api/Policies", {}, token);
 }
 
 export type DriverDocumentType =

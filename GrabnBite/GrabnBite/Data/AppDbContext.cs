@@ -46,6 +46,7 @@ namespace GrabnBite.Data
         public DbSet<RestaurantApplicationHistory> RestaurantApplicationHistories { get; set; }
         public DbSet<RestaurantApplicationReviewItem> RestaurantApplicationReviewItems { get; set; }
         public DbSet<RestaurantCommissionSetting> RestaurantCommissionSettings { get; set; }
+        public DbSet<PolicyDocument> PolicyDocuments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

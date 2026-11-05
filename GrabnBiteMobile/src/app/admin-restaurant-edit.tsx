@@ -27,6 +27,7 @@ interface Restaurant {
   longitude?: number;
   isOpen: boolean;
   isApproved: boolean;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -47,6 +48,8 @@ export default function AdminRestaurantEditScreen() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isActive, setIsActive] = useState(true);
+  const [statusLoading, setStatusLoading] = useState(false);
 
   const [loading, setLoading] = useState(Boolean(restaurantId));
   const [saving, setSaving] = useState(false);
@@ -84,6 +87,7 @@ export default function AdminRestaurantEditScreen() {
           : "",
       );
       setIsOpen(data.isOpen ?? false);
+      setIsActive(data.isActive ?? true);
     } catch (err) {
       console.error("Failed to load restaurant:", err);
       setError("Unable to load restaurant. Please try again.");
@@ -138,6 +142,54 @@ export default function AdminRestaurantEditScreen() {
     } finally {
       setApprovalLoading(false);
     }
+  }
+
+  async function updateActiveStatus(nextIsActive: boolean) {
+    if (!restaurantId || !restaurant) return;
+
+    Alert.alert(
+      nextIsActive ? "Reactivate restaurant?" : "Suspend restaurant?",
+      nextIsActive
+        ? "The restaurant will become eligible to open again, but it will remain closed until explicitly opened."
+        : "The restaurant will be hidden from customers and will stop accepting new orders.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: nextIsActive ? "Reactivate" : "Suspend",
+          style: nextIsActive ? "default" : "destructive",
+          onPress: async () => {
+            try {
+              setStatusLoading(true);
+              const updatedRestaurant = await apiRequest(
+                "/api/Restaurant/admin/" + restaurantId + "/status",
+                {
+                  method: "PUT",
+                  body: JSON.stringify({ isActive: nextIsActive }),
+                },
+                token,
+              );
+
+              setRestaurant(updatedRestaurant);
+              setIsActive(updatedRestaurant.isActive);
+              setIsOpen(updatedRestaurant.isOpen);
+              Alert.alert(
+                "Status updated",
+                nextIsActive
+                  ? "Restaurant reactivated. It remains closed until opened."
+                  : "Restaurant suspended successfully.",
+              );
+            } catch (err: any) {
+              Alert.alert(
+                "Unable to update status",
+                err?.message || "Please try again.",
+              );
+            } finally {
+              setStatusLoading(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   async function saveRestaurant() {
@@ -438,6 +490,48 @@ export default function AdminRestaurantEditScreen() {
               thumbColor={isOpen ? "#F97316" : "#F8FAFC"}
             />
           </View>
+        </View>
+
+        {/* ADMIN SUSPENSION */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Operational Access</Text>
+
+          <View style={styles.statusRow}>
+            <View style={styles.statusInfo}>
+              <Text style={styles.statusTitle}>
+                {isActive ? "Restaurant is active" : "Restaurant is suspended"}
+              </Text>
+
+              <Text style={styles.statusDescription}>
+                Suspension hides the restaurant from customers and blocks new orders without removing its partner approval.
+              </Text>
+            </View>
+
+            <Switch
+              value={isActive}
+              onValueChange={(value) => void updateActiveStatus(value)}
+              disabled={statusLoading || !restaurant?.isApproved}
+              trackColor={{
+                false: "#CBD5E1",
+                true: "#FDBA74",
+              }}
+              thumbColor={isActive ? "#F97316" : "#F8FAFC"}
+            />
+          </View>
+
+          {statusLoading && (
+            <ActivityIndicator
+              size="small"
+              color="#F97316"
+              style={{ marginTop: 12, alignSelf: "flex-start" }}
+            />
+          )}
+
+          {!restaurant?.isApproved && (
+            <Text style={styles.approvalInfoNote}>
+              Operational reactivation is unavailable until partner approval is restored through the verified application process.
+            </Text>
+          )}
         </View>
 
         {/* APPROVAL */}

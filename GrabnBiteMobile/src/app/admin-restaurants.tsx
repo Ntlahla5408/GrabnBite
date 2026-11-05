@@ -25,10 +25,11 @@ interface Restaurant {
   longitude?: number;
   isOpen: boolean;
   isApproved: boolean;
+  isActive: boolean;
   createdAt: string;
 }
 
-const filters = ["All", "Approved", "Pending"];
+const filters = ["All", "Approved", "Pending", "Suspended"];
 
 export default function AdminRestaurantsScreen() {
   const { user, token } = useAuth();
@@ -87,6 +88,10 @@ export default function AdminRestaurantsScreen() {
 
       if (selectedFilter === "Pending") {
         matchesFilter = !restaurant.isApproved;
+      }
+
+      if (selectedFilter === "Suspended") {
+        matchesFilter = restaurant.isApproved && !restaurant.isActive;
       }
 
       return matchesSearch && matchesFilter;
@@ -289,7 +294,11 @@ function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
           <Text style={styles.detailLabel}>Status</Text>
 
           <Text style={styles.detailValue}>
-            {restaurant.isOpen ? "Open" : "Closed"}
+            {!restaurant.isActive
+              ? "Suspended"
+              : restaurant.isOpen
+                ? "Open"
+                : "Closed"}
           </Text>
         </View>
 

@@ -38,6 +38,27 @@ namespace GrabnBite.Controllers
             _logger = logger;
         }
 
+        private async Task<bool> LockOrderRowAsync(int orderId, int userId, Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction)
+        {
+            var connection = _context.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = "SELECT \"OrderId\" FROM \"Orders\" WHERE \"OrderId\" = @orderId AND \"UserId\" = @userId FOR UPDATE";
+
+            var orderIdParameter = command.CreateParameter();
+            orderIdParameter.ParameterName = "orderId";
+            orderIdParameter.Value = orderId;
+            command.Parameters.Add(orderIdParameter);
+
+            var userIdParameter = command.CreateParameter();
+            userIdParameter.ParameterName = "userId";
+            userIdParameter.Value = userId;
+            command.Parameters.Add(userIdParameter);
+
+            var result = await command.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value;
+        }
+
         // ============================================================
         // HELPER - Get logged-in user ID from JWT
         // ============================================================
@@ -249,6 +270,23 @@ namespace GrabnBite.Controllers
                     // Keep the old checkout ID in the append-only reconciliation trail
                     // before detaching it. A delayed success webhook must still be resolvable.
                     await using var retryTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+                    if (!await LockOrderRowAsync(orderId, userId.Value, retryTransaction))
+                    {
+                        await retryTransaction.RollbackAsync();
+                        return NotFound("Order not found.");
+                    }
+
+                    var orderStatusDuringRetry = await _context.Orders
+                        .AsNoTracking()
+                        .Where(o => o.OrderId == orderId && o.UserId == userId.Value)
+                        .Select(o => o.Status)
+                        .SingleAsync();
+
+                    if (string.Equals(orderStatusDuringRetry, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await retryTransaction.RollbackAsync();
+                        return BadRequest("A cancelled order cannot be paid.");
+                    }
                     var claimedRetry = await _context.Payments
                         .Where(p => p.PaymentId == payment.PaymentId &&
                                     p.PaymentStatus != "PAID" &&

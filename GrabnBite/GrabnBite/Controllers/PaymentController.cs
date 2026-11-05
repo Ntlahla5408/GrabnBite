@@ -60,6 +60,24 @@ namespace GrabnBite.Controllers
             return result != null && result != DBNull.Value;
         }
 
+        private async Task<bool> LockOrderRowAsync(
+            int orderId,
+            Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction)
+        {
+            var connection = _context.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = "SELECT \"OrderId\" FROM \"Orders\" WHERE \"OrderId\" = @orderId FOR UPDATE";
+
+            var orderIdParameter = command.CreateParameter();
+            orderIdParameter.ParameterName = "orderId";
+            orderIdParameter.Value = orderId;
+            command.Parameters.Add(orderIdParameter);
+
+            var result = await command.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value;
+        }
+
         // ============================================================
         // HELPER - Get logged-in user ID from JWT
         // ============================================================
@@ -273,7 +291,7 @@ namespace GrabnBite.Controllers
                     var newPaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
                     // Keep the old checkout ID in the append-only reconciliation trail
                     // before detaching it. A delayed success webhook must still be resolvable.
-                    await using var retryTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+                    await using var retryTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
                     if (!await LockOrderRowAsync(orderId, userId.Value, retryTransaction))
                     {
                         await retryTransaction.RollbackAsync();
@@ -852,7 +870,10 @@ namespace GrabnBite.Controllers
             Payment payment,
             string providerCheckoutReference)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+            if (!await LockOrderRowAsync(payment.OrderId, transaction))
+                throw new InvalidOperationException("The order for the verified payment no longer exists.");
 
             var currentOrderStatus = await _context.Orders
                 .Where(o => o.OrderId == payment.OrderId)

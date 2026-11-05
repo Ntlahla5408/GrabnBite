@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,19 +19,170 @@ namespace GrabnBite.Controllers
         private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
         private readonly AppDbContext _context;
         private readonly ISupabaseRestaurantDocumentStorageService _documentStorage;
+        private readonly IRestaurantBankingEncryptionService _identityEncryption;
 
         public AdminDriverApplicationController(
             AppDbContext context,
-            ISupabaseRestaurantDocumentStorageService documentStorage)
+            ISupabaseRestaurantDocumentStorageService documentStorage,
+            IRestaurantBankingEncryptionService identityEncryption)
         {
             _context = context;
             _documentStorage = documentStorage;
+            _identityEncryption = identityEncryption;
         }
 
         private int? CurrentAdminId()
         {
             var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return int.TryParse(claim, out var userId) ? userId : null;
+        }
+
+        [HttpPost("maintenance/encrypt-legacy-identifiers")]
+        [ApiExplorerSettings(IgnoreApi = true)]
+        public async Task<IActionResult> EncryptLegacyIdentityValues(
+            [FromQuery] bool confirm = false,
+            CancellationToken cancellationToken = default)
+        {
+            const string requiredMigration = "20261105160000_EncryptDriverIdentityFields";
+            var appliedMigrations = await _context.Database.GetAppliedMigrationsAsync(cancellationToken);
+            if (!appliedMigrations.Contains(requiredMigration, StringComparer.Ordinal))
+                return Conflict("Apply the driver identity encryption schema migration before running this maintenance operation.");
+
+            if (confirm)
+            {
+                await using var transaction = await _context.Database.BeginTransactionAsync(
+                    IsolationLevel.Serializable, cancellationToken);
+
+                var applications = await _context.DriverApplications
+                    .Where(application =>
+                        application.IdOrPassportNumber != null ||
+                        application.SignatureIdOrPassportNumber != null ||
+                        application.AccountHolderIdOrRegistrationNumber != null ||
+                        application.IdOrPassportNumberEncrypted != null ||
+                        application.SignatureIdOrPassportNumberEncrypted != null ||
+                        application.AccountHolderIdOrRegistrationNumberEncrypted != null)
+                    .ToListAsync(cancellationToken);
+
+                var encryptedFieldCount = 0;
+                var updatedApplicationCount = 0;
+                var now = DateTime.UtcNow;
+                var adminId = CurrentAdminId();
+
+                foreach (var application in applications)
+                {
+                    var changed = false;
+
+                    if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted))
+                        _identityEncryption.Decrypt(application.IdOrPassportNumberEncrypted);
+                    else if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumber))
+                    {
+                        application.IdOrPassportNumberEncrypted =
+                            _identityEncryption.Encrypt(application.IdOrPassportNumber.Trim());
+                        encryptedFieldCount++;
+                        changed = true;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted))
+                        _identityEncryption.Decrypt(application.SignatureIdOrPassportNumberEncrypted);
+                    else if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber))
+                    {
+                        application.SignatureIdOrPassportNumberEncrypted =
+                            _identityEncryption.Encrypt(application.SignatureIdOrPassportNumber.Trim());
+                        encryptedFieldCount++;
+                        changed = true;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted))
+                        _identityEncryption.Decrypt(application.AccountHolderIdOrRegistrationNumberEncrypted);
+                    else if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber))
+                    {
+                        application.AccountHolderIdOrRegistrationNumberEncrypted =
+                            _identityEncryption.Encrypt(application.AccountHolderIdOrRegistrationNumber.Trim());
+                        encryptedFieldCount++;
+                        changed = true;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted) &&
+                        application.IdOrPassportNumber != null)
+                    {
+                        application.IdOrPassportNumber = null;
+                        changed = true;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted) &&
+                        application.SignatureIdOrPassportNumber != null)
+                    {
+                        application.SignatureIdOrPassportNumber = null;
+                        changed = true;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted) &&
+                        application.AccountHolderIdOrRegistrationNumber != null)
+                    {
+                        application.AccountHolderIdOrRegistrationNumber = null;
+                        changed = true;
+                    }
+
+                    if (changed)
+                    {
+                        application.UpdatedAt = now;
+                        updatedApplicationCount++;
+
+                        _context.DriverApplicationHistories.Add(new DriverApplicationHistory
+                        {
+                            DriverApplicationId = application.DriverApplicationId,
+                            PreviousStatus = application.Status,
+                            NewStatus = application.Status,
+                            Action = "IdentityDataEncrypted",
+                            Comment = "Legacy driver identity fields encrypted at rest during a controlled maintenance operation.",
+                            PerformedByUserId = adminId,
+                            CreatedAt = now
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                return Ok(new
+                {
+                    dryRun = false,
+                    updatedApplicationCount,
+                    encryptedFieldCount,
+                    message = "Legacy driver identity values were encrypted and plaintext copies cleared."
+                });
+            }
+
+            var candidates = await _context.DriverApplications
+                .AsNoTracking()
+                .Where(application =>
+                    application.IdOrPassportNumber != null ||
+                    application.SignatureIdOrPassportNumber != null ||
+                    application.AccountHolderIdOrRegistrationNumber != null ||
+                    application.IdOrPassportNumberEncrypted != null ||
+                    application.SignatureIdOrPassportNumberEncrypted != null ||
+                    application.AccountHolderIdOrRegistrationNumberEncrypted != null)
+                .ToListAsync(cancellationToken);
+
+            var pendingFields = candidates.Sum(application =>
+                (string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted) &&
+                 !string.IsNullOrWhiteSpace(application.IdOrPassportNumber) ? 1 : 0) +
+                (string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted) &&
+                 !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber) ? 1 : 0) +
+                (string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted) &&
+                 !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber) ? 1 : 0));
+
+            return Ok(new
+            {
+                dryRun = true,
+                applicationsChecked = candidates.Count,
+                applicationsWithLegacyIdentityData = candidates.Count(application =>
+                    !string.IsNullOrWhiteSpace(application.IdOrPassportNumber) ||
+                    !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber) ||
+                    !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber)),
+                pendingFields,
+                message = "No data was changed. Repeat with confirm=true only after reviewing this result."
+            });
         }
 
         [HttpGet]

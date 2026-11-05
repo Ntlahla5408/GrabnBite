@@ -750,12 +750,7 @@ namespace GrabnBite.Controllers
                     // races with a successful confirmation in another request.
                     // A delayed failure from a detached checkout must not fail the
                     // currently active retry. Only mutate state when IDs still match.
-                    await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId &&
-                                    p.YocoCheckoutId == checkoutId &&
-                                    p.PaymentStatus != "PAID")
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(p => p.PaymentStatus, "FAILED"));
+                    await MarkYocoCheckoutFailedAsync(payment.PaymentId, payment.OrderId, checkoutId);
                 }
 
                 return Ok(new { received = true });
@@ -864,6 +859,26 @@ namespace GrabnBite.Controllers
             }
 
             return null;
+        }
+
+        private async Task MarkYocoCheckoutFailedAsync(
+            int paymentId,
+            int orderId,
+            string checkoutId)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+            if (!await LockOrderRowAsync(orderId, transaction))
+                throw new InvalidOperationException("The order for the failed Yoco checkout no longer exists.");
+
+            await _context.Payments
+                .Where(p => p.PaymentId == paymentId &&
+                            p.YocoCheckoutId == checkoutId &&
+                            p.PaymentStatus != "PAID")
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(p => p.PaymentStatus, "FAILED"));
+
+            await transaction.CommitAsync();
         }
 
         private async Task<bool> RecordVerifiedYocoPaymentAsync(
@@ -1197,12 +1212,7 @@ namespace GrabnBite.Controllers
                     "failed",
                     StringComparison.OrdinalIgnoreCase))
                 {
-                    await _context.Payments
-                        .Where(p => p.PaymentId == payment.PaymentId &&
-                                    p.YocoCheckoutId == checkout.Id &&
-                                    p.PaymentStatus != "PAID")
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(p => p.PaymentStatus, "FAILED"));
+                    await MarkYocoCheckoutFailedAsync(payment.PaymentId, payment.OrderId, checkout.Id);
 
                     await _context.Entry(payment).ReloadAsync();
 

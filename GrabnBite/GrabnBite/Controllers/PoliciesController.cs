@@ -40,10 +40,12 @@ namespace GrabnBite.Controllers
             CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow;
+            var audience = GetCurrentAudience();
             var policies = await _context.PolicyDocuments
                 .AsNoTracking()
                 .Where(policy =>
                     !policy.IsArchived &&
+                    (audience == null || policy.Audience == audience || policy.Audience == "All") &&
                     policy.Status == "Published" &&
                     (policy.EffectiveDate == null || policy.EffectiveDate <= now))
                  .OrderBy(policy => policy.Title)
@@ -59,11 +61,13 @@ namespace GrabnBite.Controllers
             CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow;
+            var audience = GetCurrentAudience();
             var policy = await _context.PolicyDocuments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(item =>
                     item.PolicyDocumentId == policyDocumentId &&
                     !item.IsArchived &&
+                    (audience == null || item.Audience == audience || item.Audience == "All") &&
                     item.Status == "Published" &&
                     (item.EffectiveDate == null || item.EffectiveDate <= now),
                     cancellationToken);
@@ -122,6 +126,7 @@ namespace GrabnBite.Controllers
             {
                 Title = request.Title.Trim(),
                 Description = request.Description.Trim(),
+                Audience = NormalizeAudience(request.Audience),
                 StoragePath = storagePath,
                 OriginalFileName = Path.GetFileName(request.PdfFile.FileName),
                 ContentType = PdfContentType,
@@ -196,6 +201,7 @@ namespace GrabnBite.Controllers
 
             policy.Title = request.Title.Trim();
             policy.Description = request.Description.Trim();
+            policy.Audience = NormalizeAudience(request.Audience);
             policy.Status = NormalizeStatus(request.Status);
             policy.EffectiveDate = NormalizeDate(request.EffectiveDate);
             policy.UpdatedAt = DateTime.UtcNow;
@@ -257,6 +263,9 @@ namespace GrabnBite.Controllers
                 !string.Equals(request.Status, "Published", StringComparison.OrdinalIgnoreCase))
                 return "Status must be Draft or Published.";
 
+            if (!IsValidAudience(request.Audience))
+                return "Audience must be Customer, Driver, Restaurant or All.";
+
             return null;
         }
 
@@ -290,6 +299,40 @@ namespace GrabnBite.Controllers
                 : null;
         }
 
+        private static bool IsValidAudience(string? audience)
+        {
+            return audience is not null &&
+                (audience.Equals("Customer", StringComparison.OrdinalIgnoreCase) ||
+                 audience.Equals("Driver", StringComparison.OrdinalIgnoreCase) ||
+                 audience.Equals("Restaurant", StringComparison.OrdinalIgnoreCase) ||
+                 audience.Equals("All", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizeAudience(string audience)
+        {
+            return audience.Trim().ToLowerInvariant() switch
+            {
+                "driver" => "Driver",
+                "restaurant" => "Restaurant",
+                "all" => "All",
+                _ => "Customer"
+            };
+        }
+
+        private string? GetCurrentAudience()
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role");
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return role?.ToLowerInvariant() switch
+            {
+                "driver" => "Driver",
+                "restaurant" => "Restaurant",
+                _ => "Customer"
+            };
+        }
+
         private static string NormalizeStatus(string status)
         {
             return string.Equals(status, "Published", StringComparison.OrdinalIgnoreCase)
@@ -315,6 +358,7 @@ namespace GrabnBite.Controllers
                 FileUrl = string.Empty,
                 OriginalFileName = policy.OriginalFileName,
                 Status = policy.Status,
+                Audience = policy.Audience,
                 EffectiveDate = policy.EffectiveDate,
                 Version = policy.Version,
                 CreatedAt = policy.CreatedAt,

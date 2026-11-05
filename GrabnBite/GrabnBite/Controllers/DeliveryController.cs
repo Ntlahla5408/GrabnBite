@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Npgsql;
-using System.Data;
 
 namespace GrabnBite.Controllers
 {
@@ -447,8 +446,18 @@ namespace GrabnBite.Controllers
                     changedAt
                 });
             }
-            catch (PostgresException exception) when (
-                exception.SqlState == PostgresErrorCodes.SerializationFailure)
+            catch (Exception exception) when (
+                exception is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.SerializationFailure
+                } ||
+                exception is DbUpdateException
+                {
+                    InnerException: PostgresException
+                    {
+                        SqlState: PostgresErrorCodes.SerializationFailure
+                    }
+                })
             {
                 await transaction.RollbackAsync();
                 return Conflict("Another request changed this delivery or order. Refresh and check the latest status.");

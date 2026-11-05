@@ -157,8 +157,11 @@ namespace GrabnBite.Controllers
                     "Order amount must be greater than zero.");
             }
 
-            // Reuse a payment only when no checkout was created, or when
-            // Yoco has authoritatively confirmed the previous checkout failed/cancelled.
+            // Reuse a payment only when Yoco has authoritatively confirmed
+            // the previous attempt failed. INITIATED without a checkout is ambiguous:
+            // the provider may have created it before the response was lost.
+            var isExistingPayment = order.Payment != null;
+            var retryClaimedInThisRequest = false;
             Payment payment;
             if (order.Payment != null)
             {
@@ -321,6 +324,7 @@ namespace GrabnBite.Controllers
                     await _context.SaveChangesAsync();
                     await retryTransaction.CommitAsync();
                     await _context.Entry(payment).ReloadAsync();
+                    retryClaimedInThisRequest = true;
                 }
 
                 payment.PaymentStatus = "INITIATED";
@@ -360,6 +364,40 @@ namespace GrabnBite.Controllers
                 {
                     await paymentStartTransaction.RollbackAsync();
                     return BadRequest("A cancelled order cannot be paid.");
+                }
+
+                if (isExistingPayment && !retryClaimedInThisRequest)
+                {
+                    // An existing INITIATED payment with no checkout may represent a
+                    // provider request whose response was lost. Never create another
+                    // checkout unless the previous attempt is authoritatively FAILED.
+                    var expectedPaymentReference = payment.PaymentReference;
+                    if (!string.Equals(payment.PaymentStatus, "FAILED", StringComparison.OrdinalIgnoreCase) ||
+                        !string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                    {
+                        await paymentStartTransaction.RollbackAsync();
+                        return Conflict("A previous payment attempt is still unresolved. Check payment status before trying again.");
+                    }
+
+                    var newPaymentReference = $"GNB-YOCO-{Guid.NewGuid():N}".Substring(0, 18).ToUpper();
+                    var claimedFailedAttempt = await _context.Payments
+                        .Where(p => p.PaymentId == payment.PaymentId &&
+                                    p.PaymentStatus == "FAILED" &&
+                                    p.YocoCheckoutId == null &&
+                                    p.PaymentReference == expectedPaymentReference)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(p => p.PaymentReference, newPaymentReference)
+                            .SetProperty(p => p.PaymentStatus, "INITIATED")
+                            .SetProperty(p => p.TransactionReference, (string?)null)
+                            .SetProperty(p => p.PaymentDate, DateTime.UtcNow));
+
+                    if (claimedFailedAttempt != 1)
+                    {
+                        await paymentStartTransaction.RollbackAsync();
+                        return Conflict("Another request has already claimed this payment attempt. Refresh and check its status.");
+                    }
+
+                    await _context.Entry(payment).ReloadAsync();
                 }
 
                 try

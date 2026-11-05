@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { PdfView } from "react-native-better-pdf";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 
 interface PolicyDocument {
@@ -16,6 +17,7 @@ interface PolicyDocument {
 export default function PolicyReaderScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { theme, isDark } = useThemePreference();
+  const { token } = useAuth();
   const colors = AppThemeColors[theme];
   const policyId = typeof id === "string" ? Number(id) : Number.NaN;
   const [policy, setPolicy] = useState<PolicyDocument | null>(null);
@@ -42,7 +44,7 @@ export default function PolicyReaderScreen() {
       setIsPdfLoading(true);
 
       try {
-        const data = await apiRequest(`/api/Policies/${policyId}`);
+        const data = await apiRequest(`/api/Policies/${policyId}`, {}, token);
         if (isActive) {
           setPolicy(data);
         }
@@ -60,7 +62,7 @@ export default function PolicyReaderScreen() {
 
     void loadPolicy();
     return () => { isActive = false; };
-  }, [policyId, reloadKey]);
+  }, [policyId, reloadKey, token]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>

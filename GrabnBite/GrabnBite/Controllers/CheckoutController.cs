@@ -80,6 +80,7 @@ namespace GrabnBite.Controllers
                 .Include(c => c.CartItems)
                     .ThenInclude(ci => ci.MenuItem)
                 .Include(c => c.Restaurant)
+                    .ThenInclude(restaurant => restaurant.User)
                 .FirstOrDefaultAsync(c =>
                     c.CartId == dto.CartId &&
                     c.UserId == userId.Value);
@@ -104,7 +105,8 @@ namespace GrabnBite.Controllers
                     "The restaurant associated with this cart was not found.");
             }
 
-            if (!cart.Restaurant.IsApproved || !cart.Restaurant.IsActive)
+            if (!cart.Restaurant.IsApproved || !cart.Restaurant.IsActive ||
+                !cart.Restaurant.User.IsActive || !cart.Restaurant.User.IsEmailVerified)
             {
                 return BadRequest(
                     "This restaurant is not currently available.");

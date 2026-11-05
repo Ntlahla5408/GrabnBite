@@ -341,20 +341,33 @@ namespace GrabnBite.Controllers
             int id,
             CancellationToken cancellationToken)
         {
+            var adminId = GetCurrentUserId();
+            if (adminId == null) return Unauthorized();
+
+            // Keep restaurant profile creation, account-role assignment, commission
+            // configuration and application approval in one atomic operation.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable, cancellationToken);
+
             var application = await _context.RestaurantApplications
                 .Include(item => item.User)
+                    .ThenInclude(user => user.Role)
                 .Include(item => item.Documents)
                 .Include(item => item.BankingDetails)
                 .Include(item => item.Restaurant)
                 .FirstOrDefaultAsync(item => item.RestaurantApplicationId == id, cancellationToken);
 
             if (application == null) return NotFound("Restaurant application not found.");
+            if (!application.User.IsActive)
+                return Conflict("An inactive user account cannot be approved as a restaurant partner.");
+            if (!application.User.IsEmailVerified)
+                return Conflict("The applicant's email address has not been verified.");
+            if (!string.Equals(application.User.Role.Name, "Customer", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(application.User.Role.Name, "Restaurant", StringComparison.OrdinalIgnoreCase))
+                return Conflict("Only customer accounts can be converted into restaurant partner accounts.");
             if (application.Status is not RestaurantApplicationStatus.UnderVerification
                 and not RestaurantApplicationStatus.PendingReview)
                 return Conflict("Only an application under review can be approved.");
-
-            if (!application.User.IsEmailVerified)
-                return Conflict("The applicant's email address has not been verified.");
 
             var requiredDocuments = new[]
             {
@@ -384,8 +397,10 @@ namespace GrabnBite.Controllers
             if (application.Restaurant != null)
                 return Conflict("An operational restaurant profile already exists for this application.");
 
-            var adminId = GetCurrentUserId();
-            if (adminId == null) return Unauthorized();
+            var restaurantRole = await _context.Roles
+                .FirstOrDefaultAsync(role => role.Name.ToLower() == "restaurant", cancellationToken);
+            if (restaurantRole == null)
+                return Conflict("The Restaurant role is not configured. Create the Restaurant role before approving applications.");
 
             var previousStatus = application.Status;
             var now = DateTime.UtcNow;
@@ -407,7 +422,6 @@ namespace GrabnBite.Controllers
                 RestaurantApplicationId = application.RestaurantApplicationId
             };
 
-            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
             _context.Restaurants.Add(restaurant);
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -426,11 +440,16 @@ namespace GrabnBite.Controllers
                 UpdatedAt = now
             });
 
+            // Public registration creates Customer accounts. Promote only after
+            // all application, document and banking checks have succeeded.
+            application.User.RoleId = restaurantRole.RoleId;
+            application.User.UpdatedAt = now;
+
             application.Status = RestaurantApplicationStatus.Approved;
             application.ReviewedByUserId = adminId;
             application.ReviewedAt = now;
             application.UpdatedAt = now;
-            application.AdminComments = "Application approved and operational restaurant profile activated.";
+            application.AdminComments = "Application approved, Restaurant role assigned and operational restaurant profile activated.";
 
             _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
             {
@@ -455,7 +474,9 @@ namespace GrabnBite.Controllers
                 restaurant.Name,
                 restaurant.IsApproved,
                 restaurant.IsActive,
-                message = "Application approved and restaurant profile activated."
+                role = restaurantRole.Name,
+                reauthenticationRequired = true,
+                message = "Application approved and restaurant profile activated. The applicant must sign in again to access restaurant features."
             });
         }
 

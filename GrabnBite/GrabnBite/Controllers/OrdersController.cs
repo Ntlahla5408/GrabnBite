@@ -84,6 +84,7 @@ namespace GrabnBite.Controllers
 
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
+                .Include(o => o.Payment)
                 .FirstOrDefaultAsync(o =>
                     o.OrderId == id &&
                     o.UserId == userId.Value);
@@ -113,6 +114,7 @@ namespace GrabnBite.Controllers
             var orders = await _context.Orders
                 .Where(o => o.UserId == userId.Value)
                 .Include(o => o.OrderItems)
+                .Include(o => o.Payment)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
 
@@ -290,6 +292,10 @@ namespace GrabnBite.Controllers
                 UserId = order.UserId,
                 RestaurantId = order.RestaurantId,
                 DeliveryAddressId = order.DeliveryAddressId,
+                PaymentStatus = order.Payment?.PaymentStatus,
+                PaymentMethod = order.Payment?.PaymentMethod,
+                RefundStatus = order.Payment?.RefundStatus,
+                RequiresReconciliation = order.Payment?.RequiresReconciliation ?? false,
 
                 OrderItems = order.OrderItems
                     .Select(oi => new OrderItemResponseDto

@@ -10,6 +10,7 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 import { login as loginApi } from "../services/authService";
+import { apiRequest } from "../services/api";
 import { LoginResponse, User } from "../types/auth";
 
 interface AuthContextType {
@@ -88,8 +89,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedUser = await getUser();
 
       if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
+        try {
+          // A locally stored profile is only a cache. Confirm the token and
+          // current account role/status with the API before restoring access.
+          const currentUser = await apiRequest(
+            "/api/Authentication/me",
+            {},
+            storedToken,
+          );
+
+          const validatedUser: User = {
+            userId: currentUser.userId,
+            firstName: currentUser.firstName,
+            lastName: currentUser.lastName,
+            email: currentUser.email,
+            role: currentUser.role,
+          };
+
+          await saveUser(validatedUser);
+          setToken(storedToken);
+          setUser(validatedUser);
+        } catch (validationError) {
+          const status = (validationError as Error & { status?: number }).status;
+
+          if (status === 401 || status === 403) {
+            await removeSession();
+          } else {
+            // Keep the stored credentials for a temporary network outage,
+            // but do not restore a privileged UI without server validation.
+            console.error("Unable to validate the saved session:", validationError);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to load session:", error);

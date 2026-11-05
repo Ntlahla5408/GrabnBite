@@ -112,7 +112,9 @@ namespace GrabnBite.Controllers
             var categories = await _context.MenuCategories
                 .Where(category =>
                     category.Restaurant.IsApproved &&
-                    category.Restaurant.IsActive)
+                    category.Restaurant.IsActive &&
+                    category.Restaurant.User.IsActive &&
+                    category.Restaurant.User.IsEmailVerified)
                 .ToListAsync();
 
             var response = categories
@@ -140,7 +142,9 @@ namespace GrabnBite.Controllers
                 .FirstOrDefaultAsync(c =>
                     c.MenuCategoryId == id &&
                     c.Restaurant.IsApproved &&
-                    c.Restaurant.IsActive);
+                    c.Restaurant.IsActive &&
+                    c.Restaurant.User.IsActive &&
+                    c.Restaurant.User.IsEmailVerified);
 
             if (category == null)
             {

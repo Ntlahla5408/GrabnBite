@@ -16,6 +16,15 @@
 
         public int DeliveryAddressId { get; set; }
 
+        // Customer-safe payment and refund status; internal reconciliation details stay private.
+        public string? PaymentStatus { get; set; }
+
+        public string? PaymentMethod { get; set; }
+
+        public string? RefundStatus { get; set; }
+
+        public bool RequiresReconciliation { get; set; }
+
         public List<OrderItemResponseDto> OrderItems { get; set; } = new();
     }
 }

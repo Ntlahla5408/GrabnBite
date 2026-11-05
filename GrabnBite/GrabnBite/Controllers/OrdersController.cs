@@ -142,9 +142,9 @@ namespace GrabnBite.Controllers
                 return Unauthorized();
             }
 
-            // Use a serializable transaction so cancellation and payment-state
-            // checks cannot silently pass each other under concurrent requests.
-            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            // Lock the order row so cancellation is serialized with payment creation,
+            // retries, and verified provider notifications.
+            await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted);
             if (!await LockOrderRowAsync(id, userId.Value, transaction))
             {
                 await transaction.RollbackAsync();

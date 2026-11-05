@@ -178,10 +178,15 @@ export default function AdminRestaurantApplicationsScreen() {
     const currentLatest = selected?.documents.find(
       (item) => item.restaurantDocumentId === currentLatestId,
     );
+    const documentUploadedAt = new Date(document.uploadedAt).getTime();
+    const latestUploadedAt = currentLatest
+      ? new Date(currentLatest.uploadedAt).getTime()
+      : Number.NEGATIVE_INFINITY;
+
     if (
       !currentLatest ||
-      new Date(document.uploadedAt).getTime() > new Date(currentLatest.uploadedAt).getTime() ||
-      (document.uploadedAt === currentLatest.uploadedAt &&
+      documentUploadedAt > latestUploadedAt ||
+      (documentUploadedAt === latestUploadedAt &&
         document.restaurantDocumentId > currentLatest.restaurantDocumentId)
     ) {
       latestDocumentIdByType.set(document.documentType, document.restaurantDocumentId);

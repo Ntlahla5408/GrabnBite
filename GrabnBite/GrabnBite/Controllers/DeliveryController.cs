@@ -20,8 +20,21 @@ namespace GrabnBite.Controllers
             _context = context;
         }
 
-        private static bool IsUniqueConstraintViolation(Exception exception)
+        private static bool IsPaymentEligibleForFulfilment(Order order)
         {
+            var payment = order.Payment;
+            if (payment == null || payment.RequiresReconciliation ||
+                !string.Equals(payment.RefundStatus, "NOT_REQUIRED", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return string.Equals(payment.PaymentMethod, "CASH", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(payment.PaymentStatus, "PAID", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsUniqueConstraintViolation(Exception exception)
+        {}
             return exception is PostgresException
                 { SqlState: PostgresErrorCodes.UniqueViolation }
                 || exception is DbUpdateException
@@ -56,6 +69,7 @@ namespace GrabnBite.Controllers
         {
             var order = await _context.Orders
                 .Include(o => o.Delivery)
+                .Include(o => o.Payment)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
             if (order == null)
@@ -67,6 +81,11 @@ namespace GrabnBite.Controllers
             {
                 return BadRequest(
                     "Delivery can only be created when the order is ready for pickup.");
+            }
+
+            if (!IsPaymentEligibleForFulfilment(order))
+            {
+                return Conflict("The order payment must be verified and free of refund or reconciliation issues before delivery can be created.");
             }
 
             if (order.Delivery != null)
@@ -119,6 +138,8 @@ namespace GrabnBite.Controllers
             var delivery = await _context.Deliveries
                 .Include(d => d.Order)
                     .ThenInclude(o => o.StatusHistory)
+                .Include(d => d.Order)
+                    .ThenInclude(o => o.Payment)
                 .FirstOrDefaultAsync(d =>
                     d.DeliveryId == deliveryId);
 
@@ -161,6 +182,11 @@ namespace GrabnBite.Controllers
                     "Only orders ready for pickup can be assigned.");
             }
 
+            if (!IsPaymentEligibleForFulfilment(delivery.Order))
+            {
+                return Conflict("The order payment must be verified and free of refund or reconciliation issues before driver assignment.");
+            }
+
             var driverHasActiveDelivery = await _context.Deliveries
                 .AnyAsync(d =>
                     d.DriverId == driver.DriverId &&
@@ -184,7 +210,12 @@ namespace GrabnBite.Controllers
                         d.DeliveryId == deliveryId &&
                         d.Status == "UNASSIGNED" &&
                         d.DriverId == null &&
-                        d.Order.Status == "READY_FOR_PICKUP")
+                        d.Order.Status == "READY_FOR_PICKUP" &&
+                        d.Order.Payment != null &&
+                        !d.Order.Payment.RequiresReconciliation &&
+                        d.Order.Payment.RefundStatus == "NOT_REQUIRED" &&
+                        (d.Order.Payment.PaymentMethod == "CASH" ||
+                         d.Order.Payment.PaymentStatus == "PAID"))
                     .ExecuteUpdateAsync(update => update
                         .SetProperty(d => d.DriverId, driver.DriverId)
                         .SetProperty(d => d.Status, "ASSIGNED"));
@@ -717,7 +748,12 @@ namespace GrabnBite.Controllers
                 .Where(d =>
                     d.Status == "UNASSIGNED" &&
                     d.DriverId == null &&
-                    d.Order.Status == "READY_FOR_PICKUP")
+                    d.Order.Status == "READY_FOR_PICKUP" &&
+                    d.Order.Payment != null &&
+                    !d.Order.Payment.RequiresReconciliation &&
+                    d.Order.Payment.RefundStatus == "NOT_REQUIRED" &&
+                    (d.Order.Payment.PaymentMethod == "CASH" ||
+                     d.Order.Payment.PaymentStatus == "PAID"))
                 .OrderBy(d => d.Order.OrderDate)
                 .Select(d => new
                 {
@@ -833,7 +869,12 @@ namespace GrabnBite.Controllers
                         d.DeliveryId == deliveryId &&
                         d.Status == "UNASSIGNED" &&
                         d.DriverId == null &&
-                        d.Order.Status == "READY_FOR_PICKUP")
+                        d.Order.Status == "READY_FOR_PICKUP" &&
+                        d.Order.Payment != null &&
+                        !d.Order.Payment.RequiresReconciliation &&
+                        d.Order.Payment.RefundStatus == "NOT_REQUIRED" &&
+                        (d.Order.Payment.PaymentMethod == "CASH" ||
+                         d.Order.Payment.PaymentStatus == "PAID"))
                     .ExecuteUpdateAsync(update => update
                         .SetProperty(d => d.DriverId, driver.DriverId)
                         .SetProperty(d => d.Status, "ASSIGNED"));

@@ -229,6 +229,9 @@ namespace GrabnBite.Migrations
                     b.Property<string>("AccountHolderIdOrRegistrationNumber")
                         .HasColumnType("text");
 
+                    b.Property<string>("AccountHolderIdOrRegistrationNumberEncrypted")
+                        .HasColumnType("text");
+
                     b.Property<string>("AccountHolderName")
                         .HasColumnType("text");
 
@@ -478,6 +481,9 @@ namespace GrabnBite.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("SignatureIdOrPassportNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureIdOrPassportNumberEncrypted")
                         .HasColumnType("text");
 
                     b.Property<string>("SignatureMethod")

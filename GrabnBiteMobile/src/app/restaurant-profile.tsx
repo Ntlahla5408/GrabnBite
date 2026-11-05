@@ -176,7 +176,7 @@ export default function RestaurantProfileScreen() {
                       : application.status === "Approved"
                         ? application.hasOperationalRestaurant
                           ? "Your application has been approved and your operational restaurant profile is active. You can return to the dashboard to manage it."
-                          : "Your application has been approved, but its operational restaurant profile is not active yet. It will become available once activation is completed."
+                          : "This previously approved application no longer has an active approved restaurant profile. It remains in your application history. To become a restaurant partner again, start and submit a completely new application."
                         : "This application was rejected. Review the administrator's feedback or contact support."}
             </Text>
             <Text style={styles.date}>

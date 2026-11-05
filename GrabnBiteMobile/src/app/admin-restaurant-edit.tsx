@@ -356,7 +356,7 @@ export default function AdminRestaurantEditScreen() {
                   : styles.pendingText,
               ]}
             >
-              {restaurant?.isApproved ? "Approved" : "Pending"}
+              {restaurant?.isApproved ? "Approved" : "Not approved"}
             </Text>
           </View>
         </View>

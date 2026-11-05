@@ -76,6 +76,7 @@ export default function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState("");
 
   const loadDriverData = useCallback(async () => {
     if (!token) return;
@@ -84,6 +85,7 @@ export default function DriverDashboard() {
       // Get driver's current profile/status
       const driver = await apiRequest("/api/Driver/me", {}, token);
 
+      setDashboardError("");
       setDriverProfileMissing(false);
       setIsApproved(Boolean(driver.isApproved));
       setIsOnline(Boolean(driver.isOnline));
@@ -93,8 +95,13 @@ export default function DriverDashboard() {
         const active = await apiRequest("/api/Delivery/my-delivery", {}, token);
 
         setActiveDelivery(active);
-      } catch {
-        setActiveDelivery(null);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          // No active delivery is a valid empty state; other failures are not.
+          setActiveDelivery(null);
+        } else {
+          throw error;
+        }
       }
 
       // Only get available deliveries when online
@@ -107,8 +114,6 @@ export default function DriverDashboard() {
           );
 
           setAvailableDeliveries(available);
-        } catch {
-          setAvailableDeliveries([]);
         }
       } else {
         setAvailableDeliveries([]);
@@ -128,6 +133,11 @@ export default function DriverDashboard() {
         setAvailableDeliveries([]);
       } else {
         console.error("Driver dashboard error:", error);
+        setDashboardError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load driver information. Please try again.",
+        );
       }
     } finally {
       setLoading(false);
@@ -412,7 +422,21 @@ export default function DriverDashboard() {
           </View>
         </View>
 
-        {driverProfileMissing ? (
+        {dashboardError ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Unable to load driver dashboard</Text>
+            <Text style={styles.emptyText}>{dashboardError}</Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={refresh}
+              disabled={refreshing}
+            >
+              <Text style={styles.primaryButtonText}>
+                {refreshing ? "RETRYING..." : "TRY AGAIN"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : driverProfileMissing ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Complete your delivery partner application</Text>
             <Text style={styles.emptyText}>

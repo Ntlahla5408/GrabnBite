@@ -3,6 +3,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
+using System.Security.Claims;
 using GrabnBite.Data;
 using GrabnBite.Hubs;
 using GrabnBite.Configuration;
@@ -150,6 +151,52 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+
+        // Re-check account state and authorization claims on every authenticated request.
+        // This immediately revokes access after deactivation, email changes, or role changes.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal;
+                var userIdValue = principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var tokenRole = principal?.FindFirst(ClaimTypes.Role)?.Value;
+                var tokenEmail = principal?.FindFirst(ClaimTypes.Name)?.Value;
+
+                if (!int.TryParse(userIdValue, out var userId) ||
+                    string.IsNullOrWhiteSpace(tokenRole) ||
+                    string.IsNullOrWhiteSpace(tokenEmail))
+                {
+                    context.Fail("The access token is invalid.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices
+                    .GetRequiredService<AppDbContext>();
+
+                var currentUser = await db.Users
+                    .AsNoTracking()
+                    .Include(user => user.Role)
+                    .FirstOrDefaultAsync(
+                        user => user.UserId == userId,
+                        context.HttpContext.RequestAborted);
+
+                if (currentUser == null ||
+                    !currentUser.IsActive ||
+                    !currentUser.IsEmailVerified ||
+                    !string.Equals(
+                        currentUser.Role.Name,
+                        tokenRole,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(
+                        currentUser.Email,
+                        tokenEmail,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Fail("This account is no longer authorized. Please sign in again.");
+                }
+            }
         };
     });
 

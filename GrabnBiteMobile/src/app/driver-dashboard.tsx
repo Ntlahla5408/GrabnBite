@@ -106,15 +106,13 @@ export default function DriverDashboard() {
 
       // Only get available deliveries when online
       if (driver.isOnline) {
-        try {
-          const available = await apiRequest(
-            "/api/Delivery/available",
-            {},
-            token,
-          );
+        const available = await apiRequest(
+          "/api/Delivery/available",
+          {},
+          token,
+        );
 
-          setAvailableDeliveries(available);
-        }
+        setAvailableDeliveries(available);
       } else {
         setAvailableDeliveries([]);
       }

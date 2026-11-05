@@ -23,6 +23,9 @@ namespace GrabnBite.Models.Entities
         [MaxLength(20)]
         public string Status { get; set; } = "Draft";
 
+        [MaxLength(20)]
+        public string Audience { get; set; } = "Customer";
+
         public DateTime? EffectiveDate { get; set; }
 
         public int Version { get; set; } = 1;

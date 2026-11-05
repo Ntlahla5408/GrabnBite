@@ -438,7 +438,9 @@ namespace GrabnBite.Controllers
                     "The document could not be removed from private storage. The application record was retained; please try again.");
             }
 
-            await transaction.CommitAsync(cancellationToken);
+            // Once the private object has been deleted, do not let a disconnected
+            // client cancel the database commit and leave a stale metadata reference.
+            await transaction.CommitAsync(CancellationToken.None);
             return NoContent();
         }
 

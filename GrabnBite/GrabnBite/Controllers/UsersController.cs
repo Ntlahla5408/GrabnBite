@@ -39,6 +39,7 @@ namespace GrabnBite.Controllers
                     PhoneNumber = u.PhoneNumber,
                     Role = u.Role.Name,
                     IsActive = u.IsActive,
+                    IsEmailVerified = u.IsEmailVerified,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt
                 })
@@ -84,6 +85,7 @@ namespace GrabnBite.Controllers
                     PhoneNumber = u.PhoneNumber,
                     Role = u.Role.Name,
                     IsActive = u.IsActive,
+                    IsEmailVerified = u.IsEmailVerified,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt
                 })
@@ -216,6 +218,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = user.PhoneNumber,
                 Role = roleName ?? "Unknown",
                 IsActive = user.IsActive,
+                IsEmailVerified = user.IsEmailVerified,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -275,6 +278,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = user.PhoneNumber,
                 Role = role.Name,
                 IsActive = user.IsActive,
+                IsEmailVerified = user.IsEmailVerified,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -327,6 +331,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = user.PhoneNumber,
                 Role = roleName ?? "Unknown",
                 IsActive = user.IsActive,
+                IsEmailVerified = user.IsEmailVerified,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });

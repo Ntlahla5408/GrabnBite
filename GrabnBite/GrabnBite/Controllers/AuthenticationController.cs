@@ -630,6 +630,52 @@ namespace GrabnBite.Controllers
         }
 
         // ============================================================
+        // CURRENT AUTHENTICATED USER
+        // GET: api/Authentication/me
+        // Returns the authoritative account identity after JWT validation.
+        // ============================================================
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdValue, out var userId))
+            {
+                return Unauthorized(new
+                {
+                    code = "INVALID_SESSION",
+                    message = "Your session is invalid. Please sign in again."
+                });
+            }
+
+            var currentUser = await dbContext.Users
+                .AsNoTracking()
+                .Include(user => user.Role)
+                .Where(user => user.UserId == userId)
+                .Select(user => new
+                {
+                    user.UserId,
+                    user.FirstName,
+                    user.LastName,
+                    user.Email,
+                    Role = user.Role.Name
+                })
+                .FirstOrDefaultAsync();
+
+            if (currentUser == null)
+            {
+                return Unauthorized(new
+                {
+                    code = "ACCOUNT_UNAVAILABLE",
+                    message = "This account is no longer available. Please sign in again."
+                });
+            }
+
+            return Ok(currentUser);
+        }
+
+        // ============================================================
         // AUTHORIZATION TEST
         // GET: api/Authentication/test
         // Any authenticated user

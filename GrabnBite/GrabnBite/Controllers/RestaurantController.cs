@@ -67,9 +67,20 @@ namespace GrabnBite.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRestaurants()
         {
-            var restaurants = await _context.Restaurants
-                .Where(r => r.IsApproved && r.IsActive && r.User.IsActive && r.User.IsEmailVerified)
-                .ToListAsync();
+            var restaurantsQuery = _context.Restaurants.AsQueryable();
+
+            // Admins need to see pending and suspended profiles in the management
+            // screen. Anonymous and customer requests only see eligible restaurants.
+            if (!User.IsInRole("Admin"))
+            {
+                restaurantsQuery = restaurantsQuery.Where(r =>
+                    r.IsApproved &&
+                    r.IsActive &&
+                    r.User.IsActive &&
+                    r.User.IsEmailVerified);
+            }
+
+            var restaurants = await restaurantsQuery.ToListAsync();
 
             var response = restaurants
                 .Select(MapRestaurantToResponse)
@@ -93,13 +104,21 @@ namespace GrabnBite.Controllers
                     "A valid restaurant id is required.");
             }
 
-            var restaurant = await _context.Restaurants
-                .FirstOrDefaultAsync(r =>
-                    r.RestaurantId == id &&
+            var restaurantQuery = _context.Restaurants
+                .Where(r => r.RestaurantId == id);
+
+            // Preserve the public visibility rules while allowing admins to inspect
+            // pending or suspended profiles from the management screen.
+            if (!User.IsInRole("Admin"))
+            {
+                restaurantQuery = restaurantQuery.Where(r =>
                     r.IsApproved &&
                     r.IsActive &&
                     r.User.IsActive &&
                     r.User.IsEmailVerified);
+            }
+
+            var restaurant = await restaurantQuery.FirstOrDefaultAsync();
 
             if (restaurant == null)
             {

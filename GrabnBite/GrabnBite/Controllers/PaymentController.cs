@@ -345,10 +345,9 @@ namespace GrabnBite.Controllers
                     retryClaimedInThisRequest = true;
                 }
 
-                payment.PaymentStatus = "INITIATED";
-                payment.YocoCheckoutId = null;
-                payment.TransactionReference = null;
-                payment.PaymentDate = DateTime.UtcNow;
+                // Do not mutate the tracked payment before the transaction checks
+                // its persisted state. In particular, FAILED with no checkout must
+                // remain FAILED until the conditional retry claim succeeds.
             }
             else
             {

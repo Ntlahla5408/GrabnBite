@@ -130,6 +130,11 @@ export default function RestaurantDashboardScreen() {
   );
 
   const readyOrders = orders.filter((order) => order.status === "READY_FOR_PICKUP");
+  const activeOrderCount =
+    pendingOrders.length +
+    acceptedOrders.length +
+    preparingOrders.length +
+    readyOrders.length;
 
   if (authLoading || loading) {
     return (
@@ -238,14 +243,14 @@ export default function RestaurantDashboardScreen() {
           onAction={handleAction}
         />
 
-        {orders.length === 0 ? (
+        {activeOrderCount === 0 ? (
           <View style={[styles.emptyBox, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
             <Text style={styles.emptyIcon}>🍽️</Text>
 
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No orders yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No active orders</Text>
 
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              New customer orders will appear here.
+              There are no orders awaiting acceptance, preparation or pickup. New customer orders will appear here.
             </Text>
           </View>
         ) : null}

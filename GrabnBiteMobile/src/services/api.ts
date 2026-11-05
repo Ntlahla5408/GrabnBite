@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { notifySessionExpired } from "./sessionInvalidation";
 
 // Render is the default API URL.
 // Set EXPO_PUBLIC_API_URL to use another deployment or a local development API.
@@ -92,7 +93,11 @@ export async function apiRequest(
       endpoint.startsWith("/api/Authentication/login") ||
       endpoint.startsWith("/api/Authentication/register");
 
-    if (response.status === 401 && !isAuthenticationRequest) {
+    if (response.status === 401 && !isAuthenticationRequest && storedToken) {
+      // Clear the active in-memory and persisted session as well as navigating
+      // away from protected screens. The provider ignores stale-token responses
+      // if the user has already signed in again with a different token.
+      notifySessionExpired(storedToken);
       router.replace("/login");
     }
 

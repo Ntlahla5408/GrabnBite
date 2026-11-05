@@ -92,10 +92,17 @@ namespace GrabnBite.Controllers
                 return Forbid();
             }
 
-            if (!restaurant.IsApproved)
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
             {
                 return BadRequest(
-                    "This restaurant has not been approved yet.");
+                    "This restaurant is not currently available for menu management.");
+            }
+
+            if (!restaurant.IsApproved || !restaurant.IsActive)
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var categoryExists = await _context.MenuCategories
@@ -150,6 +157,7 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetMenuItems()
         {
             var menuItems = await _context.MenuItems
+                .Where(item => item.Restaurant.IsApproved && item.Restaurant.IsActive)
                 .ToListAsync();
 
             var response = menuItems.Select(m => new MenuItemResponseDto
@@ -176,7 +184,10 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetMenuItem(int id)
         {
             var menuItem = await _context.MenuItems
-                .FirstOrDefaultAsync(m => m.MenuItemId == id);
+                .FirstOrDefaultAsync(m =>
+                    m.MenuItemId == id &&
+                    m.Restaurant.IsApproved &&
+                    m.Restaurant.IsActive);
 
             if (menuItem == null)
             {
@@ -212,7 +223,10 @@ namespace GrabnBite.Controllers
             }
 
             var restaurantExists = await _context.Restaurants
-                .AnyAsync(r => r.RestaurantId == restaurantId);
+                .AnyAsync(r =>
+                    r.RestaurantId == restaurantId &&
+                    r.IsApproved &&
+                    r.IsActive);
 
             if (!restaurantExists)
             {
@@ -290,6 +304,13 @@ namespace GrabnBite.Controllers
                 restaurant.UserId != currentUserId.Value)
             {
                 return Forbid();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var menuItem = await _context.MenuItems
@@ -573,6 +594,13 @@ namespace GrabnBite.Controllers
                 restaurant.UserId != currentUserId.Value)
             {
                 return Forbid();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var menuItem = await _context.MenuItems

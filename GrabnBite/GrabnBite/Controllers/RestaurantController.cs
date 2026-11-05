@@ -321,6 +321,55 @@ namespace GrabnBite.Controllers
         }
 
         // =========================================================
+        // UPDATE RESTAURANT OPERATIONAL STATUS
+        // Admin only. Suspension is separate from partner approval.
+        // =========================================================
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/{id}/status")]
+        public async Task<IActionResult> UpdateRestaurantStatus(
+            int id,
+            UpdateRestaurantStatusDto dto)
+        {
+            if (id <= 0)
+            {
+                return BadRequest("A valid restaurant id is required.");
+            }
+
+            var restaurant = await _context.Restaurants
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.RestaurantId == id);
+
+            if (restaurant == null)
+            {
+                return NotFound("Restaurant not found.");
+            }
+
+            if (dto.IsActive &&
+                (!restaurant.IsApproved ||
+                 !restaurant.User.IsActive ||
+                 !restaurant.User.IsEmailVerified))
+            {
+                return Conflict(new
+                {
+                    message = "A restaurant can only be reactivated after partner approval and owner-account eligibility are confirmed."
+                });
+            }
+
+            restaurant.IsActive = dto.IsActive;
+
+            // Reactivation does not automatically open the restaurant.
+            // An administrator or the owner must explicitly open it afterwards.
+            if (!dto.IsActive)
+            {
+                restaurant.IsOpen = false;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(MapRestaurantToResponse(restaurant));
+        }
+
+        // =========================================================
         // DELETE OWN RESTAURANT
         // Restaurant only
         // =========================================================
@@ -550,6 +599,7 @@ namespace GrabnBite.Controllers
                 Longitude = restaurant.Longitude,
                 IsOpen = restaurant.IsOpen,
                 IsApproved = restaurant.IsApproved,
+                IsActive = restaurant.IsActive,
                 CreatedAt = restaurant.CreatedAt
             };
         }

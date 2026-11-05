@@ -404,6 +404,13 @@ namespace GrabnBite.Controllers
             if (document.VerificationStatus != RestaurantVerificationStatus.Pending)
                 return Conflict("A document that has been reviewed cannot be deleted.");
 
+            // Keep the metadata deletion and private-object deletion coordinated.
+            // Save metadata changes inside a transaction first, then delete the object.
+            // If storage deletion fails, roll back so the applicant can retry and the
+            // database continues to reference the still-existing private document.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                cancellationToken);
+
             _context.RestaurantDocuments.Remove(document);
             application.UpdatedAt = DateTime.UtcNow;
             _context.RestaurantApplicationHistories.Add(new RestaurantApplicationHistory
@@ -416,8 +423,22 @@ namespace GrabnBite.Controllers
                 PerformedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             });
+
             await _context.SaveChangesAsync(cancellationToken);
 
+            try
+            {
+                await _documentStorage.DeleteAsync(document.StoragePath, cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                return StatusCode(
+                    StatusCodes.Status502BadGateway,
+                    "The document could not be removed from private storage. The application record was retained; please try again.");
+            }
+
+            await transaction.CommitAsync(cancellationToken);
             return NoContent();
         }
 

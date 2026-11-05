@@ -29,7 +29,7 @@ interface Restaurant {
   createdAt: string;
 }
 
-const filters = ["All", "Approved", "Pending", "Suspended"];
+const filters = ["All", "Approved", "Not approved", "Suspended"];
 
 export default function AdminRestaurantsScreen() {
   const { user, token } = useAuth();
@@ -86,7 +86,7 @@ export default function AdminRestaurantsScreen() {
         matchesFilter = restaurant.isApproved;
       }
 
-      if (selectedFilter === "Pending") {
+      if (selectedFilter === "Not approved") {
         matchesFilter = !restaurant.isApproved;
       }
 
@@ -151,7 +151,7 @@ export default function AdminRestaurantsScreen() {
 
         {/* FILTER */}
         <View style={styles.filterSection}>
-          <Text style={styles.sectionLabel}>Filter by approval</Text>
+          <Text style={styles.sectionLabel}>Filter by approval status</Text>
 
           <ScrollView
             horizontal
@@ -221,7 +221,7 @@ export default function AdminRestaurantsScreen() {
             <Text style={styles.emptyTitle}>No restaurants found</Text>
 
             <Text style={styles.emptyText}>
-              Try changing your search or approval filter.
+              Try changing your search or approval-status filter.
             </Text>
           </View>
         )}
@@ -278,7 +278,7 @@ function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
               restaurant.isApproved ? styles.approvedText : styles.pendingText,
             ]}
           >
-            {restaurant.isApproved ? "Approved" : "Pending"}
+            {restaurant.isApproved ? "Approved" : "Not approved"}
           </Text>
         </View>
       </View>

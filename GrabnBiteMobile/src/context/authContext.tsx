@@ -5,9 +5,11 @@ import {
     useCallback,
     useEffect,
     useState,
+    useRef,
 } from "react";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { registerSessionExpiredHandler } from "../services/sessionInvalidation";
 
 import { login as loginApi } from "../services/authService";
 import { apiRequest } from "../services/api";
@@ -82,6 +84,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionTokenRef = useRef<string | null>(token);
+
+  // A delayed response from an older request must not clear a newer login.
+  sessionTokenRef.current = token;
+
+  const clearSession = useCallback(async () => {
+    await removeSession();
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  useEffect(() => registerSessionExpiredHandler((expiredToken) => {
+    if (sessionTokenRef.current === expiredToken) {
+      void clearSession();
+    }
+  }), [clearSession]);
 
   const loadSession = useCallback(async () => {
     try {
@@ -157,10 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await removeSession();
-
-    setToken(null);
-    setUser(null);
+    await clearSession();
   }
 
   return (

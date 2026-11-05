@@ -130,9 +130,12 @@ namespace GrabnBite.Controllers
             json.Remove("idOrPassportNumber");
             json.Remove("signatureIdOrPassportNumber");
             json.Remove("accountHolderIdOrRegistrationNumber");
-            json["identityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.IdOrPassportNumber);
-            json["signatureIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber);
-            json["accountHolderIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber);
+            json.Remove("idOrPassportNumberEncrypted");
+            json.Remove("signatureIdOrPassportNumberEncrypted");
+            json.Remove("accountHolderIdOrRegistrationNumberEncrypted");
+            json["identityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted) || !string.IsNullOrWhiteSpace(application.IdOrPassportNumber);
+            json["signatureIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted) || !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber);
+            json["accountHolderIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted) || !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber);
             json.Remove("user");
             json.Remove("reviewedByUser");
             json.Remove("documents");

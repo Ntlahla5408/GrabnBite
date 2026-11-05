@@ -377,10 +377,15 @@ namespace GrabnBite.Controllers
                 RestaurantDocumentType.BankConfirmation
             };
 
+            // A replacement upload supersedes an older copy of the same document type.
+            // Approval must be based on the latest submitted copy, not any historical
+            // copy that may have been approved before the administrator requested a replacement.
             var unapprovedDocuments = requiredDocuments.Where(required =>
-                !application.Documents.Any(document =>
-                    document.DocumentType == required &&
-                    document.VerificationStatus == RestaurantVerificationStatus.Approved))
+                application.Documents
+                    .Where(document => document.DocumentType == required)
+                    .OrderByDescending(document => document.UploadedAt)
+                    .ThenByDescending(document => document.RestaurantDocumentId)
+                    .FirstOrDefault()?.VerificationStatus != RestaurantVerificationStatus.Approved)
                 .Select(required => required.ToString())
                 .ToList();
 

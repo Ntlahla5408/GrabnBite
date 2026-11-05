@@ -135,7 +135,8 @@ namespace GrabnBite.Controllers
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.DriverId == dto.DriverId);
+                    d.DriverId == dto.DriverId &&
+                    d.User.IsActive);
 
             if (driver == null)
             {
@@ -249,7 +250,8 @@ namespace GrabnBite.Controllers
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
+                    d.UserId == userId.Value &&
+                    d.User.IsActive);
 
             if (driver == null)
             {
@@ -338,7 +340,7 @@ namespace GrabnBite.Controllers
         {
             var driver = await _context.Drivers
                 .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.UserId == userId);
+                .FirstOrDefaultAsync(d => d.UserId == userId && d.User.IsActive);
 
             if (driver == null)
             {
@@ -568,7 +570,8 @@ namespace GrabnBite.Controllers
 
             var driver = await _context.Drivers
                 .FirstOrDefaultAsync(d =>
-                    d.UserId == userId.Value);
+                    d.UserId == userId.Value &&
+                    d.User.IsActive);
 
             if (driver == null)
             {
@@ -685,7 +688,7 @@ namespace GrabnBite.Controllers
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId.Value);
+                .FirstOrDefaultAsync(d => d.UserId == userId.Value && d.User.IsActive);
 
             if (driver == null)
             {
@@ -781,7 +784,7 @@ namespace GrabnBite.Controllers
             }
 
             var driver = await _context.Drivers
-                .FirstOrDefaultAsync(d => d.UserId == userId.Value);
+                .FirstOrDefaultAsync(d => d.UserId == userId.Value && d.User.IsActive);
 
             if (driver == null)
             {

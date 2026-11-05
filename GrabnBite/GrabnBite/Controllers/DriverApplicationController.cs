@@ -369,7 +369,8 @@ namespace GrabnBite.Controllers
             if (document.VerificationStatus != DriverVerificationStatus.Pending)
                 return Conflict("A document that has been reviewed cannot be deleted.");
 
-            await _documentStorage.DeleteAsync(document.StoragePath, cancellationToken);
+            // Persist the metadata deletion first. If the database write fails,
+            // the still-existing private object remains referenced and downloadable.
             _context.DriverApplicationDocuments.Remove(document);
             application.UpdatedAt = DateTime.UtcNow;
             _context.DriverApplicationHistories.Add(new DriverApplicationHistory
@@ -383,6 +384,10 @@ namespace GrabnBite.Controllers
                 CreatedAt = DateTime.UtcNow
             });
             await _context.SaveChangesAsync(cancellationToken);
+
+            // A storage deletion failure can leave an orphan, but cannot leave a
+            // database record pointing at a missing document.
+            await _documentStorage.DeleteAsync(document.StoragePath, cancellationToken);
             return NoContent();
         }
 

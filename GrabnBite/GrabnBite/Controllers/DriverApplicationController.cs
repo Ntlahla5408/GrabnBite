@@ -411,6 +411,7 @@ namespace GrabnBite.Controllers
                 .AsNoTracking()
                 .Where(policy =>
                     !policy.IsArchived &&
+                    (policy.Audience == "Driver" || policy.Audience == "All") &&
                     policy.Status == "Published" &&
                     (policy.EffectiveDate == null || policy.EffectiveDate <= DateTime.UtcNow))
                 .OrderBy(policy => policy.Title)

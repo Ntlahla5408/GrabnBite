@@ -104,10 +104,10 @@ namespace GrabnBite.Controllers
                     "The restaurant associated with this cart was not found.");
             }
 
-            if (!cart.Restaurant.IsApproved)
+            if (!cart.Restaurant.IsApproved || !cart.Restaurant.IsActive)
             {
                 return BadRequest(
-                    "This restaurant is not currently approved.");
+                    "This restaurant is not currently available.");
             }
 
             if (!cart.Restaurant.IsOpen)

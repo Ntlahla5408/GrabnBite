@@ -174,11 +174,31 @@ namespace GrabnBite.Controllers
                     "Another account is already using this email address.");
             }
 
+            var emailChanged = !string.Equals(
+                user.Email,
+                normalizedEmail,
+                StringComparison.OrdinalIgnoreCase);
+
             user.FirstName = dto.FirstName.Trim();
             user.LastName = dto.LastName.Trim();
-            user.Email = dto.Email.Trim();
+            user.Email = normalizedEmail;
             user.PhoneNumber = dto.PhoneNumber.Trim();
             user.UpdatedAt = DateTime.UtcNow;
+
+            if (emailChanged)
+            {
+                // A changed email address must be verified before the account can sign in again.
+                user.IsEmailVerified = false;
+                user.EmailVerifiedAt = null;
+
+                var existingChallenge = await _context.EmailVerificationChallenges
+                    .FirstOrDefaultAsync(challenge => challenge.UserId == user.UserId);
+
+                if (existingChallenge != null)
+                {
+                    _context.EmailVerificationChallenges.Remove(existingChallenge);
+                }
+            }
 
             await _context.SaveChangesAsync();
 

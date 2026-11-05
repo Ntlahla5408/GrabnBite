@@ -31,6 +31,10 @@ interface Order {
   userId: number;
   restaurantId: number;
   deliveryAddressId: number;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
+  refundStatus?: string | null;
+  requiresReconciliation?: boolean;
   orderItems: OrderItem[];
 }
 
@@ -227,6 +231,30 @@ export default function OrderScreen() {
   ];
 
   const currentIndex = statusOrder.indexOf(status);
+  const paymentStatus = order.paymentStatus?.toUpperCase() ?? null;
+  const refundStatus = order.refundStatus?.toUpperCase() ?? "NOT_REQUIRED";
+  const paymentLabel = !paymentStatus
+    ? "Not started"
+    : paymentStatus === "PAID"
+      ? "Paid"
+      : paymentStatus === "FAILED"
+        ? "Failed"
+        : paymentStatus === "INITIATED"
+          ? "Awaiting confirmation"
+          : paymentStatus;
+  const refundLabel = refundStatus === "NOT_REQUIRED"
+    ? null
+    : refundStatus === "REQUIRED"
+      ? "Refund required"
+      : refundStatus === "PENDING"
+        ? "Refund being processed"
+        : refundStatus === "SUCCEEDED"
+          ? "Refund completed"
+          : refundStatus === "FAILED"
+            ? "Refund unsuccessful — review required"
+            : refundStatus === "MANUAL_REVIEW"
+              ? "Refund under review"
+              : refundStatus;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -375,6 +403,41 @@ export default function OrderScreen() {
               R{order.totalAmount.toFixed(2)}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Payment</Text>
+          <View style={styles.paymentInfoRow}>
+            <Text style={styles.paymentInfoLabel}>Method</Text>
+            <Text style={styles.paymentInfoValue}>
+              {order.paymentMethod ? order.paymentMethod.toUpperCase() : "Not selected"}
+            </Text>
+          </View>
+          <View style={styles.paymentInfoRow}>
+            <Text style={styles.paymentInfoLabel}>Payment status</Text>
+            <Text style={styles.paymentInfoValue}>{paymentLabel}</Text>
+          </View>
+          {refundLabel ? (
+            <View style={styles.paymentNotice}>
+              <Text style={styles.paymentNoticeText}>{refundLabel}</Text>
+              <Text style={styles.paymentNoticeSubtext}>
+                Refunds are handled by the GrabnBite support team. Please contact support if you need an update.
+              </Text>
+            </View>
+          ) : null}
+          {order.requiresReconciliation ? (
+            <View style={styles.paymentNotice}>
+              <Text style={styles.paymentNoticeText}>Payment under review</Text>
+              <Text style={styles.paymentNoticeSubtext}>
+                We are checking this payment. Please do not make another payment while this review is underway.
+              </Text>
+            </View>
+          ) : null}
+          {paymentStatus === "FAILED" && refundStatus === "NOT_REQUIRED" ? (
+            <Text style={styles.paymentInfoHint}>
+              This payment was not completed. If your order is still pending, you can try payment again.
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -671,6 +734,51 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "800",
     color: "#F28C28",
+  },
+
+  paymentInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  paymentInfoLabel: {
+    color: "#777",
+    fontSize: 14,
+  },
+
+  paymentInfoValue: {
+    color: "#071B2C",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  paymentInfoHint: {
+    color: "#777",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+
+  paymentNotice: {
+    backgroundColor: "#FFF4E5",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+  },
+
+  paymentNoticeText: {
+    color: "#8A4B08",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+
+  paymentNoticeSubtext: {
+    color: "#765A3A",
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
   },
 
   deliveryText: {

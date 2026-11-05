@@ -280,7 +280,7 @@ export default function AdminPoliciesScreen() {
         </Pressable>
         <View style={styles.headerCopy}>
           <Text style={[styles.headerTitle, { color: colors.accent }]}>Policy Management</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Manage customer-facing legal documents</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Manage policies by intended audience</Text>
         </View>
         <Pressable onPress={() => { void loadPolicies(); }} disabled={loading}>
           <Text style={[styles.refreshText, { color: colors.headerText }]}>↻</Text>
@@ -312,6 +312,28 @@ export default function AdminPoliciesScreen() {
             maxLength={500}
             textAlignVertical="top"
           />
+          <Text style={[styles.fieldLabel, { color: colors.text }]}>Who does this policy apply to?</Text>
+          <View style={styles.statusRow}>
+            {(["Customer", "Driver", "Restaurant", "All"] as const).map((option) => {
+              const selected = audience === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => setAudience(option)}
+                  style={[
+                    styles.statusButton,
+                    { borderColor: selected ? colors.accent : colors.border, backgroundColor: selected ? colors.accent : colors.background },
+                  ]}
+                >
+                  <Text style={{ color: selected ? "#FFFFFF" : colors.text, fontWeight: "700" }}>{option}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+            All makes this document applicable to customers, drivers and restaurant partners. Choose the audience after reviewing the actual policy contents.
+          </Text>
+
           <Text style={[styles.fieldLabel, { color: colors.text }]}>PDF document</Text>
           <Pressable
             onPress={() => { void choosePdf(); }}
@@ -358,7 +380,7 @@ export default function AdminPoliciesScreen() {
             })}
           </View>
           <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-            Drafts are visible only to administrators. Published policies appear to customers when their effective date is reached.
+            Drafts are visible only to administrators. Published policies are shown to their selected audience when their effective date is reached.
           </Text>
 
           <Pressable
@@ -410,7 +432,7 @@ export default function AdminPoliciesScreen() {
               </View>
               <Text style={[styles.policyDescription, { color: colors.textSecondary }]}>{policy.description}</Text>
               <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-                Version {policy.version} · {policy.originalFileName}
+                {policy.audience} · Version {policy.version} · {policy.originalFileName}
                 {policy.effectiveDate ? ` · Effective ${policy.effectiveDate.slice(0, 10)}` : ""}
               </Text>
               <View style={styles.actionsRow}>

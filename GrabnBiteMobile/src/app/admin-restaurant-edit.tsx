@@ -447,11 +447,11 @@ export default function AdminRestaurantEditScreen() {
           <Text style={styles.approvalInfoText}>
             {restaurant?.isApproved
               ? "This restaurant has been approved."
-              : "This restaurant is still awaiting admin approval."}
+              : "Approval must be completed through the verified Restaurant Partner Applications workflow."}
           </Text>
 
           <Text style={styles.approvalInfoNote}>
-            Approval is managed separately from restaurant details.
+            Direct approval is disabled here to prevent bypassing document and banking verification.
           </Text>
         </View>
 
@@ -466,14 +466,14 @@ export default function AdminRestaurantEditScreen() {
             setApprovalMessage("");
             setApprovalConfirmation(restaurant?.isApproved !== true);
           }}
-          disabled={approvalLoading || saving || !restaurant}
+          disabled={approvalLoading || saving || !restaurant || restaurant.isApproved !== true}
           accessibilityRole="button"
         >
           {approvalLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.saveButtonText}>
-              {restaurant?.isApproved === true ? "Remove Approval" : "Approve Restaurant"}
+              {restaurant?.isApproved === true ? "Remove Approval" : "Approval via Partner Applications"}
             </Text>
           )}
         </Pressable>

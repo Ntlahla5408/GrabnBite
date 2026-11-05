@@ -34,7 +34,7 @@ namespace GrabnBite.Controllers
         }
 
         private static bool IsUniqueConstraintViolation(Exception exception)
-        {}
+        {
             return exception is PostgresException
                 { SqlState: PostgresErrorCodes.UniqueViolation }
                 || exception is DbUpdateException

@@ -53,7 +53,9 @@ namespace GrabnBite.Controllers
                 .Include(c => c.Restaurant)
                 .Include(c => c.CartItems)
                     .ThenInclude(ci => ci.MenuItem)
-                .Where(c => c.UserId == userId.Value)
+                .Where(c => c.UserId == userId.Value &&
+                    c.Restaurant.IsActive &&
+                    c.Restaurant.IsApproved)
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToListAsync();
 
@@ -138,10 +140,10 @@ namespace GrabnBite.Controllers
                     "This restaurant is currently closed.");
             }
 
-            if (!menuItem.Restaurant.IsApproved)
+            if (!menuItem.Restaurant.IsApproved || !menuItem.Restaurant.IsActive)
             {
                 return BadRequest(
-                    "This restaurant is not approved.");
+                    "This restaurant is not currently available.");
             }
 
             var cart = await _context.Carts

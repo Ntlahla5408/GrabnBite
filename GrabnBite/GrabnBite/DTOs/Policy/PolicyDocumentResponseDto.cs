@@ -14,6 +14,8 @@ namespace GrabnBite.DTOs.Policy
 
         public string Status { get; set; } = string.Empty;
 
+        public string Audience { get; set; } = "Customer";
+
         public DateTime? EffectiveDate { get; set; }
 
         public int Version { get; set; }

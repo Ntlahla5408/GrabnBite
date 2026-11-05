@@ -55,7 +55,9 @@ namespace GrabnBite.Controllers
                     .ThenInclude(ci => ci.MenuItem)
                 .Where(c => c.UserId == userId.Value &&
                     c.Restaurant.IsActive &&
-                    c.Restaurant.IsApproved)
+                    c.Restaurant.IsApproved &&
+                    c.Restaurant.User.IsActive &&
+                    c.Restaurant.User.IsEmailVerified)
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToListAsync();
 
@@ -140,7 +142,8 @@ namespace GrabnBite.Controllers
                     "This restaurant is currently closed.");
             }
 
-            if (!menuItem.Restaurant.IsApproved || !menuItem.Restaurant.IsActive)
+            if (!menuItem.Restaurant.IsApproved || !menuItem.Restaurant.IsActive ||
+                !menuItem.Restaurant.User.IsActive || !menuItem.Restaurant.User.IsEmailVerified)
             {
                 return BadRequest(
                     "This restaurant is not currently available.");

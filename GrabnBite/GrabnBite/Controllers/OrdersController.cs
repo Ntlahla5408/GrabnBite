@@ -28,6 +28,27 @@ namespace GrabnBite.Controllers
             _hubContext = hubContext;
         }
 
+        private async Task<bool> LockOrderRowAsync(int orderId, int userId, Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction)
+        {
+            var connection = _context.Database.GetDbConnection();
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction.GetDbTransaction();
+            command.CommandText = "SELECT \"OrderId\" FROM \"Orders\" WHERE \"OrderId\" = @orderId AND \"UserId\" = @userId FOR UPDATE";
+
+            var orderIdParameter = command.CreateParameter();
+            orderIdParameter.ParameterName = "orderId";
+            orderIdParameter.Value = orderId;
+            command.Parameters.Add(orderIdParameter);
+
+            var userIdParameter = command.CreateParameter();
+            userIdParameter.ParameterName = "userId";
+            userIdParameter.Value = userId;
+            command.Parameters.Add(userIdParameter);
+
+            var result = await command.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value;
+        }
+
         // ============================================================
         // HELPER - Get logged-in user ID from JWT
         // ============================================================
@@ -123,6 +144,12 @@ namespace GrabnBite.Controllers
             // Use a serializable transaction so cancellation and payment-state
             // checks cannot silently pass each other under concurrent requests.
             await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            if (!await LockOrderRowAsync(id, userId.Value, transaction))
+            {
+                await transaction.RollbackAsync();
+                return NotFound("Order not found.");
+            }
+
 
             var order = await _context.Orders
                 .Include(o => o.StatusHistory)

@@ -70,10 +70,17 @@ namespace GrabnBite.Controllers
                 return Forbid();
             }
 
-            if (!restaurant.IsApproved)
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
             {
                 return BadRequest(
-                    "This restaurant has not been approved yet.");
+                    "This restaurant is not currently available for menu management.");
+            }
+
+            if (!restaurant.IsApproved || !restaurant.IsActive)
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var category = new MenuCategory
@@ -109,6 +116,9 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetCategories()
         {
             var categories = await _context.MenuCategories
+                .Where(category =>
+                    category.Restaurant.IsApproved &&
+                    category.Restaurant.IsActive)
                 .ToListAsync();
 
             var response = categories
@@ -134,7 +144,9 @@ namespace GrabnBite.Controllers
         {
             var category = await _context.MenuCategories
                 .FirstOrDefaultAsync(c =>
-                    c.MenuCategoryId == id);
+                    c.MenuCategoryId == id &&
+                    c.Restaurant.IsApproved &&
+                    c.Restaurant.IsActive);
 
             if (category == null)
             {
@@ -191,6 +203,13 @@ namespace GrabnBite.Controllers
                 restaurant.UserId != currentUserId.Value)
             {
                 return Forbid();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var category = await _context.MenuCategories
@@ -254,6 +273,13 @@ namespace GrabnBite.Controllers
                 restaurant.UserId != currentUserId.Value)
             {
                 return Forbid();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var category = await _context.MenuCategories

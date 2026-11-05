@@ -78,8 +78,18 @@ export default function RestaurantDashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!authLoading && token && user?.role === "Restaurant") {
-        loadOrders();
+        void loadOrders();
+
+        // Keep newly placed orders and restaurant-side status changes current
+        // while the dashboard is visible, without polling in the background.
+        const refreshInterval = setInterval(() => {
+          void loadOrders();
+        }, 15000);
+
+        return () => clearInterval(refreshInterval);
       }
+
+      return undefined;
     }, [authLoading, token, user?.role, loadOrders]),
   );
 

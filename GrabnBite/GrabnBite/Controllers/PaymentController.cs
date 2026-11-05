@@ -364,7 +364,7 @@ namespace GrabnBite.Controllers
                 _context.Payments.Add(payment);
             }
 
-            await using (var paymentStartTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable))
+            await using (var paymentStartTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted))
             {
                 if (!await LockOrderRowAsync(orderId, userId.Value, paymentStartTransaction))
                 {

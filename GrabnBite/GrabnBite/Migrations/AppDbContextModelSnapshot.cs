@@ -559,6 +559,11 @@ namespace GrabnBite.Migrations
                     b.Property<string>("AdminComment")
                         .HasColumnType("text");
 
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("text");

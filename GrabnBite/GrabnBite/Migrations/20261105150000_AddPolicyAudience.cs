@@ -17,6 +17,8 @@ namespace GrabnBite.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            throw new System.NotSupportedException(
+                "Policy audience classifications must be preserved. Roll back with a reviewed forward migration instead.");
         }
     }
 }

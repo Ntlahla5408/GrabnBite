@@ -134,6 +134,7 @@ export default function OrderScreen() {
   }
 
   const status = order.status.toUpperCase();
+  const isCancelled = status === "CANCELLED";
 
   const statusSteps = [
     {
@@ -208,7 +209,7 @@ export default function OrderScreen() {
 
         <View style={styles.statusCard}>
           <Text style={styles.statusIcon}>
-            {status === "DELIVERED" ? "✓" : "🍔"}
+            {status === "DELIVERED" ? "✓" : isCancelled ? "✕" : "🍔"}
           </Text>
 
           <Text style={styles.statusTitle}>
@@ -228,7 +229,9 @@ export default function OrderScreen() {
                           ? "On the Way"
                           : status === "DELIVERED"
                         ? "Order Delivered"
-                        : "Order Received"}
+                        : isCancelled
+                          ? "Order Cancelled"
+                          : "Order Received"}
           </Text>
 
           <Text style={styles.statusDescription}>
@@ -236,12 +239,23 @@ export default function OrderScreen() {
               ? "Your order has been received and is waiting for the restaurant."
               : status === "DELIVERED"
                 ? "Enjoy your meal!"
-                : "We'll keep you updated as your order progresses."}
+                : isCancelled
+                  ? "This order was cancelled. No further delivery updates are expected."
+                  : "We'll keep you updated as your order progresses."}
           </Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Order Status</Text>
+        {isCancelled ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Order Status</Text>
+            <Text style={styles.stepTitleCurrent}>Order Cancelled</Text>
+            <Text style={styles.stepDescription}>
+              This order will not continue through the delivery process.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Order Status</Text>
 
           {statusSteps.map((step, index) => {
             const isCompleted = currentIndex >= index;
@@ -292,7 +306,8 @@ export default function OrderScreen() {
               </View>
             );
           })}
-        </View>
+          </View>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Your Order</Text>

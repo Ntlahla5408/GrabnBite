@@ -10,6 +10,8 @@ namespace GrabnBite.DTOs.Policy
 
         public string Status { get; set; } = "Draft";
 
+        public string Audience { get; set; } = "Customer";
+
         public DateTime? EffectiveDate { get; set; }
 
         public IFormFile? PdfFile { get; set; }

@@ -279,19 +279,38 @@ namespace GrabnBite.Controllers
                 UploadedAt = DateTime.UtcNow
             };
 
-            _context.DriverApplicationDocuments.Add(document);
-            application.UpdatedAt = DateTime.UtcNow;
-            _context.DriverApplicationHistories.Add(new DriverApplicationHistory
+            try
             {
-                DriverApplicationId = application.DriverApplicationId,
-                PreviousStatus = application.Status,
-                NewStatus = application.Status,
-                Action = "DocumentUploaded",
-                Comment = $"Applicant uploaded {documentType}.",
-                PerformedByUserId = userId,
-                CreatedAt = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync(cancellationToken);
+                _context.DriverApplicationDocuments.Add(document);
+                application.UpdatedAt = DateTime.UtcNow;
+                _context.DriverApplicationHistories.Add(new DriverApplicationHistory
+                {
+                    DriverApplicationId = application.DriverApplicationId,
+                    PreviousStatus = application.Status,
+                    NewStatus = application.Status,
+                    Action = "DocumentUploaded",
+                    Comment = $"Applicant uploaded {documentType}.",
+                    PerformedByUserId = userId,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch
+            {
+                // The private object was uploaded before its database record.
+                // Compensate so a failed DB write does not leave an orphaned file.
+                try
+                {
+                    await _documentStorage.DeleteAsync(storagePath, CancellationToken.None);
+                }
+                catch
+                {
+                    // Preserve the original database exception. A failed cleanup
+                    // may leave an orphan for storage reconciliation.
+                }
+
+                throw;
+            }
 
             return Ok(new
             {

@@ -5,7 +5,6 @@ import {
     useCallback,
     useEffect,
     useState,
-    useRef,
 } from "react";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
@@ -84,10 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const sessionTokenRef = useRef<string | null>(token);
-
-  // A delayed response from an older request must not clear a newer login.
-  sessionTokenRef.current = token;
 
   const clearSession = useCallback(async () => {
     await removeSession();
@@ -95,11 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // The handler is refreshed with the active token so a delayed 401 from
+  // an earlier login cannot clear a newer session.
   useEffect(() => registerSessionExpiredHandler((expiredToken) => {
-    if (sessionTokenRef.current === expiredToken) {
+    if (token === expiredToken) {
       void clearSession();
     }
-  }), [clearSession]);
+  }), [token, clearSession]);
 
   const loadSession = useCallback(async () => {
     try {

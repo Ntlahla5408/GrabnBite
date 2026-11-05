@@ -354,6 +354,20 @@ export default function OrderScreen() {
 
         </View>
 
+        {status === "PENDING" && !isCancelled ? (
+          <Pressable
+            style={styles.paymentButton}
+            onPress={() =>
+              router.push({
+                pathname: "/payment",
+                params: { orderId: String(order.orderId) },
+              })
+            }
+          >
+            <Text style={styles.homeButtonText}>Continue to Payment</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
           style={styles.homeButtonLarge}
           onPress={() => router.replace("/")}
@@ -641,6 +655,15 @@ const styles = StyleSheet.create({
   homeText: {
     color: "#1A4B6B",
     fontWeight: "600",
+  },
+
+  paymentButton: {
+    backgroundColor: "#F28C28",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 5,
+    marginBottom: 12,
   },
 
   homeButtonLarge: {

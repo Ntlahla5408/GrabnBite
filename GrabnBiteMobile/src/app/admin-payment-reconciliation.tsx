@@ -48,7 +48,14 @@ interface ReconciliationEvent {
   createdAt: string;
 }
 
-const refundStatuses = ["REQUIRED", "PENDING", "SUCCEEDED", "FAILED", "MANUAL_REVIEW"];
+const allowedRefundTransitions: Record<string, string[]> = {
+  NOT_REQUIRED: ["REQUIRED", "MANUAL_REVIEW"],
+  REQUIRED: ["PENDING", "FAILED", "MANUAL_REVIEW"],
+  PENDING: ["SUCCEEDED", "FAILED", "MANUAL_REVIEW"],
+  FAILED: ["REQUIRED", "PENDING", "MANUAL_REVIEW"],
+  MANUAL_REVIEW: ["REQUIRED", "PENDING", "SUCCEEDED", "FAILED"],
+  SUCCEEDED: [],
+};
 
 export default function AdminPaymentReconciliationScreen() {
   const { user, token } = useAuth();
@@ -112,7 +119,8 @@ export default function AdminPaymentReconciliationScreen() {
 
   function openItem(item: ReconciliationItem) {
     setSelectedPaymentId(item.paymentId);
-    setNextStatus(item.refundStatus === "REQUIRED" ? "PENDING" : "MANUAL_REVIEW");
+    const allowedNextStatuses = allowedRefundTransitions[item.refundStatus] ?? [];
+    setNextStatus(allowedNextStatuses[0] ?? item.refundStatus);
     setProvider(item.refundProvider || "YOCO");
     setProviderReference("");
     setDetails("");
@@ -235,7 +243,7 @@ export default function AdminPaymentReconciliationScreen() {
 
             <Text style={[styles.label, { color: colors.text }]}>Refund status to record</Text>
             <View style={styles.statusChoices}>
-              {refundStatuses.map(status => (
+              {(allowedRefundTransitions[selectedItem.refundStatus] ?? []).map(status => (
                 <Pressable key={status} onPress={() => setNextStatus(status)} style={[styles.choice, nextStatus === status && styles.choiceSelected]}>
                   <Text style={[styles.choiceText, nextStatus === status && styles.choiceTextSelected]}>{status.replace("_", " ")}</Text>
                 </Pressable>
@@ -251,9 +259,13 @@ export default function AdminPaymentReconciliationScreen() {
             <Text style={[styles.label, { color: colors.text }]}>Audit details</Text>
             <TextInput value={details} onChangeText={setDetails} placeholder="What was checked or what action was taken?" style={[styles.input, styles.multiline]} multiline />
 
-            <Pressable onPress={() => void saveRefundStatus()} disabled={saving} style={[styles.primaryButton, saving && styles.disabled]}>
-              <Text style={styles.primaryButtonText}>{saving ? "Saving…" : "Record refund status"}</Text>
-            </Pressable>
+            {(allowedRefundTransitions[selectedItem.refundStatus] ?? []).length > 0 ? (
+              <Pressable onPress={() => void saveRefundStatus()} disabled={saving} style={[styles.primaryButton, saving && styles.disabled]}>
+                <Text style={styles.primaryButtonText}>{saving ? "Saving…" : "Record refund status"}</Text>
+              </Pressable>
+            ) : (
+              <Text style={[styles.helper, { color: colors.textSecondary }]}>This refund is already marked completed and has no further allowed status transitions.</Text>
+            )}
 
             {selectedItem.refundStatus === "NOT_REQUIRED" && selectedItem.requiresReconciliation ? (
               <Pressable onPress={() => void resolveCheckoutReview()} disabled={saving} style={[styles.secondaryButton, saving && styles.disabled]}>

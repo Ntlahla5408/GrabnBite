@@ -388,6 +388,13 @@ namespace GrabnBite.Controllers
                 return Forbid();
             }
 
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
+            }
+
             var menuItem = await _context.MenuItems
                 .FirstOrDefaultAsync(item =>
                     item.MenuItemId == id && item.RestaurantId == restaurantId,
@@ -502,6 +509,13 @@ namespace GrabnBite.Controllers
             if (User.IsInRole("Restaurant") && restaurant.UserId != currentUserId.Value)
             {
                 return Forbid();
+            }
+
+            if (User.IsInRole("Restaurant") &&
+                (!restaurant.IsApproved || !restaurant.IsActive))
+            {
+                return BadRequest(
+                    "This restaurant is not currently available for menu management.");
             }
 
             var menuItem = await _context.MenuItems

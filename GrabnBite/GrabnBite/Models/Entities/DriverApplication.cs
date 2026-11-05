@@ -12,6 +12,7 @@ namespace GrabnBite.Models.Entities
         public string? Surname { get; set; }
         public string? PreferredName { get; set; }
         public string? IdOrPassportNumber { get; set; }
+        public string? IdOrPassportNumberEncrypted { get; set; }
         public DateOnly? DateOfBirth { get; set; }
         public string? Nationality { get; set; }
         public string? MobileNumber { get; set; }
@@ -76,6 +77,7 @@ namespace GrabnBite.Models.Entities
         public string? AccountType { get; set; }
         public string? BranchCode { get; set; }
         public string? AccountHolderIdOrRegistrationNumber { get; set; }
+        public string? AccountHolderIdOrRegistrationNumberEncrypted { get; set; }
 
         // Emergency contact
         public string? EmergencyContactName { get; set; }
@@ -114,6 +116,7 @@ namespace GrabnBite.Models.Entities
         // Electronic signature
         public string? SignatureFullLegalName { get; set; }
         public string? SignatureIdOrPassportNumber { get; set; }
+        public string? SignatureIdOrPassportNumberEncrypted { get; set; }
         public string? SignatureEmailAddress { get; set; }
         public string? SignatureMobileNumber { get; set; }
         public DateTime? AcceptedAt { get; set; }

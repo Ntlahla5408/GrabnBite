@@ -151,7 +151,8 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetMenuItems()
         {
             var menuItems = await _context.MenuItems
-                .Where(item => item.Restaurant.IsApproved && item.Restaurant.IsActive)
+                .Where(item => item.Restaurant.IsApproved && item.Restaurant.IsActive &&
+                    item.Restaurant.User.IsActive && item.Restaurant.User.IsEmailVerified)
                 .ToListAsync();
 
             var response = menuItems.Select(m => new MenuItemResponseDto
@@ -181,7 +182,9 @@ namespace GrabnBite.Controllers
                 .FirstOrDefaultAsync(m =>
                     m.MenuItemId == id &&
                     m.Restaurant.IsApproved &&
-                    m.Restaurant.IsActive);
+                    m.Restaurant.IsActive &&
+                    m.Restaurant.User.IsActive &&
+                    m.Restaurant.User.IsEmailVerified);
 
             if (menuItem == null)
             {
@@ -220,7 +223,9 @@ namespace GrabnBite.Controllers
                 .AnyAsync(r =>
                     r.RestaurantId == restaurantId &&
                     r.IsApproved &&
-                    r.IsActive);
+                    r.IsActive &&
+                    r.User.IsActive &&
+                    r.User.IsEmailVerified);
 
             if (!restaurantExists)
             {

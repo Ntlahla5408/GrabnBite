@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -48,6 +49,7 @@ export default function OrderScreen() {
   const orderLoadedRef = useRef(false);
   const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
+  const [cancelling, setCancelling] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!token || !orderId) return;
@@ -87,6 +89,40 @@ export default function OrderScreen() {
       void loadOrder();
     }
   }, [authLoading, token, orderId, loadOrder]);
+
+  async function cancelOrder() {
+    if (!token || cancelling) return;
+
+    setCancelling(true);
+    try {
+      await apiRequest(
+        `/api/Orders/${orderId}`,
+        { method: "DELETE" },
+        token,
+      );
+      await loadOrder();
+      Alert.alert("Order cancelled", "Your order has been cancelled.");
+    } catch (cancelError) {
+      const message = cancelError instanceof Error
+        ? cancelError.message
+        : "Unable to cancel this order. Refresh and check its status.";
+      Alert.alert("Cancellation unavailable", message);
+      await loadOrder();
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  function confirmCancelOrder() {
+    Alert.alert(
+      "Cancel this order?",
+      "You can only cancel an order while it is pending. If payment is unresolved or already confirmed, cancellation may be blocked or require refund review.",
+      [
+        { text: "Keep Order", style: "cancel" },
+        { text: "Cancel Order", style: "destructive", onPress: () => void cancelOrder() },
+      ],
+    );
+  }
 
   useEffect(() => {
     if (!token || !Number.isInteger(orderId) || orderId <= 0) {
@@ -353,6 +389,20 @@ export default function OrderScreen() {
           </Text>
 
         </View>
+
+        {status === "PENDING" && !isCancelled ? (
+          <Pressable
+            style={styles.cancelOrderButton}
+            onPress={confirmCancelOrder}
+            disabled={cancelling}
+          >
+            {cancelling ? (
+              <ActivityIndicator color="#B42318" />
+            ) : (
+              <Text style={styles.cancelOrderText}>Cancel Order</Text>
+            )}
+          </Pressable>
+        ) : null}
 
         {status === "PENDING" && !isCancelled ? (
           <Pressable
@@ -655,6 +705,22 @@ const styles = StyleSheet.create({
   homeText: {
     color: "#1A4B6B",
     fontWeight: "600",
+  },
+
+  cancelOrderButton: {
+    borderWidth: 1,
+    borderColor: "#D32F2F",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 5,
+    marginBottom: 12,
+  },
+
+  cancelOrderText: {
+    color: "#B42318",
+    fontSize: 15,
+    fontWeight: "800",
   },
 
   paymentButton: {

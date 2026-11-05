@@ -387,6 +387,9 @@ namespace GrabnBite.Migrations
                     b.Property<string>("IdOrPassportNumber")
                         .HasColumnType("text");
 
+                    b.Property<string>("IdOrPassportNumberEncrypted")
+                        .HasColumnType("text");
+
                     b.Property<bool?>("IsInsured")
                         .HasColumnType("boolean");
 

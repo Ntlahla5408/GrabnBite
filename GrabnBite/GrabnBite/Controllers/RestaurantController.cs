@@ -265,10 +265,21 @@ namespace GrabnBite.Controllers
                 return NotFound("Restaurant not found.");
             }
 
-            restaurant.IsApproved = dto.IsApproved;
+            if (dto.IsApproved)
+            {
+                // Partner approval must pass the application, document and banking
+                // verification workflow. This legacy flag endpoint must not bypass it.
+                return Conflict(new
+                {
+                    message = "Restaurant approval can only be granted through the verified partner application workflow.",
+                    approvalEndpoint = "/api/AdminRestaurantApplication/{applicationId}/approve"
+                });
+            }
 
-            // Approval is deliberately separate from editing restaurant details.
-            // Opening a restaurant remains a separate operational decision.
+            // Administrators may revoke approval here. Re-approval requires a
+            // fresh, verified partner-application approval operation.
+            restaurant.IsApproved = false;
+            restaurant.IsOpen = false;
             await _context.SaveChangesAsync();
 
             return Ok(MapRestaurantToResponse(restaurant));

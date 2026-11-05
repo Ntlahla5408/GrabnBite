@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Data;
 
 namespace GrabnBite.Controllers
 {
@@ -256,7 +257,11 @@ namespace GrabnBite.Controllers
                     "Role must be Customer, Restaurant, Driver, or Admin.");
             }
 
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+
             var user = await _context.Users
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.UserId == userId);
 
             if (user == null)
@@ -264,10 +269,27 @@ namespace GrabnBite.Controllers
                 return NotFound("User not found.");
             }
 
+            if (user.IsActive &&
+                user.Role.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase) &&
+                !role.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                var activeAdminCount = await _context.Users
+                    .CountAsync(candidate =>
+                        candidate.IsActive &&
+                        candidate.Role.Name.ToLower() == "admin");
+
+                if (activeAdminCount <= 1)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("The last active administrator cannot be demoted.");
+                }
+            }
+
             user.RoleId = role.RoleId;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return Ok(new UserResponseDto
             {
@@ -304,7 +326,11 @@ namespace GrabnBite.Controllers
                 return BadRequest("Status data is required.");
             }
 
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+
             var user = await _context.Users
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.UserId == userId);
 
             if (user == null)
@@ -312,10 +338,27 @@ namespace GrabnBite.Controllers
                 return NotFound("User not found.");
             }
 
+            if (user.IsActive &&
+                user.Role.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase) &&
+                !dto.IsActive)
+            {
+                var activeAdminCount = await _context.Users
+                    .CountAsync(candidate =>
+                        candidate.IsActive &&
+                        candidate.Role.Name.ToLower() == "admin");
+
+                if (activeAdminCount <= 1)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("The last active administrator cannot be deactivated.");
+                }
+            }
+
             user.IsActive = dto.IsActive;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             var roleName = await _context.Roles
                 .Where(r => r.RoleId == user.RoleId)
@@ -350,7 +393,11 @@ namespace GrabnBite.Controllers
                 return BadRequest("A valid userId is required.");
             }
 
+            await using var transaction = await _context.Database
+                .BeginTransactionAsync(IsolationLevel.Serializable);
+
             var user = await _context.Users
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.UserId == userId);
 
             if (user == null)
@@ -358,9 +405,25 @@ namespace GrabnBite.Controllers
                 return NotFound("User not found.");
             }
 
+            if (user.IsActive &&
+                user.Role.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                var activeAdminCount = await _context.Users
+                    .CountAsync(candidate =>
+                        candidate.IsActive &&
+                        candidate.Role.Name.ToLower() == "admin");
+
+                if (activeAdminCount <= 1)
+                {
+                    await transaction.RollbackAsync();
+                    return Conflict("The last active administrator cannot be deleted.");
+                }
+            }
+
             _context.Users.Remove(user);
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             return Ok(new
             {

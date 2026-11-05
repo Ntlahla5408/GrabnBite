@@ -76,7 +76,12 @@ namespace GrabnBite.Controllers
                     var changed = false;
 
                     if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted))
-                        _identityEncryption.Decrypt(application.IdOrPassportNumberEncrypted);
+                    {
+                        var decrypted = _identityEncryption.Decrypt(application.IdOrPassportNumberEncrypted);
+                        if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumber) &&
+                            !string.Equals(decrypted, application.IdOrPassportNumber.Trim(), StringComparison.Ordinal))
+                            throw new InvalidOperationException("An existing driver identity value does not match its encrypted copy. Manual review is required.");
+                    }
                     else if (!string.IsNullOrWhiteSpace(application.IdOrPassportNumber))
                     {
                         application.IdOrPassportNumberEncrypted =
@@ -86,7 +91,12 @@ namespace GrabnBite.Controllers
                     }
 
                     if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted))
-                        _identityEncryption.Decrypt(application.SignatureIdOrPassportNumberEncrypted);
+                    {
+                        var decrypted = _identityEncryption.Decrypt(application.SignatureIdOrPassportNumberEncrypted);
+                        if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber) &&
+                            !string.Equals(decrypted, application.SignatureIdOrPassportNumber.Trim(), StringComparison.Ordinal))
+                            throw new InvalidOperationException("An existing signature identity value does not match its encrypted copy. Manual review is required.");
+                    }
                     else if (!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber))
                     {
                         application.SignatureIdOrPassportNumberEncrypted =
@@ -96,7 +106,12 @@ namespace GrabnBite.Controllers
                     }
 
                     if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted))
-                        _identityEncryption.Decrypt(application.AccountHolderIdOrRegistrationNumberEncrypted);
+                    {
+                        var decrypted = _identityEncryption.Decrypt(application.AccountHolderIdOrRegistrationNumberEncrypted);
+                        if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber) &&
+                            !string.Equals(decrypted, application.AccountHolderIdOrRegistrationNumber.Trim(), StringComparison.Ordinal))
+                            throw new InvalidOperationException("An existing account-holder identity value does not match its encrypted copy. Manual review is required.");
+                    }
                     else if (!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber))
                     {
                         application.AccountHolderIdOrRegistrationNumberEncrypted =

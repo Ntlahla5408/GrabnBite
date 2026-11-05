@@ -24,6 +24,7 @@ interface PolicyDocument {
   fileUrl: string;
   originalFileName: string;
   status: "Draft" | "Published" | "Archived";
+  audience: "Customer" | "Driver" | "Restaurant" | "All";
   effectiveDate: string | null;
   version: number;
   createdAt: string;
@@ -49,6 +50,7 @@ export default function AdminPoliciesScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"Draft" | "Published">("Draft");
+  const [audience, setAudience] = useState<"Customer" | "Driver" | "Restaurant" | "All">("Customer");
   const [effectiveDate, setEffectiveDate] = useState("");
   const [pickedPdf, setPickedPdf] = useState<PickedPdf | null>(null);
 
@@ -89,6 +91,7 @@ export default function AdminPoliciesScreen() {
     setTitle("");
     setDescription("");
     setStatus("Draft");
+    setAudience("Customer");
     setEffectiveDate("");
     setPickedPdf(null);
   }
@@ -98,6 +101,7 @@ export default function AdminPoliciesScreen() {
     setTitle(policy.title);
     setDescription(policy.description);
     setStatus(policy.status === "Published" ? "Published" : "Draft");
+    setAudience(policy.audience || "Customer");
     setEffectiveDate(policy.effectiveDate ? policy.effectiveDate.slice(0, 10) : "");
     setPickedPdf(null);
   }
@@ -138,6 +142,7 @@ export default function AdminPoliciesScreen() {
     formData.append("Title", title.trim());
     formData.append("Description", description.trim());
     formData.append("Status", status);
+    formData.append("Audience", audience);
 
     if (effectiveDate.trim()) {
       formData.append(

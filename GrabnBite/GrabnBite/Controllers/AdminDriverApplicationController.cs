@@ -575,9 +575,9 @@ namespace GrabnBite.Controllers
                 driver.IsApproved = true;
             }
 
-            // Public registration defaults to Customer. Promote only after every
-            // application and document check has passed; the role change invalidates
-            // the applicant's old Customer-role token during token validation.
+            // Driver accounts may already receive this role during registration.
+            // Reassert it here so role and approved profile remain consistent.
+            // Any previous token with a different role is rejected during validation.
             application.User.RoleId = driverRole.RoleId;
             application.User.UpdatedAt = now;
 

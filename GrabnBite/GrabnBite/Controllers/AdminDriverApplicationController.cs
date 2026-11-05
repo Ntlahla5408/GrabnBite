@@ -481,19 +481,60 @@ namespace GrabnBite.Controllers
                     missingItems = missingApplicationItems
                 });
 
-            var unreviewedDocuments = application.Documents
-                .Where(document => document.VerificationStatus != DriverVerificationStatus.Approved)
+            var pendingDocuments = application.Documents
+                .Where(document => document.VerificationStatus == DriverVerificationStatus.Pending)
                 .Select(document => document.DocumentType)
                 .Distinct()
                 .ToList();
-            if (unreviewedDocuments.Count > 0)
+            if (pendingDocuments.Count > 0)
                 return BadRequest(new
                 {
-                    message = "Review and approve every uploaded document before approving the application.",
-                    documentsToReview = unreviewedDocuments
+                    message = "Review all pending uploaded documents before approving the application.",
+                    documentsToReview = pendingDocuments
                 });
 
             var isBicycle = application.PartnerType?.Contains("bicycle", StringComparison.OrdinalIgnoreCase) == true;
+            var requiredDocumentTypes = new List<string>
+            {
+                "IdentityDocument",
+                "ProofOfAddress",
+                "ProfilePhotograph",
+                "BankConfirmation"
+            };
+
+            if (!isBicycle)
+            {
+                requiredDocumentTypes.AddRange(new[]
+                {
+                    "VehicleRegistrationCertificate",
+                    "VehicleLicence",
+                    "ProofOfInsurance",
+                    "DriversLicence"
+                });
+
+                if (application.RequiresProfessionalDrivingPermit)
+                    requiredDocumentTypes.Add("ProfessionalDrivingPermit");
+                if (application.RequiresRoadworthiness)
+                    requiredDocumentTypes.Add("RoadworthinessCertificate");
+                if (application.VehicleOwnedByApplicant == false)
+                    requiredDocumentTypes.Add("ThirdPartyVehiclePermission");
+            }
+
+            if (!string.Equals(application.ApplyingAs, "Individual", StringComparison.OrdinalIgnoreCase))
+                requiredDocumentTypes.Add("BusinessRegistration");
+
+            var requiredDocumentsWithoutApprovedCopy = requiredDocumentTypes
+                .Where(requiredType => !application.Documents.Any(document =>
+                    string.Equals(document.DocumentType, requiredType, StringComparison.Ordinal) &&
+                    document.VerificationStatus == DriverVerificationStatus.Approved))
+                .ToList();
+
+            if (requiredDocumentsWithoutApprovedCopy.Count > 0)
+                return BadRequest(new
+                {
+                    message = "Every required document type must have at least one approved upload. Replace rejected documents and have the replacement approved.",
+                    documentsToReplace = requiredDocumentsWithoutApprovedCopy
+                });
             if (!isBicycle)
             {
                 if (application.IsLicensed != true || application.IsInsured != true)

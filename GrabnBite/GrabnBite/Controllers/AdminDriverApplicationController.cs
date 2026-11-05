@@ -50,6 +50,10 @@ namespace GrabnBite.Controllers
 
             if (confirm)
             {
+                var adminId = CurrentAdminId();
+                if (adminId == null)
+                    return Unauthorized();
+
                 await using var transaction = await _context.Database.BeginTransactionAsync(
                     IsolationLevel.Serializable, cancellationToken);
 
@@ -66,7 +70,6 @@ namespace GrabnBite.Controllers
                 var encryptedFieldCount = 0;
                 var updatedApplicationCount = 0;
                 var now = DateTime.UtcNow;
-                var adminId = CurrentAdminId();
 
                 foreach (var application in applications)
                 {

@@ -446,6 +446,14 @@ namespace GrabnBite.Controllers
         [HttpPut("{id:int}/approve")]
         public async Task<IActionResult> ApproveApplication(int id, CancellationToken cancellationToken)
         {
+            var adminId = CurrentAdminId();
+            if (adminId == null) return Unauthorized();
+
+            // Approval, driver activation and role assignment must be one atomic operation.
+            // Otherwise an applicant can be marked approved without receiving Driver access.
+            await using var transaction = await _context.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable, cancellationToken);
+
             var application = await _context.DriverApplications
                 .Include(item => item.Documents)
                 .Include(item => item.User)
@@ -492,8 +500,10 @@ namespace GrabnBite.Controllers
                     return BadRequest("Roadworthiness must be confirmed before approval.");
             }
 
-            var adminId = CurrentAdminId();
-            if (adminId == null) return Unauthorized();
+            var driverRole = await _context.Roles
+                .FirstOrDefaultAsync(role => role.Name.ToLower() == "driver", cancellationToken);
+            if (driverRole == null)
+                return Conflict("The Driver role is not configured. Create the Driver role before approving applications.");
 
             var now = DateTime.UtcNow;
             var driver = await _context.Drivers
@@ -520,6 +530,12 @@ namespace GrabnBite.Controllers
                 driver.IsApproved = true;
             }
 
+            // Public registration defaults to Customer. Promote only after every
+            // application and document check has passed; the role change invalidates
+            // the applicant's old Customer-role token during token validation.
+            application.User.RoleId = driverRole.RoleId;
+            application.User.UpdatedAt = now;
+
             var previousStatus = application.Status;
             application.Status = DriverApplicationStatus.Approved;
             application.ReviewedByUserId = adminId;
@@ -532,18 +548,22 @@ namespace GrabnBite.Controllers
                 PreviousStatus = previousStatus,
                 NewStatus = application.Status,
                 Action = "ApplicationApproved",
-                Comment = "Delivery partner application approved and driver profile activated.",
+                Comment = "Delivery partner application approved, Driver role assigned and driver profile activated.",
                 PerformedByUserId = adminId,
                 CreatedAt = now
             });
 
             await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
             return Ok(new
             {
-                message = "Driver application approved. The driver profile is now active.",
+                message = "Driver application approved and driver profile activated. The applicant must sign in again to access driver features.",
                 application.DriverApplicationId,
                 status = application.Status.ToString(),
-                driverId = driver.DriverId
+                driverId = driver.DriverId,
+                role = driverRole.Name,
+                reauthenticationRequired = true
             });
         }
 

@@ -559,11 +559,6 @@ namespace GrabnBite.Migrations
                     b.Property<string>("AdminComment")
                         .HasColumnType("text");
 
-                    b.Property<string>("Audience")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1082,6 +1077,11 @@ namespace GrabnBite.Migrations
                     b.Property<int>("PolicyDocumentId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PolicyDocumentId"));
 

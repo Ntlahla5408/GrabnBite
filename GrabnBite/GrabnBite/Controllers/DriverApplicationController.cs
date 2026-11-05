@@ -168,12 +168,30 @@ namespace GrabnBite.Controllers
             {
                 var targetProperty = typeof(DriverApplication).GetProperty(sourceProperty.Name);
                 if (targetProperty == null || !targetProperty.CanWrite) continue;
-                if (sourceProperty.Name == "BankAccountNumber") continue;
+                if (sourceProperty.Name is "BankAccountNumber" or "IdOrPassportNumber" or "SignatureIdOrPassportNumber" or "AccountHolderIdOrRegistrationNumber") continue;
                 targetProperty.SetValue(application, sourceProperty.GetValue(request));
             }
 
             if (!string.IsNullOrWhiteSpace(request.BankAccountNumber))
                 application.AccountNumberEncrypted = _bankingEncryption.Encrypt(request.BankAccountNumber.Trim());
+
+            if (!string.IsNullOrWhiteSpace(request.IdOrPassportNumber))
+            {
+                application.IdOrPassportNumberEncrypted = _bankingEncryption.Encrypt(request.IdOrPassportNumber.Trim());
+                application.IdOrPassportNumber = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SignatureIdOrPassportNumber))
+            {
+                application.SignatureIdOrPassportNumberEncrypted = _bankingEncryption.Encrypt(request.SignatureIdOrPassportNumber.Trim());
+                application.SignatureIdOrPassportNumber = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.AccountHolderIdOrRegistrationNumber))
+            {
+                application.AccountHolderIdOrRegistrationNumberEncrypted = _bankingEncryption.Encrypt(request.AccountHolderIdOrRegistrationNumber.Trim());
+                application.AccountHolderIdOrRegistrationNumber = null;
+            }
 
             application.SignatureMethod = "EmailVerification";
             application.UpdatedAt = DateTime.UtcNow;
@@ -509,7 +527,7 @@ namespace GrabnBite.Controllers
 
             Require(!string.IsNullOrWhiteSpace(application.FullLegalName), "Full legal name");
             Require(!string.IsNullOrWhiteSpace(application.Surname), "Surname");
-            Require(!string.IsNullOrWhiteSpace(application.IdOrPassportNumber), "South African ID or passport number");
+            Require(!string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted) || !string.IsNullOrWhiteSpace(application.IdOrPassportNumber), "South African ID or passport number");
             Require(application.DateOfBirth.HasValue, "Date of birth");
             Require(!string.IsNullOrWhiteSpace(application.Nationality), "Nationality");
             Require(!string.IsNullOrWhiteSpace(application.MobileNumber), "Mobile number");
@@ -529,7 +547,7 @@ namespace GrabnBite.Controllers
             Require(!string.IsNullOrWhiteSpace(application.AccountType), "Bank account type");
             Require(!string.IsNullOrWhiteSpace(application.BranchCode), "Branch code");
             Require(!string.IsNullOrWhiteSpace(application.SignatureFullLegalName), "Electronic signature name");
-            Require(!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber), "Electronic signature ID/passport number");
+            Require(!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted) || !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber), "Electronic signature ID/passport number");
             Require(!string.IsNullOrWhiteSpace(application.SignatureEmailAddress), "Electronic signature email");
             Require(!string.IsNullOrWhiteSpace(application.SignatureMobileNumber), "Electronic signature mobile number");
             Require(string.Equals(application.SignatureMethod, "EmailVerification", StringComparison.OrdinalIgnoreCase), "Email-verified electronic signature");
@@ -585,11 +603,23 @@ namespace GrabnBite.Controllers
             return missing;
         }
 
-        private static JsonObject ToApplicationJson(
+        private JsonObject ToApplicationJson(
             DriverApplication application,
             IEnumerable<object> documents)
         {
             var json = JsonSerializer.SerializeToNode(application, WebJson)!.AsObject();
+            json["idOrPassportNumber"] = JsonValue.Create(!string.IsNullOrWhiteSpace(application.IdOrPassportNumberEncrypted)
+                ? _bankingEncryption.Decrypt(application.IdOrPassportNumberEncrypted)
+                : application.IdOrPassportNumber);
+            json["signatureIdOrPassportNumber"] = JsonValue.Create(!string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumberEncrypted)
+                ? _bankingEncryption.Decrypt(application.SignatureIdOrPassportNumberEncrypted)
+                : application.SignatureIdOrPassportNumber);
+            json["accountHolderIdOrRegistrationNumber"] = JsonValue.Create(!string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumberEncrypted)
+                ? _bankingEncryption.Decrypt(application.AccountHolderIdOrRegistrationNumberEncrypted)
+                : application.AccountHolderIdOrRegistrationNumber);
+            json.Remove("idOrPassportNumberEncrypted");
+            json.Remove("signatureIdOrPassportNumberEncrypted");
+            json.Remove("accountHolderIdOrRegistrationNumberEncrypted");
             json.Remove("accountNumberEncrypted");
             json.Remove("user");
             json.Remove("reviewedByUser");

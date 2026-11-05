@@ -69,6 +69,7 @@ interface ApplicationDetail {
     fileSize: number;
     verificationStatus: string;
     adminComment: string | null;
+    uploadedAt: string;
     signedUrl: string;
   }[];
   bankingDetails: null | {
@@ -171,6 +172,22 @@ export default function AdminRestaurantApplicationsScreen() {
 
   if (!user || user.role !== "Admin") return null;
 
+  const latestDocumentIdByType = new Map<string, number>();
+  for (const document of selected?.documents ?? []) {
+    const currentLatestId = latestDocumentIdByType.get(document.documentType);
+    const currentLatest = selected?.documents.find(
+      (item) => item.restaurantDocumentId === currentLatestId,
+    );
+    if (
+      !currentLatest ||
+      new Date(document.uploadedAt).getTime() > new Date(currentLatest.uploadedAt).getTime() ||
+      (document.uploadedAt === currentLatest.uploadedAt &&
+        document.restaurantDocumentId > currentLatest.restaurantDocumentId)
+    ) {
+      latestDocumentIdByType.set(document.documentType, document.restaurantDocumentId);
+    }
+  }
+
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
@@ -225,18 +242,31 @@ export default function AdminRestaurantApplicationsScreen() {
 
           <Text style={styles.section}>Supporting documents</Text>
           {selected.documents.length === 0 ? <Text style={styles.meta}>No documents uploaded.</Text> : null}
-          {selected.documents.map((document) => (
-            <View key={document.restaurantDocumentId} style={styles.documentCard}>
-              <Text style={styles.body}>{document.documentType} · {document.originalFileName}</Text>
-              <Text style={styles.meta}>{document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB</Text>
-              {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
-              <View style={styles.actionRow}>
-                <Action label="View file" onPress={() => Linking.openURL(document.signedUrl)} disabled={working} secondary />
-                <Action label="Approve document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Approved", comment })} disabled={working || document.verificationStatus === "Approved"} />
-                <Action label="Reject document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Rejected", comment })} disabled={working || !comment.trim() || document.verificationStatus === "Rejected"} danger />
+          {selected.documents.map((document) => {
+            const isLatestCopy =
+              latestDocumentIdByType.get(document.documentType) === document.restaurantDocumentId;
+
+            return (
+              <View key={document.restaurantDocumentId} style={styles.documentCard}>
+                <Text style={styles.body}>{document.documentType} · {document.originalFileName}</Text>
+                <Text style={styles.meta}>
+                  {document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB ·
+                  {" "}{new Date(document.uploadedAt).toLocaleString()}
+                </Text>
+                <Text style={isLatestCopy ? styles.latestDocument : styles.supersededDocument}>
+                  {isLatestCopy
+                    ? "Latest submitted copy — this copy must be approved"
+                    : "Superseded copy — approval of this copy does not satisfy the requirement"}
+                </Text>
+                {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
+                <View style={styles.actionRow}>
+                  <Action label="View file" onPress={() => Linking.openURL(document.signedUrl)} disabled={working} secondary />
+                  <Action label="Approve document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Approved", comment })} disabled={working || !isLatestCopy || document.verificationStatus === "Approved"} />
+                  <Action label="Reject document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Rejected", comment })} disabled={working || !isLatestCopy || !comment.trim() || document.verificationStatus === "Rejected"} danger />
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
 
           <Text style={styles.section}>Payout banking details</Text>
           {selected.bankingDetails ? (
@@ -348,6 +378,8 @@ const styles = StyleSheet.create({
   applicationTitle: { color: "#0F172A", fontSize: 17, fontWeight: "800" },
   body: { color: "#334155", fontSize: 13, lineHeight: 19, marginTop: 4 },
   meta: { color: "#64748B", fontSize: 12, marginTop: 5, lineHeight: 18 },
+  latestDocument: { color: "#166534", fontSize: 12, fontWeight: "800", marginTop: 7 },
+  supersededDocument: { color: "#92400E", fontSize: 12, fontWeight: "700", marginTop: 7 },
   section: { color: "#0F172A", fontSize: 16, fontWeight: "800", marginTop: 22, marginBottom: 8 },
   detailRow: { paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
   detailLabel: { color: "#64748B", fontSize: 11, fontWeight: "700" },

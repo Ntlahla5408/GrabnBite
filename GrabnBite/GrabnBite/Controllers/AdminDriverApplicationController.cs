@@ -124,6 +124,15 @@ namespace GrabnBite.Controllers
 
             var json = JsonSerializer.SerializeToNode(application, WebJson)!.AsObject();
             json.Remove("accountNumberEncrypted");
+            // Identity and signature identifiers are sensitive personal information.
+            // Administrators verify the supporting private documents; the API
+            // must not disclose the raw numbers in the application payload.
+            json.Remove("idOrPassportNumber");
+            json.Remove("signatureIdOrPassportNumber");
+            json.Remove("accountHolderIdOrRegistrationNumber");
+            json["identityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.IdOrPassportNumber);
+            json["signatureIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.SignatureIdOrPassportNumber);
+            json["accountHolderIdentityNumberOnFile"] = !string.IsNullOrWhiteSpace(application.AccountHolderIdOrRegistrationNumber);
             json.Remove("user");
             json.Remove("reviewedByUser");
             json.Remove("documents");

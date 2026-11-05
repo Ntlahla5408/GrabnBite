@@ -174,6 +174,7 @@ namespace GrabnBite.Controllers
 
             // Restaurant must belong to logged-in user
             var restaurant = await _context.Restaurants
+                .Include(r => r.User)
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
                     r.UserId == userId.Value);
@@ -192,7 +193,13 @@ namespace GrabnBite.Controllers
             restaurant.ImageUrl = dto.ImageUrl?.Trim();
             restaurant.Latitude = dto.Latitude;
             restaurant.Longitude = dto.Longitude;
-            restaurant.IsOpen = dto.IsOpen;
+            // A restaurant cannot be opened unless its profile and owner
+            // account are currently eligible to receive customer orders.
+            restaurant.IsOpen = dto.IsOpen &&
+                restaurant.IsApproved &&
+                restaurant.IsActive &&
+                restaurant.User.IsActive &&
+                restaurant.User.IsEmailVerified;
 
             // IsApproved is intentionally NOT changed here.
             // Only the admin should approve a restaurant.
@@ -240,6 +247,7 @@ namespace GrabnBite.Controllers
             }
 
             var restaurant = await _context.Restaurants
+                .Include(r => r.User)
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id);
 
@@ -256,7 +264,13 @@ namespace GrabnBite.Controllers
             restaurant.ImageUrl = dto.ImageUrl?.Trim();
             restaurant.Latitude = dto.Latitude;
             restaurant.Longitude = dto.Longitude;
-            restaurant.IsOpen = dto.IsOpen;
+            // A restaurant cannot be opened unless its profile and owner
+            // account are currently eligible to receive customer orders.
+            restaurant.IsOpen = dto.IsOpen &&
+                restaurant.IsApproved &&
+                restaurant.IsActive &&
+                restaurant.User.IsActive &&
+                restaurant.User.IsEmailVerified;
 
             await _context.SaveChangesAsync();
 

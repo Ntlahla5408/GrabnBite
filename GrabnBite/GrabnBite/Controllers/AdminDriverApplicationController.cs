@@ -457,6 +457,7 @@ namespace GrabnBite.Controllers
             var application = await _context.DriverApplications
                 .Include(item => item.Documents)
                 .Include(item => item.User)
+                    .ThenInclude(user => user.Role)
                 .FirstOrDefaultAsync(item => item.DriverApplicationId == id, cancellationToken);
 
             if (application == null) return NotFound("Driver application not found.");
@@ -464,6 +465,9 @@ namespace GrabnBite.Controllers
                 return Conflict("An inactive user account cannot be approved as a delivery partner.");
             if (!application.User.IsEmailVerified)
                 return Conflict("The applicant must verify their email address before approval.");
+            if (!string.Equals(application.User.Role.Name, "Customer", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(application.User.Role.Name, "Driver", StringComparison.OrdinalIgnoreCase))
+                return Conflict("Only customer accounts can be converted into delivery partner accounts.");
             if (application.Status is DriverApplicationStatus.Approved or DriverApplicationStatus.Rejected)
                 return Conflict("This application has already been completed.");
             if (application.Status is not DriverApplicationStatus.PendingReview and not DriverApplicationStatus.UnderVerification)

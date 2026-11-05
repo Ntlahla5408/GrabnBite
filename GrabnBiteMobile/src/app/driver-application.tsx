@@ -246,7 +246,7 @@ export default function DriverApplicationScreen() {
       setForm({ ...initialForm, ...result, bankAccountNumber: "", signatureMethod: "EmailVerification" });
 
       try {
-        const publishedPolicies = await getPublishedPolicyDocuments();
+        const publishedPolicies = await getPublishedPolicyDocuments(token);
         setPolicies(publishedPolicies);
         setPoliciesError("");
 

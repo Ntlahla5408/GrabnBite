@@ -39,7 +39,6 @@ export default function AdminDrivers() {
   const [filter, setFilter] = useState<Filter>("All");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [approvingId, setApprovingId] = useState<number | null>(null);
 
   const loadDrivers = useCallback(async () => {
     try {
@@ -74,27 +73,6 @@ export default function AdminDrivers() {
     loadDrivers();
   };
 
-  const approveDriver = async (driverId: number) => {
-    try {
-      setApprovingId(driverId);
-
-      await apiRequest(
-        `/api/Driver/${driverId}/approve`,
-        {
-          method: "PUT",
-        },
-        token,
-      );
-
-      Alert.alert("Success", "Driver approved successfully.");
-
-      await loadDrivers();
-    } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to approve driver.");
-    } finally {
-      setApprovingId(null);
-    }
-  };
 
   const filteredDrivers = useMemo(() => {
     let result = [...drivers];
@@ -132,8 +110,6 @@ export default function AdminDrivers() {
   }, [drivers, search, filter]);
 
   const renderDriver = ({ item }: { item: Driver }) => {
-    const isApproving = approvingId === item.driverId;
-
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -206,14 +182,9 @@ export default function AdminDrivers() {
           {!item.isApproved && (
             <TouchableOpacity
               style={styles.approveButton}
-              onPress={() => approveDriver(item.driverId)}
-              disabled={isApproving}
+              onPress={() => router.push("/admin-driver-applications" as any)}
             >
-              {isApproving ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.approveButtonText}>Approve</Text>
-              )}
+              <Text style={styles.approveButtonText}>Review applications</Text>
             </TouchableOpacity>
           )}
         </View>

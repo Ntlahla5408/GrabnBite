@@ -90,7 +90,7 @@ export default function RestaurantProfileEditScreen() {
     if (!permission.granted) {
       Alert.alert(
         "Permission needed",
-        "Allow photo library access to choose a restaurant picture.",
+        "Allow photo library access to choose a restaurant cover image.",
       );
       return;
     }
@@ -98,7 +98,7 @@ export default function RestaurantProfileEditScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [16, 9],
       quality: 0.8,
     });
 
@@ -120,10 +120,10 @@ export default function RestaurantProfileEditScreen() {
       );
       setRestaurant(updated);
       setImageUrl(updated.imageUrl ?? "");
-      setImageUploadMessage("Restaurant photo uploaded successfully.");
+      setImageUploadMessage("Restaurant cover image uploaded successfully.");
     } catch (err: any) {
       setImageUploadError(
-        err?.message || "Unable to upload the restaurant picture.",
+        err?.message || "Unable to upload the restaurant cover image.",
       );
     } finally {
       setUploadingImage(false);
@@ -134,8 +134,8 @@ export default function RestaurantProfileEditScreen() {
     if (!token || !restaurant || !imageUrl) return;
 
     Alert.alert(
-      "Remove restaurant photo",
-      "Are you sure you want to remove this picture?",
+      "Remove cover image",
+      "Are you sure you want to remove this cover image?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -152,7 +152,7 @@ export default function RestaurantProfileEditScreen() {
               setImageUrl("");
             } catch (err: any) {
               Alert.alert(
-                "Unable to remove photo",
+                "Unable to remove cover image",
                 err?.message || "Please try again.",
               );
             } finally {
@@ -227,7 +227,7 @@ export default function RestaurantProfileEditScreen() {
       Alert.alert(
         "Profile updated",
         "Your restaurant details have been saved.",
-        [{ text: "OK", onPress: () => router.replace("/restaurant-profile") }],
+        [{ text: "OK", onPress: () => router.replace("/restaurant-dashboard") }],
       );
     } catch (err: any) {
       Alert.alert(
@@ -299,7 +299,7 @@ export default function RestaurantProfileEditScreen() {
           multiline
         />
         <View style={styles.imageSection}>
-          <Text style={styles.label}>Restaurant photo</Text>
+          <Text style={styles.label}>Restaurant cover image</Text>
           {imageUrl ? (
             <Image
               source={{ uri: imageUrl }}
@@ -309,7 +309,7 @@ export default function RestaurantProfileEditScreen() {
           ) : (
             <View style={styles.imagePlaceholder}>
               <Text style={styles.imagePlaceholderText}>
-                No restaurant photo selected
+                No cover image selected
               </Text>
             </View>
           )}
@@ -323,8 +323,8 @@ export default function RestaurantProfileEditScreen() {
             ) : (
               <Text style={styles.buttonText}>
                 {imageUrl
-                  ? "Change restaurant photo"
-                  : "Choose restaurant photo"}
+                  ? "Change cover image"
+                  : "Choose cover image"}
               </Text>
             )}
           </Pressable>
@@ -334,7 +334,7 @@ export default function RestaurantProfileEditScreen() {
               onPress={removeRestaurantImage}
               disabled={uploadingImage}
             >
-              <Text style={styles.removeImageText}>Remove photo</Text>
+              <Text style={styles.removeImageText}>Remove cover image</Text>
             </Pressable>
           ) : null}
           {imageUploadMessage ? (
@@ -344,7 +344,7 @@ export default function RestaurantProfileEditScreen() {
             <Text style={styles.imageError}>{imageUploadError}</Text>
           ) : null}
           <Text style={styles.helper}>
-            JPEG, PNG or WebP. Maximum file size: 5 MB.
+            Displayed to customers as your restaurant cover image. JPEG, PNG or WebP; maximum file size: 5 MB.
           </Text>
         </View>
         <Field
@@ -473,13 +473,13 @@ const styles = StyleSheet.create({
   },
   restaurantImage: {
     width: "100%",
-    height: 190,
+    aspectRatio: 16 / 9,
     borderRadius: 10,
     backgroundColor: "#E2E8F0",
   },
   imagePlaceholder: {
     width: "100%",
-    height: 150,
+    aspectRatio: 16 / 9,
     borderRadius: 10,
     backgroundColor: "#F1F5F9",
     alignItems: "center",

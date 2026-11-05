@@ -44,16 +44,23 @@ namespace GrabnBite.Controllers
         // HELPER - Get restaurant owned by logged-in user
         // ============================================================
 
-        private async Task<Restaurant?> GetCurrentRestaurant()
+        private async Task<List<Restaurant>> GetCurrentRestaurants()
         {
             var userId = GetCurrentUserId();
 
             if (userId == null)
-                return null;
+                return new List<Restaurant>();
 
+            // Until the dashboard passes an explicitly selected restaurant ID,
+            // never choose an arbitrary profile when the account owns multiple.
             return await _context.Restaurants
-                .FirstOrDefaultAsync(r =>
-                    r.UserId == userId.Value);
+                .Where(r =>
+                    r.UserId == userId.Value &&
+                    r.IsApproved &&
+                    r.IsActive)
+                .OrderBy(r => r.RestaurantId)
+                .Take(2)
+                .ToListAsync();
         }
 
         // ============================================================
@@ -63,13 +70,19 @@ namespace GrabnBite.Controllers
         [HttpGet]
         public async Task<IActionResult> GetOrders()
         {
-            var restaurant = await GetCurrentRestaurant();
+            var restaurants = await GetCurrentRestaurants();
 
-            if (restaurant == null)
+            if (restaurants.Count == 0)
             {
-                return NotFound(
-                    "Restaurant profile not found.");
+                return NotFound("No active, approved restaurant profile was found for this account.");
             }
+
+            if (restaurants.Count > 1)
+            {
+                return Conflict("This account has multiple active restaurant profiles. Select a restaurant before managing orders.");
+            }
+
+            var restaurant = restaurants[0];
 
             var orders = await _context.Orders
                 .Where(o =>
@@ -170,13 +183,19 @@ namespace GrabnBite.Controllers
                     "A valid order id is required.");
             }
 
-            var restaurant = await GetCurrentRestaurant();
+            var restaurants = await GetCurrentRestaurants();
 
-            if (restaurant == null)
+            if (restaurants.Count == 0)
             {
-                return NotFound(
-                    "Restaurant profile not found.");
+                return NotFound("No active, approved restaurant profile was found for this account.");
             }
+
+            if (restaurants.Count > 1)
+            {
+                return Conflict("This account has multiple active restaurant profiles. Select a restaurant before managing orders.");
+            }
+
+            var restaurant = restaurants[0];
 
             // Serialize restaurant status transitions with customer cancellation and
             // verified payment recording. This prevents a stale read from accepting an

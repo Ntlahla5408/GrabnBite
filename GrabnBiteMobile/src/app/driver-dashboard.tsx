@@ -34,12 +34,19 @@ type Delivery = {
   restaurant?: {
     restaurantId: number;
     name: string;
+    address?: string;
   };
 
   totalAmount: number;
   orderDate: string;
 
-  deliveryAddress?: any;
+  deliveryAddress?: {
+    label?: string;
+    streetAddress?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+  };
 
   items?: {
     orderItemId: number;
@@ -64,6 +71,8 @@ export default function DriverDashboard() {
   const [activeDelivery, setActiveDelivery] = useState<Delivery | null>(null);
 
   const [isOnline, setIsOnline] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [driverProfileMissing, setDriverProfileMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -75,7 +84,9 @@ export default function DriverDashboard() {
       // Get driver's current profile/status
       const driver = await apiRequest("/api/Driver/me", {}, token);
 
-      setIsOnline(driver.isOnline);
+      setDriverProfileMissing(false);
+      setIsApproved(Boolean(driver.isApproved));
+      setIsOnline(Boolean(driver.isOnline));
 
       // Get active delivery
       try {
@@ -102,8 +113,22 @@ export default function DriverDashboard() {
       } else {
         setAvailableDeliveries([]);
       }
-    } catch (error) {
-      console.error("Driver dashboard error:", error);
+    } catch (error: any) {
+      const profileDoesNotExist =
+        error?.message?.includes("Driver profile not found.") &&
+        error?.message?.includes("(HTTP 404)");
+
+      if (profileDoesNotExist) {
+        // A newly registered driver has an application, not an operational
+        // Driver profile. This 404 is an expected onboarding state.
+        setDriverProfileMissing(true);
+        setIsApproved(false);
+        setIsOnline(false);
+        setActiveDelivery(null);
+        setAvailableDeliveries([]);
+      } else {
+        console.error("Driver dashboard error:", error);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,6 +155,7 @@ export default function DriverDashboard() {
     setRefreshing(true);
     await loadDriverData();
   };
+
 
   const toggleOnline = async () => {
     if (!token || actionLoading) return;
@@ -379,6 +405,35 @@ export default function DriverDashboard() {
           </View>
         </View>
 
+        {driverProfileMissing ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Complete your delivery partner application</Text>
+            <Text style={styles.emptyText}>
+              Submit your personal information, vehicle details and required supporting documents. An administrator must review and approve your application before you can go online or accept deliveries.
+            </Text>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push("/driver-application" as any)}
+            >
+              <Text style={styles.primaryButtonText}>OPEN DRIVER APPLICATION</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !isApproved ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Awaiting administrator approval</Text>
+            <Text style={styles.emptyText}>
+              Your driver profile is awaiting review. You will be able to go online and accept deliveries once it has been approved.
+            </Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={refresh}
+              disabled={refreshing}
+            >
+              <Text style={styles.secondaryButtonText}>CHECK APPROVAL STATUS</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
         {/* ONLINE STATUS */}
         <View style={[styles.statusCard, { backgroundColor: isDark ? colors.surfaceElevated : NAVY }]}>
           <View>
@@ -432,6 +487,29 @@ export default function DriverDashboard() {
                   {activeDelivery.status}
                 </Text>
               </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.locationBlock}>
+              <Text style={styles.locationLabel}>PICKUP FROM</Text>
+              <Text style={styles.locationName}>{activeDelivery.restaurant?.name || "Restaurant"}</Text>
+              <Text style={styles.locationAddress}>
+                {activeDelivery.restaurant?.address || "Restaurant address unavailable"}
+              </Text>
+            </View>
+
+            <View style={styles.locationBlock}>
+              <Text style={styles.locationLabel}>DELIVER TO</Text>
+              <Text style={styles.locationAddress}>
+                {[
+                  activeDelivery.deliveryAddress?.label,
+                  activeDelivery.deliveryAddress?.streetAddress,
+                  activeDelivery.deliveryAddress?.city,
+                  activeDelivery.deliveryAddress?.province,
+                  activeDelivery.deliveryAddress?.postalCode,
+                ].filter(Boolean).join(", ") || "Delivery address unavailable"}
+              </Text>
             </View>
 
             <View style={styles.divider} />
@@ -503,8 +581,33 @@ export default function DriverDashboard() {
                       </Text>
                     </View>
 
-                    <Text style={styles.offerAmount}>
-                      R{Number(delivery.totalAmount).toFixed(2)}
+                    <View>
+                      <Text style={styles.amountLabel}>Order total</Text>
+                      <Text style={styles.offerAmount}>
+                        R{Number(delivery.totalAmount).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.locationBlock}>
+                    <Text style={styles.locationLabel}>PICKUP FROM</Text>
+                    <Text style={styles.locationAddress}>
+                      {delivery.restaurant?.address || "Restaurant address unavailable"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.locationBlock}>
+                    <Text style={styles.locationLabel}>DELIVER TO</Text>
+                    <Text style={styles.locationAddress}>
+                      {[
+                        delivery.deliveryAddress?.label,
+                        delivery.deliveryAddress?.streetAddress,
+                        delivery.deliveryAddress?.city,
+                        delivery.deliveryAddress?.province,
+                        delivery.deliveryAddress?.postalCode,
+                      ].filter(Boolean).join(", ") || "Delivery address unavailable"}
                     </Text>
                   </View>
 
@@ -538,6 +641,8 @@ export default function DriverDashboard() {
                 </View>
               ))
             )}
+          </>
+        )}
           </>
         )}
       </ScrollView>
@@ -675,6 +780,30 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  locationBlock: {
+    marginBottom: 14,
+  },
+
+  locationLabel: {
+    color: ORANGE,
+    fontSize: 11,
+    fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  locationName: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+
+  locationAddress: {
+    color: GRAY,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
   activeBadge: {
     backgroundColor: "#FFF7ED",
     paddingHorizontal: 10,
@@ -686,6 +815,13 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: "800",
     fontSize: 11,
+  },
+
+  amountLabel: {
+    color: GRAY,
+    fontSize: 10,
+    textAlign: "right",
+    marginBottom: 2,
   },
 
   offerAmount: {
@@ -735,6 +871,40 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: NAVY,
     fontSize: 17,
+  },
+
+  profileLabel: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 16,
+    marginBottom: 7,
+  },
+
+  profileInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 13,
+    color: NAVY,
+    backgroundColor: "#FFFFFF",
+  },
+
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: ORANGE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+
+  secondaryButtonText: {
+    color: ORANGE,
+    fontSize: 12,
+    fontWeight: "800",
+    textAlign: "center",
   },
 
   primaryButton: {

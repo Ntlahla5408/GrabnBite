@@ -124,10 +124,10 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("CartId");
 
+                    b.HasIndex("MenuItemId");
+
                     b.HasIndex("CartId", "MenuItemId")
                         .IsUnique();
-
-                    b.HasIndex("MenuItemId");
 
                     b.ToTable("CartItems");
                 });
@@ -208,6 +208,484 @@ namespace GrabnBite.Migrations
                     b.ToTable("Drivers");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplication", b =>
+                {
+                    b.Property<int>("DriverApplicationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DriverApplicationId"));
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("AcceptedPlatformPolicies")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("AccountHolderIdOrRegistrationNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountHolderName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountNumberEncrypted")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountType")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("AcknowledgedAccidentAndLiabilityPolicy")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedCodeOfConduct")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedCollectionProcedures")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedCompensationSeparation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedDeliveryPartnerAgreement")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedFailedDeliveryPolicy")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedNoGuaranteedAcceptance")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedPaymentSchedule")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedPopia")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AcknowledgedWorkingRelationship")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("AdminComments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlternativeContactNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ApplicationReference")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ApplyingAs")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Availability")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BankName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BranchCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BusinessAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BusinessRepresentative")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CityOrTown")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommercialDeliveryInsurance")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CompanyRegistrationNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ConfirmedDocumentAuthority")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConfirmedInformationAccurate")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConfirmedLegalCompliance")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConsentedToPersonalInformationProcessing")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ConsentedToVerification")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<string>("DocumentsRequestedMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmailAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactAlternativeNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmergencyContactRelationship")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExperienceDuration")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullLegalName")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HasDeliveryExperience")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("HasFoodDeliveryExperience")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasHelmet")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasInsulatedDeliveryBag")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasMobileInternet")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasPhoneHolder")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasProtectiveClothing")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasReflectiveEquipment")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("HasRelevantTraining")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasSecureTransportContainer")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("HasSmartphone")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("IdOrPassportNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("IsInsured")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsLicensed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("IsRoadworthy")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MobileNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nationality")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("NeedsEquipmentAssistance")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("NumberOfDrivers")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OtherEquipment")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OutsidePreferredArea")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PartnerType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PolicyVersionsOrLinks")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredAreas")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredCityOrTown")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreferredProvince")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreviousCompanyOrPlatform")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PreviousDeliveryTypes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Province")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RegisteredBusinessName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("RequiresDriversLicence")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequiresProfessionalDrivingPermit")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequiresRoadworthiness")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ResidentialAddress")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SignatureEmailAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureFullLegalName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureIdOrPassportNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureMethod")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureMobileNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SuburbOrTownship")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Surname")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TrainingDetails")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VehicleColour")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VehicleMake")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VehicleModel")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("VehicleOwnedByApplicant")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("VehicleOwner")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VehicleRegistration")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VehicleType")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("VehicleYear")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WorkingDays")
+                        .HasColumnType("text");
+
+                    b.HasKey("DriverApplicationId");
+
+                    b.HasIndex("ApplicationReference")
+                        .IsUnique();
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "UpdatedAt");
+
+                    b.ToTable("DriverApplications");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplicationDocument", b =>
+                {
+                    b.Property<int>("DriverApplicationDocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DriverApplicationDocumentId"));
+
+                    b.Property<string>("AdminComment")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DriverApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("DriverApplicationDocumentId");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.HasIndex("DriverApplicationId", "DocumentType");
+
+                    b.ToTable("DriverApplicationDocuments");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplicationHistory", b =>
+                {
+                    b.Property<int>("DriverApplicationHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DriverApplicationHistoryId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DriverApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NewStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("PerformedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("DriverApplicationHistoryId");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("DriverApplicationId", "CreatedAt");
+
+                    b.ToTable("DriverApplicationHistories");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.EmailVerificationChallenge", b =>
+                {
+                    b.Property<int>("EmailVerificationChallengeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("EmailVerificationChallengeId"));
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ResendCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ResendWindowStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("EmailVerificationChallengeId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("EmailVerificationChallenges");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.MenuCategory", b =>
                 {
                     b.Property<int>("MenuCategoryId")
@@ -246,17 +724,17 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MenuCategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("ImagePublicId")
                         .HasColumnType("text");
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MenuCategoryId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -325,19 +803,7 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("DeliveryStreetAddress")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("DeliveryCity")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeliveryProvince")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("DeliveryPostalCode")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -346,6 +812,18 @@ namespace GrabnBite.Migrations
 
                     b.Property<double>("DeliveryLongitude")
                         .HasColumnType("double precision");
+
+                    b.Property<string>("DeliveryPostalCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryProvince")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryStreetAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
@@ -424,11 +902,11 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("ChangedByUserId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("ChangedByRole")
                         .HasColumnType("text");
+
+                    b.Property<int?>("ChangedByUserId")
+                        .HasColumnType("integer");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
@@ -464,17 +942,37 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("RefundCompletedAt")
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PaymentReference")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReconciliationOpenedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("RefundFailedAt")
+                    b.Property<string>("ReconciliationReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReconciliationResolutionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReconciliationResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal?>("RefundAmount")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
-                    b.Property<DateTime?>("RefundRequiredAt")
+                    b.Property<DateTime?>("RefundCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RefundFailedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RefundProvider")
@@ -486,37 +984,19 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime?>("RefundRequestedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("RefundRequiredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("RefundStatus")
                         .IsRequired()
-                        .HasDefaultValue("NOT_REQUIRED")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ReconciliationOpenedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReconciliationReason")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ReconciliationResolvedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReconciliationResolutionNotes")
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("NOT_REQUIRED");
 
                     b.Property<bool>("RequiresReconciliation")
-                        .HasDefaultValue(false)
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentReference")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentStatus")
-                        .IsRequired()
-                        .HasColumnType("text");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("TransactionReference")
                         .HasColumnType("text");
@@ -579,13 +1059,79 @@ namespace GrabnBite.Migrations
 
                     b.HasIndex("PaymentId", "EventType", "ProviderReference")
                         .IsUnique()
-                        .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')")
-                        .HasDatabaseName("IX_PaymentReconciliationEvents_YocoEventIdempotency");
+                        .HasDatabaseName("IX_PaymentReconciliationEvents_YocoEventIdempotency")
+                        .HasFilter("\"ProviderReference\" IS NOT NULL AND \"EventType\" IN ('YOCO_MULTIPLE_CHECKOUTS_COMPLETED', 'YOCO_STALE_CHECKOUT_COMPLETED', 'YOCO_CHECKOUT_CREATED_AFTER_STATE_CHANGED')");
 
                     b.ToTable("PaymentReconciliationEvents", t =>
                         {
                             t.HasCheckConstraint("CK_PaymentReconciliationEvents_RefundStatus", "\"RefundStatus\" IN ('NOT_REQUIRED', 'REQUIRED', 'PENDING', 'SUCCEEDED', 'FAILED', 'MANUAL_REVIEW')");
                         });
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.PolicyDocument", b =>
+                {
+                    b.Property<int>("PolicyDocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("PolicyDocumentId"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("EffectiveDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PolicyDocumentId");
+
+                    b.HasIndex("IsArchived", "Status");
+
+                    b.ToTable("PolicyDocuments");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
@@ -617,6 +1163,11 @@ namespace GrabnBite.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsApproved")
                         .HasColumnType("boolean");
 
@@ -637,14 +1188,533 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("RestaurantId");
 
+                    b.HasIndex("RestaurantApplicationId")
+                        .IsUnique()
+                        .HasFilter("\"RestaurantApplicationId\" IS NOT NULL");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Restaurants");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantAgreementAcceptance", b =>
+                {
+                    b.Property<int>("RestaurantAgreementAcceptanceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantAgreementAcceptanceId"));
+
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ElectronicSignatureReference")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("OtpVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SignatoryEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatoryFullName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatoryMobileNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatoryPosition")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.HasKey("RestaurantAgreementAcceptanceId");
+
+                    b.HasIndex("RestaurantApplicationId");
+
+                    b.ToTable("RestaurantAgreementAcceptances");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantAgreementAcceptanceDocument", b =>
+                {
+                    b.Property<int>("AgreementAcceptanceDocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AgreementAcceptanceDocumentId"));
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("DocumentTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DocumentVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("EffectiveDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PolicyDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RestaurantAgreementAcceptanceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StoragePath")
+                        .HasColumnType("text");
+
+                    b.HasKey("AgreementAcceptanceDocumentId");
+
+                    b.HasIndex("PolicyDocumentId");
+
+                    b.HasIndex("RestaurantAgreementAcceptanceId");
+
+                    b.ToTable("RestaurantAgreementAcceptanceDocuments");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplication", b =>
+                {
+                    b.Property<int>("RestaurantApplicationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantApplicationId"));
+
+                    b.Property<string>("AdminComments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ApplicationReference")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("AveragePreparationTimeMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BusinessEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CipcRegistrationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("City")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("CommissionOfferAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeliveryInstructions")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentsRequestedMessage")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HasAuthorityToRepresent")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("MaximumDeliveryDistanceKm")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)");
+
+                    b.Property<bool?>("OffersCustomerCollection")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("OffersGrubnBiteDelivery")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("OffersRestaurantDelivery")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PhysicalAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RegisteredBusinessName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RepresentativeEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RepresentativeFullName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RepresentativeMobileNumber")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RepresentativePosition")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RestaurantCategory")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RestaurantContactNumber")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TradingName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WebsiteOrSocialMediaUrl")
+                        .HasColumnType("text");
+
+                    b.HasKey("RestaurantApplicationId");
+
+                    b.HasIndex("ApplicationReference")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("RestaurantApplications");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplicationHistory", b =>
+                {
+                    b.Property<int>("RestaurantApplicationHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantApplicationHistoryId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NewStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("PerformedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RestaurantApplicationHistoryId");
+
+                    b.HasIndex("PerformedByUserId");
+
+                    b.HasIndex("RestaurantApplicationId", "CreatedAt");
+
+                    b.ToTable("RestaurantApplicationHistories");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplicationReviewItem", b =>
+                {
+                    b.Property<int>("RestaurantApplicationReviewItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantApplicationReviewItemId"));
+
+                    b.Property<string>("AdminComment")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewCategory")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("RestaurantApplicationReviewItemId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("RestaurantApplicationId", "ReviewCategory")
+                        .IsUnique();
+
+                    b.ToTable("RestaurantApplicationReviewItems");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantBankingDetail", b =>
+                {
+                    b.Property<int>("RestaurantBankingDetailId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantBankingDetailId"));
+
+                    b.Property<string>("AccountHolderName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountNumberEncrypted")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BranchCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PayoutContactEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RestaurantBankingDetailId");
+
+                    b.HasIndex("RestaurantApplicationId")
+                        .IsUnique();
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.ToTable("RestaurantBankingDetails");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantCommissionSetting", b =>
+                {
+                    b.Property<int>("RestaurantCommissionSettingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantCommissionSettingId"));
+
+                    b.Property<DateTime>("ActivationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("CollectionCommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("GrubnBiteDeliveryCommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<bool>("IsPromotionActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("PromotionCommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<DateOnly>("PromotionEndDateExclusive")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PromotionStartDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("RestaurantDeliveryCommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<int>("RestaurantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RestaurantCommissionSettingId");
+
+                    b.HasIndex("RestaurantId")
+                        .IsUnique();
+
+                    b.ToTable("RestaurantCommissionSettings", t =>
+                        {
+                            t.HasCheckConstraint("CK_RestaurantCommissionSettings_PromotionDates", "\"PromotionEndDateExclusive\" > \"PromotionStartDate\"");
+
+                            t.HasCheckConstraint("CK_RestaurantCommissionSettings_Rates", "\"PromotionCommissionRate\" BETWEEN 0 AND 1 AND \"CollectionCommissionRate\" BETWEEN 0 AND 1 AND \"RestaurantDeliveryCommissionRate\" BETWEEN 0 AND 1 AND \"GrubnBiteDeliveryCommissionRate\" BETWEEN 0 AND 1");
+                        });
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantDocument", b =>
+                {
+                    b.Property<int>("RestaurantDocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantDocumentId"));
+
+                    b.Property<string>("AdminComment")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("DocumentDescription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("VerifiedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RestaurantDocumentId");
+
+                    b.HasIndex("RestaurantApplicationId");
+
+                    b.HasIndex("VerifiedByUserId");
+
+                    b.ToTable("RestaurantDocuments");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantOperatingHour", b =>
+                {
+                    b.Property<int>("RestaurantOperatingHourId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RestaurantOperatingHourId"));
+
+                    b.Property<TimeOnly?>("ClosingTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<TimeOnly?>("OpeningTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<int>("RestaurantApplicationId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("RestaurantOperatingHourId");
+
+                    b.HasIndex("RestaurantApplicationId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("RestaurantOperatingHours");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Review", b =>
@@ -724,12 +1794,20 @@ namespace GrabnBite.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -832,6 +1910,71 @@ namespace GrabnBite.Migrations
                         .WithOne("Driver")
                         .HasForeignKey("GrabnBite.Models.Entities.Driver", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplication", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithOne("DriverApplication")
+                        .HasForeignKey("GrabnBite.Models.Entities.DriverApplication", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplicationDocument", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.DriverApplication", "DriverApplication")
+                        .WithMany("Documents")
+                        .HasForeignKey("DriverApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DriverApplication");
+
+                    b.Navigation("VerifiedByUser");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplicationHistory", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.DriverApplication", "DriverApplication")
+                        .WithMany("History")
+                        .HasForeignKey("DriverApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DriverApplication");
+
+                    b.Navigation("PerformedByUser");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.EmailVerificationChallenge", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithOne("EmailVerificationChallenge")
+                        .HasForeignKey("GrabnBite.Models.Entities.EmailVerificationChallenge", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -964,13 +2107,161 @@ namespace GrabnBite.Migrations
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
                 {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithOne("Restaurant")
+                        .HasForeignKey("GrabnBite.Models.Entities.Restaurant", "RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("GrabnBite.Models.Entities.User", "User")
                         .WithMany("Restaurants")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("RestaurantApplication");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantAgreementAcceptance", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithMany("AgreementAcceptances")
+                        .HasForeignKey("RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RestaurantApplication");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantAgreementAcceptanceDocument", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.PolicyDocument", "PolicyDocument")
+                        .WithMany()
+                        .HasForeignKey("PolicyDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantAgreementAcceptance", "RestaurantAgreementAcceptance")
+                        .WithMany("Documents")
+                        .HasForeignKey("RestaurantAgreementAcceptanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PolicyDocument");
+
+                    b.Navigation("RestaurantAgreementAcceptance");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplication", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "User")
+                        .WithMany("RestaurantApplications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplicationHistory", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.User", "PerformedByUser")
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithMany("History")
+                        .HasForeignKey("RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PerformedByUser");
+
+                    b.Navigation("RestaurantApplication");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplicationReviewItem", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithMany("ReviewItems")
+                        .HasForeignKey("RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("RestaurantApplication");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantBankingDetail", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithOne("BankingDetails")
+                        .HasForeignKey("GrabnBite.Models.Entities.RestaurantBankingDetail", "RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("RestaurantApplication");
+
+                    b.Navigation("VerifiedByUser");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantCommissionSetting", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.Restaurant", "Restaurant")
+                        .WithOne("CommissionSettings")
+                        .HasForeignKey("GrabnBite.Models.Entities.RestaurantCommissionSetting", "RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Restaurant");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantDocument", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithMany("Documents")
+                        .HasForeignKey("RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GrabnBite.Models.Entities.User", "VerifiedByUser")
+                        .WithMany()
+                        .HasForeignKey("VerifiedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("RestaurantApplication");
+
+                    b.Navigation("VerifiedByUser");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantOperatingHour", b =>
+                {
+                    b.HasOne("GrabnBite.Models.Entities.RestaurantApplication", "RestaurantApplication")
+                        .WithMany("OperatingHours")
+                        .HasForeignKey("RestaurantApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RestaurantApplication");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Review", b =>
@@ -1026,6 +2317,13 @@ namespace GrabnBite.Migrations
                     b.Navigation("Deliveries");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.DriverApplication", b =>
+                {
+                    b.Navigation("Documents");
+
+                    b.Navigation("History");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.MenuCategory", b =>
                 {
                     b.Navigation("MenuItems");
@@ -1049,9 +2347,16 @@ namespace GrabnBite.Migrations
                     b.Navigation("StatusHistory");
                 });
 
+            modelBuilder.Entity("GrabnBite.Models.Entities.Payment", b =>
+                {
+                    b.Navigation("ReconciliationEvents");
+                });
+
             modelBuilder.Entity("GrabnBite.Models.Entities.Restaurant", b =>
                 {
                     b.Navigation("Carts");
+
+                    b.Navigation("CommissionSettings");
 
                     b.Navigation("MenuCategories");
 
@@ -1060,6 +2365,28 @@ namespace GrabnBite.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantAgreementAcceptance", b =>
+                {
+                    b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("GrabnBite.Models.Entities.RestaurantApplication", b =>
+                {
+                    b.Navigation("AgreementAcceptances");
+
+                    b.Navigation("BankingDetails");
+
+                    b.Navigation("Documents");
+
+                    b.Navigation("History");
+
+                    b.Navigation("OperatingHours");
+
+                    b.Navigation("Restaurant");
+
+                    b.Navigation("ReviewItems");
                 });
 
             modelBuilder.Entity("GrabnBite.Models.Entities.Role", b =>
@@ -1075,19 +2402,20 @@ namespace GrabnBite.Migrations
 
                     b.Navigation("Driver");
 
+                    b.Navigation("DriverApplication");
+
+                    b.Navigation("EmailVerificationChallenge");
+
                     b.Navigation("Notifications");
 
                     b.Navigation("Orders");
+
+                    b.Navigation("RestaurantApplications");
 
                     b.Navigation("Restaurants");
 
                     b.Navigation("Reviews");
                 });
-            modelBuilder.Entity("GrabnBite.Models.Entities.Payment", b =>
-                {
-                    b.Navigation("ReconciliationEvents");
-                });
-
 #pragma warning restore 612, 618
 
             modelBuilder.Entity("GrabnBite.Models.Entities.PolicyDocument", b =>

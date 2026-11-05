@@ -5,6 +5,7 @@ using GrabnBite.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using GrabnBite.Services;
 using System.Security.Claims;
 using System.IO;
@@ -341,14 +342,37 @@ namespace GrabnBite.Controllers
                 _context.Payments.Add(payment);
             }
 
-            try
+            await using (var paymentStartTransaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable))
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogWarning(ex, "Concurrent Yoco payment creation detected for order {OrderId}", orderId);
-                return Conflict("A payment was created or changed for this order by another request. Refresh and check its status.");
+                if (!await LockOrderRowAsync(orderId, userId.Value, paymentStartTransaction))
+                {
+                    await paymentStartTransaction.RollbackAsync();
+                    return NotFound("Order not found.");
+                }
+
+                var currentOrderStatus = await _context.Orders
+                    .AsNoTracking()
+                    .Where(o => o.OrderId == orderId && o.UserId == userId.Value)
+                    .Select(o => o.Status)
+                    .SingleAsync();
+
+                if (string.Equals(currentOrderStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+                {
+                    await paymentStartTransaction.RollbackAsync();
+                    return BadRequest("A cancelled order cannot be paid.");
+                }
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await paymentStartTransaction.CommitAsync();
+                }
+                catch (DbUpdateException ex)
+                {
+                    await paymentStartTransaction.RollbackAsync();
+                    _logger.LogWarning(ex, "Concurrent Yoco payment creation detected for order {OrderId}", orderId);
+                    return Conflict("A payment was created or changed for this order by another request. Refresh and check its status.");
+                }
             }
 
             var successUrl = _yocoSettings.SuccessUrl;

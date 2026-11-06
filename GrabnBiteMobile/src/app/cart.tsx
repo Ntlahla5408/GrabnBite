@@ -297,7 +297,7 @@ export default function CartScreen() {
                   <Text style={styles.checkoutLabel}>READY TO ORDER?</Text>
 
                   <Text style={styles.checkoutButtonText}>
-                    Proceed to Checkout
+                    Review Order
                   </Text>
                 </View>
 

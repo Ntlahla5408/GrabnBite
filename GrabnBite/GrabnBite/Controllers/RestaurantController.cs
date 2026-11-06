@@ -68,6 +68,7 @@ namespace GrabnBite.Controllers
         public async Task<IActionResult> GetRestaurants()
         {
             var restaurants = await _context.Restaurants
+                .Include(r => r.RestaurantApplication)
                 .Where(r => r.IsApproved && r.IsActive)
                 .ToListAsync();
 
@@ -94,6 +95,7 @@ namespace GrabnBite.Controllers
             }
 
             var restaurant = await _context.Restaurants
+                .Include(r => r.RestaurantApplication)
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
                     r.IsApproved &&
@@ -153,6 +155,7 @@ namespace GrabnBite.Controllers
 
             // Restaurant must belong to logged-in user
             var restaurant = await _context.Restaurants
+                .Include(r => r.RestaurantApplication)
                 .FirstOrDefaultAsync(r =>
                     r.RestaurantId == id &&
                     r.UserId == userId.Value);
@@ -504,6 +507,7 @@ namespace GrabnBite.Controllers
                 Longitude = restaurant.Longitude,
                 IsOpen = restaurant.IsOpen,
                 IsApproved = restaurant.IsApproved,
+                AveragePreparationTimeMinutes = restaurant.RestaurantApplication?.AveragePreparationTimeMinutes,
                 CreatedAt = restaurant.CreatedAt
             };
         }

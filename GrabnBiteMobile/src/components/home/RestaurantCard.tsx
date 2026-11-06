@@ -7,6 +7,7 @@ interface RestaurantCardProps {
   isOpen: boolean;
   imageUrl: string | null;
   preparationTime: string;
+  location: string;
   onPress?: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function RestaurantCard({
   isOpen,
   imageUrl,
   preparationTime,
+  location,
   onPress,
 }: RestaurantCardProps) {
   const { theme } = useThemePreference();
@@ -46,6 +48,13 @@ export default function RestaurantCard({
         <Text style={[styles.cuisine, { color: colors.textSecondary }]} numberOfLines={2}>
           {cuisine}
         </Text>
+
+        <View style={styles.locationContainer}>
+          <Text style={styles.locationIcon}>📍</Text>
+          <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
+            {location}
+          </Text>
+        </View>
 
         <View style={styles.details}>
           <View style={styles.statusContainer}>
@@ -146,6 +155,22 @@ const styles = StyleSheet.create({
     color: "#627487",
     fontSize: 13,
     lineHeight: 18,
+  },
+
+  locationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+  locationIcon: {
+    fontSize: 12,
+    marginRight: 5,
+  },
+
+  locationText: {
+    flex: 1,
+    fontSize: 12,
   },
 
   details: {

@@ -16,6 +16,10 @@
 
         public int DeliveryAddressId { get; set; }
 
+        public string? PaymentStatus { get; set; }
+
+        public string? PaymentMethod { get; set; }
+
         public List<OrderItemResponseDto> OrderItems { get; set; } = new();
     }
 }

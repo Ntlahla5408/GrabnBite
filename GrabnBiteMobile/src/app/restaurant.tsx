@@ -149,10 +149,11 @@ export default function RestaurantScreen() {
     );
   }
 
-  const cartTotal = cart.reduce(
-    (total, currentCart) => total + currentCart.totalAmount,
-    0,
-  );
+  // Show only the subtotal for the restaurant currently being viewed.
+  // Other restaurants' carts remain saved and are still available on the Cart screen.
+  const cartTotal = cart
+    .filter((currentCart) => currentCart.restaurantId === restaurantId)
+    .reduce((total, currentCart) => total + currentCart.totalAmount, 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -2,6 +2,7 @@
 using GrabnBite.Data;
 using GrabnBite.DTOs.Checkout;
 using GrabnBite.Models.Entities;
+using GrabnBite.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,14 @@ namespace GrabnBite.Controllers
     public class CheckoutController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly YocoPaymentService _yocoPaymentService;
 
-    public CheckoutController(AppDbContext context)
+        public CheckoutController(
+            AppDbContext context,
+            YocoPaymentService yocoPaymentService)
         {
             _context = context;
+            _yocoPaymentService = yocoPaymentService;
         }
 
         private int? GetCurrentUserId()
@@ -197,6 +202,7 @@ namespace GrabnBite.Controllers
             var matchingPendingOrder = await _context.Orders
                 .Include(o => o.Payment)
                 .Include(o => o.OrderItems)
+                .Include(o => o.StatusHistory)
                 .Where(o => o.UserId == userId.Value &&
                             o.RestaurantId == cart.RestaurantId &&
                             o.Status == "PENDING" &&
@@ -245,34 +251,88 @@ namespace GrabnBite.Controllers
                     "FAILED",
                     StringComparison.OrdinalIgnoreCase);
 
-                if (!snapshotsMatch && !previousPaymentFailed)
+                if (paymentMethod == "CASH")
                 {
-                    return Conflict("You already have an unresolved Yoco payment for this restaurant. Check that payment before starting another checkout. Your cart has been kept.");
-                }
-
-                if (snapshotsMatch &&
-                    paymentMethod == "YOCO" &&
-                    matchingPendingOrder.DeliveryAddressId == dto.DeliveryAddressId)
-                {
-                    await transaction.CommitAsync();
-
-                    return Ok(new
+                    // A customer explicitly switching to Cash on Delivery is
+                    // abandoning the unpaid Yoco order. Verify the provider first:
+                    // if it already completed, do not create a second payable order.
+                    if (!string.IsNullOrWhiteSpace(matchingPendingOrder.Payment.YocoCheckoutId))
                     {
-                        message = "Resuming your existing pending Yoco order.",
-                        orderId = matchingPendingOrder.OrderId,
-                        userId = matchingPendingOrder.UserId,
-                        restaurantId = matchingPendingOrder.RestaurantId,
-                        deliveryAddressId = matchingPendingOrder.DeliveryAddressId,
-                        totalAmount = matchingPendingOrder.TotalAmount,
-                        status = matchingPendingOrder.Status
-                    });
-                }
+                        try
+                        {
+                            var previousCheckout = await _yocoPaymentService.GetCheckoutStatusAsync(
+                                matchingPendingOrder.Payment.YocoCheckoutId);
 
-                if (snapshotsMatch && !previousPaymentFailed)
+                            if (!string.Equals(
+                                    previousCheckout.Id,
+                                    matchingPendingOrder.Payment.YocoCheckoutId,
+                                    StringComparison.Ordinal) ||
+                                previousCheckout.Amount != (int)Math.Round(matchingPendingOrder.Payment.Amount * 100) ||
+                                !string.Equals(previousCheckout.Currency, "ZAR", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return Conflict("The previous Yoco payment could not be matched safely. Check its status before switching payment methods.");
+                            }
+
+                            if (string.Equals(previousCheckout.Status, "completed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return Conflict("Yoco has already completed this payment. Please check the payment status for your existing order instead of placing a Cash on Delivery order.");
+                            }
+
+                            if (string.Equals(previousCheckout.Status, "failed", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(previousCheckout.Status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                            {
+                                matchingPendingOrder.Payment.PaymentStatus = "FAILED";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            return Conflict("We could not verify the previous Yoco checkout. Please check its payment status before switching to Cash on Delivery.");
+                        }
+                    }
+
+                    // Cancel the old online-payment order before creating the COD
+                    // order. If Yoco reports a delayed success later, the existing
+                    // payment reconciliation flow treats it as payment for a
+                    // cancelled order and opens refund review instead of fulfilment.
+                    matchingPendingOrder.Status = "CANCELLED";
+                    matchingPendingOrder.StatusHistory.Add(new OrderStatusHistory
+                    {
+                        Status = "CANCELLED",
+                        ChangedAt = DateTime.UtcNow,
+                        ChangedByUserId = userId.Value,
+                        ChangedByRole = "Customer"
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
+                else
                 {
-                    return Conflict(matchingPendingOrder.DeliveryAddressId != dto.DeliveryAddressId
-                        ? "An unresolved Yoco order already exists with a different delivery address. Select that address or check the existing payment before starting another checkout."
-                        : "You already have an unresolved Yoco payment for these items. Check its status before placing another order. Your cart has been kept.");
+                    if (!snapshotsMatch && !previousPaymentFailed)
+                    {
+                        return Conflict("You already have an unresolved Yoco payment for this restaurant. Check that payment before starting another checkout. Your cart has been kept.");
+                    }
+
+                    if (snapshotsMatch &&
+                        matchingPendingOrder.DeliveryAddressId == dto.DeliveryAddressId)
+                    {
+                        await transaction.CommitAsync();
+
+                        return Ok(new
+                        {
+                            message = "Resuming your existing pending Yoco order.",
+                            orderId = matchingPendingOrder.OrderId,
+                            userId = matchingPendingOrder.UserId,
+                            restaurantId = matchingPendingOrder.RestaurantId,
+                            deliveryAddressId = matchingPendingOrder.DeliveryAddressId,
+                            totalAmount = matchingPendingOrder.TotalAmount,
+                            status = matchingPendingOrder.Status
+                        });
+                    }
+
+                    if (snapshotsMatch && !previousPaymentFailed)
+                    {
+                        return Conflict("An unresolved Yoco order already exists with a different delivery address. Check the existing payment before starting another checkout. Your cart has been kept.");
+                    }
                 }
             }
 

@@ -38,6 +38,7 @@ export default function CheckoutScreen() {
     null,
   );
   const [showAllAddresses, setShowAllAddresses] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"YOCO" | "CASH">("YOCO");
 
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -178,20 +179,29 @@ export default function CheckoutScreen() {
         {
           cartId,
           deliveryAddressId: selectedAddressId,
+          paymentMethod: selectedPaymentMethod,
         },
         token,
       );
 
       console.log("CHECKOUT RESULT:", result);
 
-      // Create the order, then continue to the existing Yoco payment screen.
-      router.push({
-        pathname: "/payment",
-        params: {
-          orderId: result.orderId.toString(),
-          restaurantId: restaurantId.toString(),
-        },
-      });
+      if (selectedPaymentMethod === "CASH") {
+        // The backend creates the CASH payment record atomically with the order.
+        // The customer can now track the order while paying on delivery.
+        router.replace({
+          pathname: "/order",
+          params: { orderId: result.orderId.toString() },
+        });
+      } else {
+        router.push({
+          pathname: "/payment",
+          params: {
+            orderId: result.orderId.toString(),
+            restaurantId: restaurantId.toString(),
+          },
+        });
+      }
     } catch (error) {
       console.error("Checkout failed:", error);
       setError("Unable to create your order. Please try again.");
@@ -302,6 +312,39 @@ export default function CheckoutScreen() {
             )}
           </>
         )}
+
+        {cart && (
+          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Payment method</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginBottom: 14 }]}>Choose how you would like to pay for this order.</Text>
+            <Pressable
+              onPress={() => setSelectedPaymentMethod("YOCO")}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: selectedPaymentMethod === "YOCO" ? colors.accent : colors.border, marginBottom: 10, opacity: pressed ? 0.8 : 1 })}
+            >
+              <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: selectedPaymentMethod === "YOCO" ? colors.accent : colors.textSecondary, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                {selectedPaymentMethod === "YOCO" ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent }} /> : null}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: "800", fontSize: 14 }}>Pay online with Yoco</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>Secure card payment before the restaurant prepares your order.</Text>
+              </View>
+              <Text style={{ color: colors.accent, fontWeight: "800" }}>Yoco</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSelectedPaymentMethod("CASH")}
+              style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: selectedPaymentMethod === "CASH" ? colors.accent : colors.border, opacity: pressed ? 0.8 : 1 })}
+            >
+              <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: selectedPaymentMethod === "CASH" ? colors.accent : colors.textSecondary, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                {selectedPaymentMethod === "CASH" ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent }} /> : null}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: "800", fontSize: 14 }}>Cash on Delivery</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>Pay the delivery amount when your order arrives.</Text>
+              </View>
+              <Text style={{ fontSize: 20 }}>💵</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
       <Modal
@@ -388,7 +431,7 @@ export default function CheckoutScreen() {
         <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <View style={styles.bottomInfo}><Text style={[styles.bottomLabel, { color: colors.textSecondary }]}>Delivering to</Text><Text style={[styles.bottomValue, { color: colors.text }]} numberOfLines={2}>{selectedAddress ? deliveryAddress : "Select an address"}</Text></View>
           <Pressable style={({ pressed }) => [styles.checkoutButton, { backgroundColor: colors.accent }, (checkingOut || !selectedAddressId) && styles.disabledButton, pressed && !checkingOut && selectedAddressId && styles.checkoutButtonPressed]} onPress={handleCheckout} disabled={checkingOut || !selectedAddressId}>
-            {checkingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.checkoutButtonText}>Proceed to Payment</Text>}
+            {checkingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.checkoutButtonText}>{selectedPaymentMethod === "CASH" ? "Place Cash Order" : "Proceed to Payment"}</Text>}
           </Pressable>
         </View>
       )}

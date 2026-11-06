@@ -101,6 +101,8 @@ namespace GrabnBite.Controllers
                     Email = u.Email,
                     PhoneNumber = u.PhoneNumber,
                     Role = u.Role.Name,
+                    ProfileImageUrl = u.ProfileImageUrl,
+                    IsEmailVerified = u.IsEmailVerified,
                     IsActive = u.IsActive,
                     CreatedAt = u.CreatedAt,
                     UpdatedAt = u.UpdatedAt

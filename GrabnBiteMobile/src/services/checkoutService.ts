@@ -3,6 +3,7 @@ import { apiRequest } from "./api";
 export interface CreateCheckoutDto {
   cartId: number;
   deliveryAddressId: number;
+  paymentMethod: "YOCO" | "CASH";
 }
 
 export interface CheckoutResult {

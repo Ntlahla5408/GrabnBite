@@ -204,7 +204,10 @@ export default function CheckoutScreen() {
       }
     } catch (error) {
       console.error("Checkout failed:", error);
-      setError("Unable to create your order. Please try again.");
+      const apiMessage = error instanceof Error
+        ? error.message.replace(/ \(HTTP \d+\)$/, "")
+        : "";
+      setError(apiMessage || "Unable to create your order. Please try again.");
     } finally {
       setCheckingOut(false);
     }

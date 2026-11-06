@@ -502,6 +502,7 @@ namespace GrabnBite.Controllers
                 PhoneNumber = restaurant.PhoneNumber,
                 Email = restaurant.Email,
                 Address = restaurant.Address,
+                Location = restaurant.RestaurantApplication?.City,
                 ImageUrl = restaurant.ImageUrl,
                 Latitude = restaurant.Latitude,
                 Longitude = restaurant.Longitude,

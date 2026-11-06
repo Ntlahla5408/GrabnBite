@@ -169,14 +169,19 @@ export default function RestaurantDashboardScreen() {
           ) : null}
         </View>
 
-        <Pressable
-          style={styles.headerIcon}
-          accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          onPress={() => router.push("/settings" as any)}
-        >
-          <Text style={styles.headerIconText}>⚙️</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/account-settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>My Account</Text>
+          </Pressable>
+          <Pressable
+            style={styles.headerIcon}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+            onPress={() => router.push("/settings" as any)}
+          >
+            <Text style={styles.headerIconText}>⚙️</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView

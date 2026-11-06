@@ -175,6 +175,67 @@ namespace GrabnBite.Controllers
             }
 
             // --------------------------------------------------------
+            // Reuse an unresolved Yoco order for the same unchanged cart.
+            // This prevents duplicate orders when a customer returns to checkout
+            // after leaving or cancelling the provider page.
+            // --------------------------------------------------------
+
+            if (paymentMethod == "YOCO")
+            {
+                var matchingPendingOrder = await _context.Orders
+                    .Include(o => o.Payment)
+                    .Include(o => o.OrderItems)
+                    .Where(o => o.UserId == userId.Value &&
+                                o.RestaurantId == cart.RestaurantId &&
+                                o.Status == "PENDING" &&
+                                o.Payment != null &&
+                                o.Payment.PaymentMethod == "YOCO" &&
+                                (o.Payment.PaymentStatus == "PENDING" ||
+                                 o.Payment.PaymentStatus == "INITIATED" ||
+                                 o.Payment.PaymentStatus == "FAILED") &&
+                                !o.Payment.RequiresReconciliation &&
+                                o.Payment.RefundStatus == "NOT_REQUIRED")
+                    .OrderByDescending(o => o.OrderDate)
+                    .FirstOrDefaultAsync();
+
+                if (matchingPendingOrder != null)
+                {
+                    var currentCartSnapshot = cart.CartItems
+                        .OrderBy(item => item.MenuItemId)
+                        .Select(item => new { item.MenuItemId, item.Quantity })
+                        .ToList();
+
+                    var pendingOrderSnapshot = matchingPendingOrder.OrderItems
+                        .OrderBy(item => item.MenuItemId)
+                        .Select(item => new { item.MenuItemId, item.Quantity })
+                        .ToList();
+
+                    var snapshotsMatch =
+                        currentCartSnapshot.Count == pendingOrderSnapshot.Count &&
+                        currentCartSnapshot.Zip(pendingOrderSnapshot)
+                            .All(pair =>
+                                pair.First.MenuItemId == pair.Second.MenuItemId &&
+                                pair.First.Quantity == pair.Second.Quantity);
+
+                    if (snapshotsMatch)
+                    {
+                        await transaction.CommitAsync();
+
+                        return Ok(new
+                        {
+                            message = "Resuming your existing pending Yoco order.",
+                            orderId = matchingPendingOrder.OrderId,
+                            userId = matchingPendingOrder.UserId,
+                            restaurantId = matchingPendingOrder.RestaurantId,
+                            deliveryAddressId = matchingPendingOrder.DeliveryAddressId,
+                            totalAmount = matchingPendingOrder.TotalAmount,
+                            status = matchingPendingOrder.Status
+                        });
+                    }
+                }
+            }
+
+            // --------------------------------------------------------
             // Create order
             // --------------------------------------------------------
 
@@ -262,11 +323,12 @@ namespace GrabnBite.Controllers
 
             _context.Orders.Add(order);
 
-            // --------------------------------------------------------
-            // Clear the cart
-            // --------------------------------------------------------
-
-            _context.CartItems.RemoveRange(cart.CartItems);
+            // CASH orders retain their existing behaviour. For Yoco, keep the
+            // cart until the provider independently confirms successful payment.
+            if (paymentMethod == "CASH")
+            {
+                _context.CartItems.RemoveRange(cart.CartItems);
+            }
 
             try
             {

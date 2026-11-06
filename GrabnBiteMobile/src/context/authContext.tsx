@@ -18,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -115,6 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastName: result.lastName,
       email: result.email,
       role: result.role,
+      phoneNumber: result.phoneNumber,
+      profileImageUrl: result.profileImageUrl ?? null,
+      isEmailVerified: result.isEmailVerified,
+      isActive: result.isActive,
     };
 
     await saveToken(result.token);
@@ -124,6 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
 
     return result;
+  }
+
+  async function updateUser(updatedUser: User) {
+    const mergedUser = { ...user, ...updatedUser } as User;
+    await saveUser(mergedUser);
+    setUser(mergedUser);
   }
 
   async function logout() {
@@ -141,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

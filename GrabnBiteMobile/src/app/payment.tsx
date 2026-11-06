@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
   ActivityIndicator,
   Linking,
   Pressable,
@@ -30,6 +31,8 @@ export default function PaymentScreen() {
   const [checkoutUrl, setCheckoutUrl] = useState("");
   const [error, setError] = useState("");
   const [openingPayment, setOpeningPayment] = useState(false);
+  const [paymentOpened, setPaymentOpened] = useState(false);
+  const checkoutOpenedRef = useRef(false);
 
   const startPayment = useCallback(async () => {
     if (!token || !Number.isInteger(orderId) || orderId <= 0) {
@@ -117,6 +120,30 @@ export default function PaymentScreen() {
     };
   }, [authLoading, token, orderId]);
 
+  useEffect(() => {
+    let previousAppState = AppState.currentState;
+
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      const returnedToApp =
+        (previousAppState === "inactive" || previousAppState === "background") &&
+        nextAppState === "active";
+
+      previousAppState = nextAppState;
+
+      // Some mobile browsers do not reliably open a custom-scheme link after
+      // checkout. If the customer returns to this screen, verify with the API.
+      if (returnedToApp && checkoutOpenedRef.current) {
+        checkoutOpenedRef.current = false;
+        router.replace({
+          pathname: "/payment-success",
+          params: { orderId: String(orderId) },
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, [orderId]);
+
   async function openPayment() {
     if (!checkoutUrl) {
       setError("The payment link is missing. Please try again.");
@@ -125,11 +152,15 @@ export default function PaymentScreen() {
 
     try {
       setOpeningPayment(true);
+      setPaymentOpened(true);
+      checkoutOpenedRef.current = true;
       setError("");
 
       // Linking opens Yoco in the device browser in Expo Go and native apps.
       await Linking.openURL(checkoutUrl);
     } catch (openError) {
+      checkoutOpenedRef.current = false;
+      setPaymentOpened(false);
       console.error("Failed to open the Yoco payment page.", openError);
       setError("Unable to open the payment page. Please check your connection and try again.");
     } finally {
@@ -257,6 +288,24 @@ export default function PaymentScreen() {
             </>
           )}
         </Pressable>
+
+        {paymentOpened ? (
+          <Pressable
+            onPress={() => {
+              checkoutOpenedRef.current = false;
+              router.replace({
+                pathname: "/payment-success",
+                params: { orderId: String(orderId) },
+              });
+            }}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.backText}>I&apos;ve returned — check payment</Text>
+          </Pressable>
+        ) : null}
 
         {/* Security */}
         <View style={styles.secureContainer}>

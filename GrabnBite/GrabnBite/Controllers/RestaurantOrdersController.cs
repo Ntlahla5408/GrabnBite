@@ -86,7 +86,22 @@ namespace GrabnBite.Controllers
 
             var orders = await _context.Orders
                 .Where(o =>
-                    o.RestaurantId == restaurant.RestaurantId)
+                    o.RestaurantId == restaurant.RestaurantId &&
+                    o.Payment != null &&
+                    !o.Payment.RequiresReconciliation &&
+                    o.Payment.RefundStatus == "NOT_REQUIRED" &&
+                    (
+                        // Cash-on-delivery orders may be processed while payment
+                        // remains pending, because collection happens at delivery.
+                        (o.Payment.PaymentMethod == "CASH" &&
+                         (o.Payment.PaymentStatus == "PENDING" ||
+                          o.Payment.PaymentStatus == "PAID")) ||
+
+                        // Every non-cash method (including Yoco) must be verified
+                        // as paid before the restaurant can see or process the order.
+                        (o.Payment.PaymentMethod != "CASH" &&
+                         o.Payment.PaymentStatus == "PAID")
+                    ))
                 .Include(o => o.OrderItems)
                 .Include(o => o.StatusHistory)
                 .OrderByDescending(o => o.OrderDate)
@@ -98,6 +113,8 @@ namespace GrabnBite.Controllers
                 orderDate = o.OrderDate,
                 status = o.Status,
                 totalAmount = o.TotalAmount,
+                paymentMethod = o.Payment!.PaymentMethod,
+                paymentStatus = o.Payment.PaymentStatus,
                 userId = o.UserId,
                 deliveryAddressId = o.DeliveryAddressId,
 

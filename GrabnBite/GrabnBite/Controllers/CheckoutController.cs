@@ -180,58 +180,70 @@ namespace GrabnBite.Controllers
             // after leaving or cancelling the provider page.
             // --------------------------------------------------------
 
-            if (paymentMethod == "YOCO")
+            var matchingPendingOrder = await _context.Orders
+                .Include(o => o.Payment)
+                .Include(o => o.OrderItems)
+                .Where(o => o.UserId == userId.Value &&
+                            o.RestaurantId == cart.RestaurantId &&
+                            o.Status == "PENDING" &&
+                            o.Payment != null &&
+                            o.Payment.PaymentMethod == "YOCO" &&
+                            (o.Payment.PaymentStatus == "PENDING" ||
+                             o.Payment.PaymentStatus == "INITIATED" ||
+                             o.Payment.PaymentStatus == "FAILED") &&
+                            !o.Payment.RequiresReconciliation &&
+                            o.Payment.RefundStatus == "NOT_REQUIRED")
+                .OrderByDescending(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+
+            if (matchingPendingOrder != null)
             {
-                var matchingPendingOrder = await _context.Orders
-                    .Include(o => o.Payment)
-                    .Include(o => o.OrderItems)
-                    .Where(o => o.UserId == userId.Value &&
-                                o.RestaurantId == cart.RestaurantId &&
-                                o.Status == "PENDING" &&
-                                o.Payment != null &&
-                                o.Payment.PaymentMethod == "YOCO" &&
-                                (o.Payment.PaymentStatus == "PENDING" ||
-                                 o.Payment.PaymentStatus == "INITIATED" ||
-                                 o.Payment.PaymentStatus == "FAILED") &&
-                                !o.Payment.RequiresReconciliation &&
-                                o.Payment.RefundStatus == "NOT_REQUIRED")
-                    .OrderByDescending(o => o.OrderDate)
-                    .FirstOrDefaultAsync();
+                var currentCartSnapshot = cart.CartItems
+                    .OrderBy(item => item.MenuItemId)
+                    .Select(item => new { item.MenuItemId, item.Quantity })
+                    .ToList();
 
-                if (matchingPendingOrder != null)
+                var pendingOrderSnapshot = matchingPendingOrder.OrderItems
+                    .OrderBy(item => item.MenuItemId)
+                    .Select(item => new { item.MenuItemId, item.Quantity })
+                    .ToList();
+
+                var snapshotsMatch =
+                    currentCartSnapshot.Count == pendingOrderSnapshot.Count &&
+                    currentCartSnapshot.Zip(pendingOrderSnapshot)
+                        .All(pair =>
+                            pair.First.MenuItemId == pair.Second.MenuItemId &&
+                            pair.First.Quantity == pair.Second.Quantity);
+
+                var previousPaymentFailed = string.Equals(
+                    matchingPendingOrder.Payment!.PaymentStatus,
+                    "FAILED",
+                    StringComparison.OrdinalIgnoreCase);
+
+                if (!snapshotsMatch && !previousPaymentFailed)
                 {
-                    var currentCartSnapshot = cart.CartItems
-                        .OrderBy(item => item.MenuItemId)
-                        .Select(item => new { item.MenuItemId, item.Quantity })
-                        .ToList();
+                    return Conflict("You already have an unresolved Yoco payment for this restaurant. Check that payment before starting another checkout. Your cart has been kept.");
+                }
 
-                    var pendingOrderSnapshot = matchingPendingOrder.OrderItems
-                        .OrderBy(item => item.MenuItemId)
-                        .Select(item => new { item.MenuItemId, item.Quantity })
-                        .ToList();
+                if (snapshotsMatch && paymentMethod == "YOCO")
+                {
+                    await transaction.CommitAsync();
 
-                    var snapshotsMatch =
-                        currentCartSnapshot.Count == pendingOrderSnapshot.Count &&
-                        currentCartSnapshot.Zip(pendingOrderSnapshot)
-                            .All(pair =>
-                                pair.First.MenuItemId == pair.Second.MenuItemId &&
-                                pair.First.Quantity == pair.Second.Quantity);
-
-                    if (snapshotsMatch)
+                    return Ok(new
                     {
-                        await transaction.CommitAsync();
+                        message = "Resuming your existing pending Yoco order.",
+                        orderId = matchingPendingOrder.OrderId,
+                        userId = matchingPendingOrder.UserId,
+                        restaurantId = matchingPendingOrder.RestaurantId,
+                        deliveryAddressId = matchingPendingOrder.DeliveryAddressId,
+                        totalAmount = matchingPendingOrder.TotalAmount,
+                        status = matchingPendingOrder.Status
+                    });
+                }
 
-                        return Ok(new
-                        {
-                            message = "Resuming your existing pending Yoco order.",
-                            orderId = matchingPendingOrder.OrderId,
-                            userId = matchingPendingOrder.UserId,
-                            restaurantId = matchingPendingOrder.RestaurantId,
-                            deliveryAddressId = matchingPendingOrder.DeliveryAddressId,
-                            totalAmount = matchingPendingOrder.TotalAmount,
-                            status = matchingPendingOrder.Status
-                        });
-                    }
+                if (snapshotsMatch && !previousPaymentFailed)
+                {
+                    return Conflict("You already have an unresolved Yoco payment for these items. Check its status before placing another order. Your cart has been kept.");
                 }
             }
 

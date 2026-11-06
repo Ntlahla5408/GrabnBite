@@ -669,6 +669,9 @@ namespace GrabnBite.Migrations
                     b.Property<DateTime>("LastSentAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("TargetEmail")
+                        .HasColumnType("text");
+
                     b.Property<int>("ResendCount")
                         .HasColumnType("integer");
 
@@ -1796,6 +1799,12 @@ namespace GrabnBite.Migrations
 
                     b.Property<DateTime?>("EmailVerifiedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProfileImagePublicId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProfileImageUrl")
+                        .HasColumnType("text");
 
                     b.Property<string>("FirstName")
                         .IsRequired()

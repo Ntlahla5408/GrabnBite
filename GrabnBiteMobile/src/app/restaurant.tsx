@@ -246,7 +246,11 @@ export default function RestaurantScreen() {
                 <>
                   <Text style={[styles.metaDivider, { color: colors.textSecondary }]}>•</Text>
 
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>20–35 min</Text>
+                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                    {restaurant.averagePreparationTimeMinutes != null
+                      ? `${restaurant.averagePreparationTimeMinutes} min prep`
+                      : "Prep time unavailable"}
+                  </Text>
                 </>
               )}
             </View>

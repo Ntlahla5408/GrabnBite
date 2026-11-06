@@ -393,7 +393,7 @@ function createStyles(colors: typeof AppThemeColors.light) {
   },
 
   payButtonText: {
-    color: colors.text,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
   },
@@ -494,7 +494,7 @@ function createStyles(colors: typeof AppThemeColors.light) {
   },
 
   retryText: {
-    color: colors.text,
+    color: "#FFFFFF",
     fontWeight: "800",
   },
 
@@ -510,5 +510,5 @@ function createStyles(colors: typeof AppThemeColors.light) {
 
   buttonPressed: {
     opacity: 0.7,
-  },
+    });
 }

@@ -69,7 +69,7 @@ export default function AccountSettingsScreen() {
   }, [token, updateUser]);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user?.userId) {
       router.replace("/login");
       return;
     }
@@ -77,7 +77,7 @@ export default function AccountSettingsScreen() {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Load the authenticated profile when this screen opens.
       void loadProfile();
     }
-  }, [authLoading, token, user, loadProfile]);
+  }, [authLoading, token, user?.userId, loadProfile]);
 
   function showMessage(value: string) {
     setError("");

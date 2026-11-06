@@ -1,6 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -325,7 +325,9 @@ export default function AccountSettingsScreen() {
   );
 }
 
-function Section({ title, colors, children }: { title: string; colors: typeof AppThemeColors.light; children: React.ReactNode }) {
+type ThemeColors = typeof AppThemeColors[keyof typeof AppThemeColors];
+
+function Section({ title, colors, children }: { title: string; colors: ThemeColors; children: ReactNode }) {
   return (
     <View style={[styles.section, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
@@ -363,7 +365,7 @@ function Field({
 }
 
 function ActionButton({ title, onPress, loading, colors }: {
-  title: string; onPress: () => void; loading: boolean; colors: typeof AppThemeColors.light;
+  title: string; onPress: () => void; loading: boolean; colors: ThemeColors;
 }) {
   return (
     <Pressable style={[styles.actionButton, { backgroundColor: colors.accent }, loading && styles.disabled]} onPress={onPress} disabled={loading}>

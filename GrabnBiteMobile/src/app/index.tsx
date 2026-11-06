@@ -151,6 +151,7 @@ export default function HomeScreen() {
                   key={restaurant.restaurantId}
                   name={restaurant.name}
                   cuisine={restaurant.description}
+                  location={restaurant.location?.trim() || "Location unavailable"}
                   isOpen={restaurant.isOpen}
                   imageUrl={restaurant.imageUrl}
                   preparationTime={

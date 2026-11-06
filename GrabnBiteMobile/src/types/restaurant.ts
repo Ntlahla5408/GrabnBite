@@ -10,5 +10,6 @@ export interface Restaurant {
   longitude: number;
   isOpen: boolean;
   isApproved: boolean;
+  averagePreparationTimeMinutes: number | null;
   createdAt: string;
 }

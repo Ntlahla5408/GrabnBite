@@ -14,6 +14,8 @@ export interface RestaurantOrder {
   orderDate: string;
   status: string;
   totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
   userId: number;
   deliveryAddressId: number;
   items: RestaurantOrderItem[];

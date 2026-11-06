@@ -200,12 +200,22 @@ namespace GrabnBite.Controllers
             {
                 var currentCartSnapshot = cart.CartItems
                     .OrderBy(item => item.MenuItemId)
-                    .Select(item => new { item.MenuItemId, item.Quantity })
+                    .Select(item => new
+                    {
+                        item.MenuItemId,
+                        item.Quantity,
+                        UnitPrice = item.MenuItem.Price
+                    })
                     .ToList();
 
                 var pendingOrderSnapshot = matchingPendingOrder.OrderItems
                     .OrderBy(item => item.MenuItemId)
-                    .Select(item => new { item.MenuItemId, item.Quantity })
+                    .Select(item => new
+                    {
+                        item.MenuItemId,
+                        item.Quantity,
+                        item.UnitPrice
+                    })
                     .ToList();
 
                 var snapshotsMatch =
@@ -213,7 +223,8 @@ namespace GrabnBite.Controllers
                     currentCartSnapshot.Zip(pendingOrderSnapshot)
                         .All(pair =>
                             pair.First.MenuItemId == pair.Second.MenuItemId &&
-                            pair.First.Quantity == pair.Second.Quantity);
+                            pair.First.Quantity == pair.Second.Quantity &&
+                            pair.First.UnitPrice == pair.Second.UnitPrice);
 
                 var previousPaymentFailed = string.Equals(
                     matchingPendingOrder.Payment!.PaymentStatus,
@@ -227,6 +238,11 @@ namespace GrabnBite.Controllers
 
                 if (snapshotsMatch && paymentMethod == "YOCO")
                 {
+                    if (matchingPendingOrder.DeliveryAddressId != dto.DeliveryAddressId)
+                    {
+                        return Conflict("An unresolved Yoco order already exists with a different delivery address. Select that address or check the existing payment before starting another checkout.");
+                    }
+
                     await transaction.CommitAsync();
 
                     return Ok(new

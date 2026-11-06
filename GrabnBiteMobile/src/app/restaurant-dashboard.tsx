@@ -313,6 +313,13 @@ function OrderSection({
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700" }}>PAYMENT</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: "800" }}>
+                {order.paymentMethod?.toUpperCase() === "CASH" ? "Cash on Delivery" : "Yoco"} · {order.paymentStatus?.toUpperCase() === "PAID" ? "Paid" : "Pay on delivery"}
+              </Text>
+            </View>
+
             {order.items.map((item) => (
               <View key={item.orderItemId} style={styles.itemRow}>
                 <Text style={styles.quantity}>{item.quantity}×</Text>

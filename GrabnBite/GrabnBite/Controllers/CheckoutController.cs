@@ -180,6 +180,20 @@ namespace GrabnBite.Controllers
             // after leaving or cancelling the provider page.
             // --------------------------------------------------------
 
+            var paymentReviewOrderExists = await _context.Orders
+                .AnyAsync(o => o.UserId == userId.Value &&
+                               o.RestaurantId == cart.RestaurantId &&
+                               o.Payment != null &&
+                               o.Payment.PaymentMethod == "YOCO" &&
+                               (o.Payment.RequiresReconciliation ||
+                                (o.Payment.RefundStatus != "NOT_REQUIRED" &&
+                                 o.Payment.RefundStatus != "SUCCEEDED")));
+
+            if (paymentReviewOrderExists)
+            {
+                return Conflict("A previous Yoco payment for this restaurant needs review. Do not start another payment until its status is resolved. Your cart has been kept.");
+            }
+
             var matchingPendingOrder = await _context.Orders
                 .Include(o => o.Payment)
                 .Include(o => o.OrderItems)

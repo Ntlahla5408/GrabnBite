@@ -37,6 +37,7 @@ export default function CheckoutScreen() {
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
+  const [showAllAddresses, setShowAllAddresses] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -133,6 +134,7 @@ export default function CheckoutScreen() {
 
       setAddresses((current) => [...current, newAddress]);
       setSelectedAddressId(newAddress.addressId);
+      setShowAllAddresses(false);
       setAddressModalVisible(false);
       setAddressLabel("");
       setStreetAddress("");
@@ -208,7 +210,10 @@ export default function CheckoutScreen() {
     );
   }
 
-  const selectedAddress = addresses.find((address) => address.addressId === selectedAddressId);
+  const selectedAddress = addresses.find((address) => address.addressId === selectedAddressId) ?? addresses[0];
+  const visibleAddresses = showAllAddresses || !selectedAddress
+    ? addresses
+    : [selectedAddress];
   const deliveryAddress = selectedAddress ? [selectedAddress.streetAddress, selectedAddress.city, selectedAddress.province, selectedAddress.postalCode].map((part) => part?.trim()).filter(Boolean).join(", ") : "";
   const itemSubtotal = cart?.items.reduce((total, item) => total + item.subtotal, 0) ?? 0;
 
@@ -253,7 +258,22 @@ export default function CheckoutScreen() {
               </View>
             </View>
 
-            <View style={styles.addressSectionHeading}><Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery address</Text><Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Choose where this order should be delivered.</Text></View>
+            <View style={styles.addressSectionHeading}>
+              <View style={styles.addressSectionTitleGroup}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Delivery address</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Choose where this order should be delivered.</Text>
+              </View>
+              {addresses.length > 1 ? (
+                <Pressable
+                  style={({ pressed }) => [styles.seeAllButton, { borderColor: colors.border }, pressed && styles.seeAllButtonPressed]}
+                  onPress={() => setShowAllAddresses((current) => !current)}
+                  accessibilityRole="button"
+                  accessibilityLabel={showAllAddresses ? "Show selected address only" : `See all ${addresses.length} saved addresses`}
+                >
+                  <Text style={[styles.seeAllText, { color: colors.accent }]}>{showAllAddresses ? "Show less" : "See all"}</Text>
+                </Pressable>
+              ) : null}
+            </View>
             {addresses.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>No delivery addresses</Text><Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add a delivery address before placing your order.</Text>
@@ -261,7 +281,7 @@ export default function CheckoutScreen() {
               </View>
             ) : (
               <>
-                {addresses.map((address) => {
+                {visibleAddresses.map((address) => {
                   const selected = selectedAddressId === address.addressId;
                   const combinedAddress = [address.streetAddress, address.city, address.province, address.postalCode].map((part) => part?.trim()).filter(Boolean).join(", ");
                   return (
@@ -405,7 +425,11 @@ const styles = StyleSheet.create({
   grandTotalLabel: { fontSize: 15, fontWeight: "800" },
   grandTotalValue: { fontSize: 21, fontWeight: "900" },
   feeNotice: { fontSize: 11, lineHeight: 16, marginTop: 10 },
-  addressSectionHeading: { marginBottom: 13 },
+  addressSectionHeading: { marginBottom: 13, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  addressSectionTitleGroup: { flex: 1 },
+  seeAllButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 11, paddingVertical: 6 },
+  seeAllButtonPressed: { opacity: 0.65 },
+  seeAllText: { fontSize: 12, fontWeight: "800" },
   addressCard: { borderRadius: 16, padding: 17, marginBottom: 11, borderWidth: 1, minHeight: 95 },
   selectedAddressCard: { borderWidth: 2 },
   addressCardPressed: { opacity: 0.85 },

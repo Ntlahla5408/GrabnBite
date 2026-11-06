@@ -246,7 +246,7 @@ export default function OrderScreen() {
           <Text style={styles.sectionTitle}>Order Status</Text>
 
           {statusSteps.map((step, index) => {
-            const isCompleted = currentIndex >= index;
+            const isCompleted = !paymentPending && currentIndex >= index;
 
             const isCurrent = currentIndex === index;
 

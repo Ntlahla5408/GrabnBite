@@ -13,11 +13,11 @@ import {
 import { useAuth } from "../context/authContext";
 
 import { addCartItem, getCart } from "../services/cartService";
-import { getRestaurantMenu } from "../services/menuService";
+import { getMenuCategories, getRestaurantMenu } from "../services/menuService";
 import { getRestaurant } from "../services/restaurantService";
 
 import { Cart } from "../types/cart";
-import { MenuItem } from "../types/menu";
+import { MenuCategory, MenuItem } from "../types/menu";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
@@ -38,20 +38,25 @@ export default function RestaurantScreen() {
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
 
   const [loading, setLoading] = useState(Number.isInteger(restaurantId) && restaurantId > 0);
   const [error, setError] = useState(Number.isInteger(restaurantId) && restaurantId > 0 ? "" : "Restaurant could not be found.");
 
   const loadRestaurant = useCallback(async () => {
     try {
-      const [restaurantData, menuData] = await Promise.all([
+      const [restaurantData, menuData, categoryData] = await Promise.all([
         getRestaurant(restaurantId),
         getRestaurantMenu(restaurantId),
+        getMenuCategories(),
       ]);
 
       setError("");
       setRestaurant(restaurantData);
       setMenuItems(menuData.filter((item) => item.isAvailable));
+      setMenuCategories(
+        categoryData.filter((category) => category.restaurantId === restaurantId),
+      );
     } catch (err) {
       console.error("Failed to load restaurant:", err);
       setError("Unable to load restaurant. Please try again.");
@@ -94,28 +99,14 @@ export default function RestaurantScreen() {
   );
 
   const categories = useMemo(() => {
-    const categoryIds = Array.from(
-      new Set(menuItems.map((item) => item.menuCategoryId)),
+    const categoryIdsWithAvailableItems = new Set(
+      menuItems.map((item) => item.menuCategoryId),
     );
 
-    return categoryIds;
-  }, [menuItems]);
-
-  function getCategoryName(categoryId: number) {
-    switch (categoryId) {
-      case 1:
-        return "Burgers";
-
-      case 2:
-        return "Meals";
-
-      case 3:
-        return "Drinks";
-
-      default:
-        return "Menu";
-    }
-  }
+    return menuCategories.filter((category) =>
+      categoryIdsWithAvailableItems.has(category.menuCategoryId),
+    );
+  }, [menuCategories, menuItems]);
 
   async function handleAddToCart(menuItemId: number) {
     if (authLoading) {
@@ -275,16 +266,22 @@ export default function RestaurantScreen() {
           </View>
         )}
 
-        {categories.map((categoryId) => {
+        {categories.map((category) => {
           const categoryItems = menuItems.filter(
-            (item) => item.menuCategoryId === categoryId,
+            (item) => item.menuCategoryId === category.menuCategoryId,
           );
 
           return (
-            <View key={categoryId} style={styles.categorySection}>
+            <View key={category.menuCategoryId} style={styles.categorySection}>
               <Text style={[styles.categoryTitle, { color: colors.accent }]}>
-                {getCategoryName(categoryId)}
+                {category.name}
               </Text>
+
+              {category.description?.trim() ? (
+                <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+                  {category.description}
+                </Text>
+              ) : null}
 
               {categoryItems.map((item) => (
                 <View key={item.menuItemId} style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -573,6 +570,12 @@ const styles = StyleSheet.create({
     color: "#102A43",
     fontSize: 20,
     fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  categoryDescription: {
+    fontSize: 13,
+    lineHeight: 19,
     marginBottom: 12,
   },
 

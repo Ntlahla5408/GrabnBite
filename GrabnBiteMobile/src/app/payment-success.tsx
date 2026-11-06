@@ -37,7 +37,9 @@ export default function PaymentSuccessScreen() {
       const isFailed = result.paymentStatus?.toUpperCase() === "FAILED";
       const orderWasCancelled = result.orderStatus?.toUpperCase() === "CANCELLED";
       const refundReviewRequired = isPaid && orderWasCancelled;
-      const paymentReviewRequired = isPaid && !orderWasCancelled && result.requiresReconciliation === true;
+      const paymentReviewRequired =
+        !orderWasCancelled &&
+        (result.requiresReconciliation === true || result.refundStatus !== "NOT_REQUIRED");
 
       // Once the backend has verified payment, take the customer straight to
       // the order-tracking screen instead of leaving them on a success screen.
@@ -49,7 +51,7 @@ export default function PaymentSuccessScreen() {
         return;
       }
 
-      setPaymentFailed(isFailed);
+      setPaymentFailed(isFailed && !orderWasCancelled && !paymentReviewRequired);
       setRequiresRefundReview(refundReviewRequired);
       setRequiresPaymentReview(paymentReviewRequired);
       setVerified(isPaid && !orderWasCancelled && !paymentReviewRequired);

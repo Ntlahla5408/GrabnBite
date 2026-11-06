@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -66,6 +66,32 @@ export default function RestaurantScreen() {
       void loadRestaurant();
     }
   }, [restaurantId, loadRestaurant]);
+
+  // Refresh the customer's carts whenever this restaurant screen becomes active.
+  // This restores the existing subtotal when navigating away and returning.
+  useFocusEffect(
+    useCallback(() => {
+      if (authLoading || !token) {
+        return;
+      }
+
+      let isActive = true;
+
+      getCart(token)
+        .then((updatedCart) => {
+          if (isActive) {
+            setCart(updatedCart);
+          }
+        })
+        .catch((cartError) => {
+          console.error("Failed to load cart for restaurant:", cartError);
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [authLoading, token]),
+  );
 
   const categories = useMemo(() => {
     const categoryIds = Array.from(

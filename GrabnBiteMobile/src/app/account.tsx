@@ -27,12 +27,21 @@ export default function AccountScreen() {
             Sign in to manage your account, orders and addresses.
           </Text>
 
-          <Pressable
-            style={styles.loginButton}
-            onPress={() => router.push("/login")}
-          >
-            <Text style={styles.loginButtonText}>Login</Text>
-          </Pressable>
+          <View style={styles.accountActions}>
+            <Pressable
+              style={styles.loginButton}
+              onPress={() => router.push("/login")}
+            >
+              <Text style={styles.loginButtonText}>Log in</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.registerButton}
+              onPress={() => router.push("/register")}
+            >
+              <Text style={styles.registerButtonText}>Create an account</Text>
+            </Pressable>
+          </View>
         </View>
 
         <CustomerBottomNav />
@@ -320,15 +329,38 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
 
+  accountActions: {
+    width: "100%",
+    maxWidth: 340,
+    gap: 12,
+  },
+
   loginButton: {
     backgroundColor: "#F97316",
     borderRadius: 11,
     paddingHorizontal: 35,
     paddingVertical: 14,
+    alignItems: "center",
   },
 
   loginButtonText: {
     color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  registerButton: {
+    backgroundColor: "transparent",
+    borderColor: "#F97316",
+    borderWidth: 1,
+    borderRadius: 11,
+    paddingHorizontal: 35,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+
+  registerButtonText: {
+    color: "#C2410C",
     fontSize: 15,
     fontWeight: "800",
   },

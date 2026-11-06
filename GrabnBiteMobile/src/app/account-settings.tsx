@@ -355,7 +355,7 @@ function Field({
         editable={editable}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
+        autoCapitalize={secureTextEntry ? "none" : autoCapitalize}
         autoCorrect={false}
         placeholder={label}
         placeholderTextColor={colors.textSecondary}

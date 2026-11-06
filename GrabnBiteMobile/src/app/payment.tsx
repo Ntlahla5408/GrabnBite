@@ -10,10 +10,14 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { createYocoPayment } from "../services/paymentService";
 
 export default function PaymentScreen() {
   const { token, loading: authLoading } = useAuth();
+  const { theme } = useThemePreference();
+  const colors = AppThemeColors[theme];
+  const styles = createStyles(colors);
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -265,10 +269,14 @@ export default function PaymentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: typeof AppThemeColors.light) {
+  const themeErrorSurface = colors.background === AppThemeColors.dark.background ? "rgba(248, 113, 113, 0.10)" : "#FEF2F2";
+  const themeErrorBorder = colors.background === AppThemeColors.dark.background ? "rgba(248, 113, 113, 0.25)" : "#FECACA";
+  const themeErrorText = colors.background === AppThemeColors.dark.background ? "#FCA5A5" : "#B42318";
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#071B2C",
+    backgroundColor: colors.background,
   },
 
   center: {
@@ -276,7 +284,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 25,
-    backgroundColor: "#071B2C",
+    backgroundColor: colors.background,
   },
 
   content: {
@@ -293,9 +301,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: "#0D2638",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#18384D",
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -308,14 +316,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 30,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.text,
     marginBottom: 12,
     textAlign: "center",
   },
 
   description: {
     textAlign: "center",
-    color: "#AFC0CC",
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
     maxWidth: 390,
@@ -325,18 +333,18 @@ const styles = StyleSheet.create({
   orderCard: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "#0D2638",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 20,
     marginTop: 26,
     marginBottom: 22,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#18384D",
+    borderColor: colors.border,
   },
 
   orderLabel: {
-    color: "#7F94A3",
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
@@ -346,18 +354,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 23,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.text,
   },
 
   orderDivider: {
     width: "100%",
     height: 1,
-    backgroundColor: "#18384D",
+    backgroundColor: colors.border,
     marginVertical: 15,
   },
 
   orderDescription: {
-    color: "#7F94A3",
+    color: colors.textSecondary,
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
@@ -366,7 +374,7 @@ const styles = StyleSheet.create({
   payButton: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "#F97316",
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 13,
@@ -385,13 +393,13 @@ const styles = StyleSheet.create({
   },
 
   payButtonText: {
-    color: "#FFFFFF",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "800",
   },
 
   payButtonArrow: {
-    color: "#FFFFFF",
+    color: colors.text,
     fontSize: 20,
     fontWeight: "700",
     marginLeft: 10,
@@ -409,7 +417,7 @@ const styles = StyleSheet.create({
   },
 
   secureText: {
-    color: "#7F94A3",
+    color: colors.textSecondary,
     fontSize: 12,
   },
 
@@ -417,9 +425,9 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#0D2638",
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: "#18384D",
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -431,14 +439,14 @@ const styles = StyleSheet.create({
 
   loadingTitle: {
     marginTop: 14,
-    color: "#FFFFFF",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "700",
   },
 
   loadingText: {
     marginTop: 5,
-    color: "#7F94A3",
+    color: colors.textSecondary,
     fontSize: 13,
     textAlign: "center",
   },
@@ -447,16 +455,16 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "rgba(248, 113, 113, 0.10)",
+    backgroundColor: themeErrorSurface,
     borderWidth: 1,
-    borderColor: "rgba(248, 113, 113, 0.25)",
+    borderColor: themeErrorBorder,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
   },
 
   errorIcon: {
-    color: "#F87171",
+    color: themeErrorText,
     fontSize: 32,
     fontWeight: "800",
   },
@@ -464,13 +472,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.text,
     marginBottom: 10,
     textAlign: "center",
   },
 
   errorText: {
-    color: "#FCA5A5",
+    color: themeErrorText,
     textAlign: "center",
     marginBottom: 20,
     fontSize: 14,
@@ -479,14 +487,14 @@ const styles = StyleSheet.create({
   },
 
   retryButton: {
-    backgroundColor: "#F97316",
+    backgroundColor: colors.accent,
     paddingHorizontal: 30,
     paddingVertical: 13,
     borderRadius: 11,
   },
 
   retryText: {
-    color: "#FFFFFF",
+    color: colors.text,
     fontWeight: "800",
   },
 
@@ -496,11 +504,11 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#AFC0CC",
+    color: colors.textSecondary,
     fontWeight: "600",
   },
 
   buttonPressed: {
     opacity: 0.7,
   },
-});
+}

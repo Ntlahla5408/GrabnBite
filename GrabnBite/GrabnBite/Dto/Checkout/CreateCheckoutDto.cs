@@ -4,5 +4,6 @@
     {
         public int CartId { get; set; }
         public int DeliveryAddressId { get; set; }
+        public string PaymentMethod { get; set; } = "YOCO";
     }
 }

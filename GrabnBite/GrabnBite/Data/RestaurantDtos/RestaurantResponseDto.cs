@@ -24,6 +24,8 @@
 
         public bool IsApproved { get; set; }
 
+        public int? AveragePreparationTimeMinutes { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

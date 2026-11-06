@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
@@ -65,11 +65,15 @@ export default function AccountScreen() {
 
         {/* Profile */}
         <View style={[styles.profileCard, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user.firstName?.charAt(0).toUpperCase() || "U"}
-            </Text>
-          </View>
+          {user.profileImageUrl ? (
+            <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {user.firstName?.charAt(0).toUpperCase() || "U"}
+              </Text>
+            </View>
+          )}
 
           <View style={styles.profileInfo}>
             <Text style={[styles.name, { color: colors.text }]}>
@@ -78,13 +82,29 @@ export default function AccountScreen() {
 
             <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
 
-            <Text style={[styles.role, { color: colors.accent }]}>Customer</Text>
+            <Text style={[styles.role, { color: colors.accent }]}>{user.role}</Text>
           </View>
         </View>
 
         {/* Account options */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.accent }]}>My GrabnBite</Text>
+
+          <Pressable
+            style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+            onPress={() => router.push("/account-settings")}
+          >
+            <View style={styles.optionIcon}>
+              <Text>👤</Text>
+            </View>
+            <View style={styles.optionContent}>
+              <Text style={[styles.optionTitle, { color: colors.text }]}>Personal Account</Text>
+              <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>
+                Update your details, email, password and profile picture
+              </Text>
+            </View>
+            <Text style={[styles.arrow, { color: colors.accent }]}>›</Text>
+          </Pressable>
 
           <Pressable
             style={[styles.option, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
@@ -198,6 +218,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
+  },
+
+  avatarImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    marginRight: 14,
+    backgroundColor: "#F1F5F9",
   },
 
   avatarText: {

@@ -102,6 +102,7 @@ namespace GrabnBite.Controllers
                         (o.Payment.PaymentMethod != "CASH" &&
                          o.Payment.PaymentStatus == "PAID")
                     ))
+                .Include(o => o.Payment)
                 .Include(o => o.OrderItems)
                 .Include(o => o.StatusHistory)
                 .OrderByDescending(o => o.OrderDate)

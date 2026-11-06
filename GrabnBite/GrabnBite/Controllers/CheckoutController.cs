@@ -284,10 +284,28 @@ namespace GrabnBite.Controllers
                                 matchingPendingOrder.Payment.PaymentStatus = "FAILED";
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
                             return Conflict("We could not verify the previous Yoco checkout. Please check its payment status before switching to Cash on Delivery.");
                         }
+                    }
+
+                    // Refresh payment/order state after the provider lookup. A webhook
+                    // may have confirmed payment while the checkout request was running.
+                    await _context.Entry(matchingPendingOrder.Payment).ReloadAsync();
+                    await _context.Entry(matchingPendingOrder).ReloadAsync();
+
+                    if (string.Equals(
+                            matchingPendingOrder.Payment.PaymentStatus,
+                            "PAID",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Conflict("Yoco has already confirmed this payment. Please track your existing order instead of placing a Cash on Delivery order.");
+                    }
+
+                    if (!string.Equals(matchingPendingOrder.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Conflict("The existing Yoco order has changed status. Refresh your orders before placing another checkout.");
                     }
 
                     // Cancel the old online-payment order before creating the COD

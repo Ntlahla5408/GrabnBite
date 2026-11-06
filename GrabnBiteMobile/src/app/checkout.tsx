@@ -2,15 +2,17 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
-import { getAddresses } from "../services/addressService";
+import { createAddress, getAddresses } from "../services/addressService";
 import { getCart } from "../services/cartService";
 import { Cart } from "../types/cart";
 import { createCheckout } from "../services/checkoutService";
@@ -39,6 +41,14 @@ export default function CheckoutScreen() {
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState("");
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [addressLabel, setAddressLabel] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [savingAddress, setSavingAddress] = useState(false);
+  const [addressFormError, setAddressFormError] = useState("");
 
   const loadAddresses = useCallback(async () => {
     if (!token) {
@@ -84,6 +94,58 @@ export default function CheckoutScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadAddresses();
   }, [authLoading, token, loadAddresses]);
+
+  function openAddressModal() {
+    setAddressFormError("");
+    setAddressLabel("");
+    setStreetAddress("");
+    setCity("");
+    setProvince("");
+    setPostalCode("");
+    setAddressModalVisible(true);
+  }
+
+  async function handleSaveAddress() {
+    if (!streetAddress.trim() || !city.trim() || !province.trim() || !postalCode.trim()) {
+      setAddressFormError("Please complete the street address, city, province and postal code.");
+      return;
+    }
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    try {
+      setSavingAddress(true);
+      setAddressFormError("");
+
+      const newAddress = await createAddress({
+        label: addressLabel.trim(),
+        streetAddress: streetAddress.trim(),
+        city: city.trim(),
+        province: province.trim(),
+        postalCode: postalCode.trim(),
+        latitude: 0,
+        longitude: 0,
+        isDefault: addresses.length === 0,
+      }, token);
+
+      setAddresses((current) => [...current, newAddress]);
+      setSelectedAddressId(newAddress.addressId);
+      setAddressModalVisible(false);
+      setAddressLabel("");
+      setStreetAddress("");
+      setCity("");
+      setProvince("");
+      setPostalCode("");
+    } catch (saveError) {
+      console.error("Failed to save delivery address:", saveError);
+      setAddressFormError("We could not save this address. Please try again.");
+    } finally {
+      setSavingAddress(false);
+    }
+  }
 
   async function handleCheckout() {
     if (!token) {
@@ -195,7 +257,7 @@ export default function CheckoutScreen() {
             {addresses.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>No delivery addresses</Text><Text style={[styles.emptyText, { color: colors.textSecondary }]}>Add a delivery address before placing your order.</Text>
-                <Pressable style={({ pressed }) => [styles.addAddressButton, { backgroundColor: colors.accent }, pressed && styles.addAddressButtonPressed]} onPress={() => router.push("/addresses")}><Text style={styles.addAddressButtonText}>+ Add Address</Text></Pressable>
+                <Pressable style={({ pressed }) => [styles.addAddressButton, { backgroundColor: colors.accent }, pressed && styles.addAddressButtonPressed]} onPress={openAddressModal}><Text style={styles.addAddressButtonText}>+ Add Address</Text></Pressable>
               </View>
             ) : (
               <>
@@ -212,7 +274,7 @@ export default function CheckoutScreen() {
                     </Pressable>
                   );
                 })}
-                <Pressable style={({ pressed }) => [styles.addNewAddressButton, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && styles.addNewAddressButtonPressed]} onPress={() => router.push("/addresses")}>
+                <Pressable style={({ pressed }) => [styles.addNewAddressButton, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && styles.addNewAddressButtonPressed]} onPress={openAddressModal}>
                   <View style={[styles.addNewAddressIcon, { backgroundColor: colors.accentSoft }]}><Text style={[styles.addNewAddressIconText, { color: colors.accent }]}>+</Text></View>
                   <View><Text style={[styles.addNewAddressTitle, { color: colors.text }]}>Add a new address</Text><Text style={[styles.addNewAddressSubtitle, { color: colors.textSecondary }]}>Deliver to a different location</Text></View>
                 </Pressable>
@@ -221,6 +283,86 @@ export default function CheckoutScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={addressModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Add a new address</Text>
+                <Pressable onPress={() => setAddressModalVisible(false)} disabled={savingAddress}>
+                  <Text style={[styles.modalClose, { color: colors.textSecondary }]}>×</Text>
+                </Pressable>
+              </View>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Enter the delivery details for this order. Your address will also be saved to My Addresses.</Text>
+
+              {addressFormError ? (
+                <View style={[styles.modalError, { borderColor: colors.border }]}>
+                  <Text style={[styles.modalErrorText, { color: theme === "dark" ? "#FCA5A5" : "#B42318" }]}>{addressFormError}</Text>
+                </View>
+              ) : null}
+
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Address label (optional)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder="e.g. Home, Work"
+                placeholderTextColor={theme === "dark" ? "#94A3B8" : "#64748B"}
+                value={addressLabel}
+                onChangeText={setAddressLabel}
+              />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Street address *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder="e.g. 12 Main Street"
+                placeholderTextColor={theme === "dark" ? "#94A3B8" : "#64748B"}
+                value={streetAddress}
+                onChangeText={setStreetAddress}
+              />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>City *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder="e.g. Gqeberha"
+                placeholderTextColor={theme === "dark" ? "#94A3B8" : "#64748B"}
+                value={city}
+                onChangeText={setCity}
+              />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Province *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder="e.g. Eastern Cape"
+                placeholderTextColor={theme === "dark" ? "#94A3B8" : "#64748B"}
+                value={province}
+                onChangeText={setProvince}
+              />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Postal code *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                placeholder="e.g. 6001"
+                placeholderTextColor={theme === "dark" ? "#94A3B8" : "#64748B"}
+                value={postalCode}
+                onChangeText={setPostalCode}
+                keyboardType="number-pad"
+              />
+
+              <Pressable
+                style={({ pressed }) => [styles.saveAddressButton, { backgroundColor: colors.accent }, (savingAddress || pressed) && styles.saveAddressButtonPressed]}
+                onPress={handleSaveAddress}
+                disabled={savingAddress}
+              >
+                {savingAddress ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveAddressButtonText}>Save and Use This Address</Text>}
+              </Pressable>
+              <Pressable style={styles.cancelAddressButton} onPress={() => setAddressModalVisible(false)} disabled={savingAddress}>
+                <Text style={[styles.cancelAddressText, { color: colors.textSecondary }]}>Cancel</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {cart && addresses.length > 0 && (
         <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
@@ -298,4 +440,19 @@ const styles = StyleSheet.create({
   checkoutButtonPressed: { opacity: 0.85 },
   checkoutButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 13 },
   disabledButton: { opacity: 0.55 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalCard: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", paddingHorizontal: 22, paddingTop: 22, paddingBottom: 28 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modalTitle: { fontSize: 22, fontWeight: "800" },
+  modalClose: { fontSize: 32, lineHeight: 34, paddingHorizontal: 4 },
+  modalSubtitle: { fontSize: 13, lineHeight: 19, marginTop: 5, marginBottom: 16 },
+  modalError: { borderWidth: 1, borderRadius: 10, padding: 11, marginBottom: 12 },
+  modalErrorText: { fontSize: 12, lineHeight: 17 },
+  inputLabel: { fontSize: 13, fontWeight: "700", marginTop: 12, marginBottom: 7 },
+  input: { height: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 13, fontSize: 14 },
+  saveAddressButton: { minHeight: 50, borderRadius: 11, alignItems: "center", justifyContent: "center", marginTop: 22, paddingHorizontal: 14 },
+  saveAddressButtonPressed: { opacity: 0.8 },
+  saveAddressButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  cancelAddressButton: { alignItems: "center", paddingVertical: 13, marginTop: 4 },
+  cancelAddressText: { fontSize: 13, fontWeight: "700" },
 });

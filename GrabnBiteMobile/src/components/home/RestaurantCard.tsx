@@ -6,7 +6,7 @@ interface RestaurantCardProps {
   cuisine: string;
   isOpen: boolean;
   imageUrl: string | null;
-  deliveryTime: string;
+  preparationTime: string;
   onPress?: () => void;
 }
 
@@ -15,7 +15,7 @@ export default function RestaurantCard({
   cuisine,
   isOpen,
   imageUrl,
-  deliveryTime,
+  preparationTime,
   onPress,
 }: RestaurantCardProps) {
   const { theme } = useThemePreference();
@@ -74,7 +74,7 @@ export default function RestaurantCard({
             <>
               <Text style={styles.separator}>•</Text>
 
-              <Text style={[styles.time, { color: colors.textSecondary }]}>{deliveryTime}</Text>
+              <Text style={[styles.time, { color: colors.textSecondary }]}>{preparationTime}</Text>
             </>
           )}
         </View>

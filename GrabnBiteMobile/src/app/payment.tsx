@@ -269,7 +269,7 @@ export default function PaymentScreen() {
   );
 }
 
-function createStyles(colors: typeof AppThemeColors.light) {
+function createStyles(colors: (typeof AppThemeColors)[keyof typeof AppThemeColors]) {
   const themeErrorSurface = colors.background === AppThemeColors.dark.background ? "rgba(248, 113, 113, 0.10)" : "#FEF2F2";
   const themeErrorBorder = colors.background === AppThemeColors.dark.background ? "rgba(248, 113, 113, 0.25)" : "#FECACA";
   const themeErrorText = colors.background === AppThemeColors.dark.background ? "#FCA5A5" : "#B42318";

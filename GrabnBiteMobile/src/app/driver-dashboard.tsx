@@ -391,6 +391,9 @@ export default function DriverDashboard() {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+            <TouchableOpacity onPress={() => router.push("/account-settings" as any)}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>My Account</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/settings" as any)}>
               <Text style={{ color: colors.text, fontWeight: "700" }}>Settings</Text>
             </TouchableOpacity>

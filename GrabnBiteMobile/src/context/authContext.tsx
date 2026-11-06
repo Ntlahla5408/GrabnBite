@@ -131,11 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   }
 
-  async function updateUser(updatedUser: User) {
-    const mergedUser = { ...user, ...updatedUser } as User;
-    await saveUser(mergedUser);
-    setUser(mergedUser);
-  }
+  const updateUser = useCallback(async (updatedUser: User) => {
+    await saveUser(updatedUser);
+    setUser(updatedUser);
+  }, []);
 
   async function logout() {
     await removeSession();

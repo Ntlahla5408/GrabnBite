@@ -34,7 +34,7 @@ export default function PaymentCancelledScreen() {
       const reviewRequired =
         result.requiresReconciliation === true ||
         orderWasCancelled ||
-        (status === "PAID" && result.refundStatus !== "NOT_REQUIRED");
+        result.refundStatus !== "NOT_REQUIRED";
 
       setPaymentStatus(status);
       setRequiresReview(reviewRequired);

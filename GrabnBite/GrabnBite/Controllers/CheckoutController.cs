@@ -198,18 +198,6 @@ namespace GrabnBite.Controllers
                 OrderDate = DateTime.UtcNow
             };
 
-            // Create the payment record in the same transaction as the order.
-            // This guarantees that restaurant visibility can distinguish cash
-            // orders from unpaid Yoco orders without a race between API calls.
-            order.Payment = new Payment
-            {
-                Amount = order.TotalAmount,
-                PaymentStatus = "PENDING",
-                PaymentMethod = paymentMethod!,
-                PaymentReference = $"GNB-PAY-{Guid.NewGuid():N}".Substring(0, 16).ToUpperInvariant(),
-                PaymentDate = DateTime.UtcNow
-            };
-
             // --------------------------------------------------------
             // Add initial status history
             // --------------------------------------------------------
@@ -255,6 +243,18 @@ namespace GrabnBite.Controllers
                 return BadRequest(
                     "The order total must be greater than zero.");
             }
+
+            // Create the payment record in the same transaction as the order.
+            // This guarantees that restaurant visibility can distinguish cash
+            // orders from unpaid Yoco orders without a race between API calls.
+            order.Payment = new Payment
+            {
+                Amount = order.TotalAmount,
+                PaymentStatus = "PENDING",
+                PaymentMethod = paymentMethod!,
+                PaymentReference = $"GNB-PAY-{Guid.NewGuid():N}".Substring(0, 16).ToUpperInvariant(),
+                PaymentDate = DateTime.UtcNow
+            };
 
             // --------------------------------------------------------
             // Save order

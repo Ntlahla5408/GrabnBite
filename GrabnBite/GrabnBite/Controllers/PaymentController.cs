@@ -949,7 +949,50 @@ namespace GrabnBite.Controllers
                         .SetProperty(p => p.TransactionReference, providerCheckoutReference));
 
                 if (orderWasCancelled)
+                {
                     await RequireYocoRefundAsync(payment.PaymentId, providerCheckoutReference, now);
+                }
+                else
+                {
+                    // Remove only the quantities represented by this verified order.
+                    // If the customer added more of the same item while payment was
+                    // pending, those additional quantities remain in the cart.
+                    var verifiedOrder = await _context.Orders
+                        .Include(o => o.OrderItems)
+                        .SingleAsync(o => o.OrderId == payment.OrderId);
+
+                    var originalCart = await _context.Carts
+                        .Include(c => c.CartItems)
+                        .SingleOrDefaultAsync(c =>
+                            c.UserId == verifiedOrder.UserId &&
+                            c.RestaurantId == verifiedOrder.RestaurantId);
+
+                    if (originalCart != null)
+                    {
+                        foreach (var orderItem in verifiedOrder.OrderItems)
+                        {
+                            var matchingCartItem = originalCart.CartItems
+                                .FirstOrDefault(item => item.MenuItemId == orderItem.MenuItemId);
+
+                            if (matchingCartItem == null)
+                                continue;
+
+                            var remainingQuantity = matchingCartItem.Quantity - orderItem.Quantity;
+
+                            if (remainingQuantity <= 0)
+                            {
+                                _context.CartItems.Remove(matchingCartItem);
+                            }
+                            else
+                            {
+                                matchingCartItem.Quantity = remainingQuantity;
+                            }
+                        }
+
+                        originalCart.UpdatedAt = now;
+                        await _context.SaveChangesAsync();
+                    }
+                }
             }
 
             await transaction.CommitAsync();

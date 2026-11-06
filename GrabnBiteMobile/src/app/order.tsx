@@ -30,6 +30,8 @@ interface Order {
   userId: number;
   restaurantId: number;
   deliveryAddressId: number;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
   orderItems: OrderItem[];
 }
 
@@ -117,8 +119,19 @@ export default function OrderScreen() {
   }
 
   const status = order.status.toUpperCase();
+  const paymentPending =
+    order.paymentMethod?.toUpperCase() === "YOCO" &&
+    order.paymentStatus?.toUpperCase() !== "PAID";
 
-  const statusSteps = [
+  const statusSteps = paymentPending
+    ? [
+        {
+          key: "PAYMENT_PENDING",
+          title: "Payment pending",
+          description: "The restaurant will receive your order after Yoco confirms payment.",
+        },
+      ]
+    : [
     {
       key: "PENDING",
       title: "Order placed",
@@ -172,7 +185,7 @@ export default function OrderScreen() {
     "DELIVERED",
   ];
 
-  const currentIndex = statusOrder.indexOf(status);
+  const currentIndex = paymentPending ? 0 : statusOrder.indexOf(status);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -191,11 +204,13 @@ export default function OrderScreen() {
 
         <View style={styles.statusCard}>
           <Text style={styles.statusIcon}>
-            {status === "DELIVERED" ? "✓" : "🍔"}
+            {paymentPending ? "!" : status === "DELIVERED" ? "✓" : "🍔"}
           </Text>
 
           <Text style={styles.statusTitle}>
-            {status === "PENDING"
+            {paymentPending
+              ? "Payment Not Yet Verified"
+              : status === "PENDING"
               ? "Order Confirmed"
               : status === "ACCEPTED"
                 ? "Restaurant Accepted"
@@ -215,11 +230,15 @@ export default function OrderScreen() {
           </Text>
 
           <Text style={styles.statusDescription}>
-            {status === "PENDING"
-              ? "Your order has been received and is waiting for the restaurant."
-              : status === "DELIVERED"
-                ? "Enjoy your meal!"
-                : "We'll keep you updated as your order progresses."}
+            {paymentPending
+              ? "Your cart has been kept safe. The restaurant has not received this order yet. Check payment status before trying another payment."
+              : status === "PENDING"
+                ? order.paymentMethod?.toUpperCase() === "CASH"
+                  ? "Your order has been placed and is waiting for the restaurant. Payment is due on delivery."
+                  : "Your order has been received and is waiting for the restaurant."
+                : status === "DELIVERED"
+                  ? "Enjoy your meal!"
+                  : "We'll keep you updated as your order progresses."}
           </Text>
         </View>
 

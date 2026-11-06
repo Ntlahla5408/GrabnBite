@@ -36,14 +36,14 @@ export default function HomeHeader() {
         {!loading && !user && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open account options"
+            accessibilityLabel="Create an account"
             style={({ pressed }) => [
-              styles.loginButton,
-              pressed && styles.loginButtonPressed,
+              styles.signUpButton,
+              pressed && styles.signUpButtonPressed,
             ]}
-            onPress={() => router.push("/account")}
+            onPress={() => router.push("/register")}
           >
-            <Text style={styles.loginText}>Account</Text>
+            <Text style={styles.signUpText}>Sign up</Text>
           </Pressable>
         )}
       </View>
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
     fontSize: 19,
   },
 
-  loginButton: {
+  signUpButton: {
     backgroundColor: "#F97316",
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
   },
 
-  loginText: {
+  signUpText: {
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 13,
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  loginButtonPressed: {
+  signUpButtonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
   },

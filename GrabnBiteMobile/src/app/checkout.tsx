@@ -91,6 +91,11 @@ export default function CheckoutScreen() {
       return;
     }
 
+    if (!cart) {
+      setError("Your cart is no longer available. Please return to your cart.");
+      return;
+    }
+
     if (!cartId) {
       setError("Invalid cart.");
       return;

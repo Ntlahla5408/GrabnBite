@@ -119,16 +119,22 @@ export default function OrderScreen() {
   }
 
   const status = order.status.toUpperCase();
+  const isYocoOrder = order.paymentMethod?.toUpperCase() === "YOCO";
+  const paymentFailed = isYocoOrder && order.paymentStatus?.toUpperCase() === "FAILED";
   const paymentPending =
-    order.paymentMethod?.toUpperCase() === "YOCO" &&
-    order.paymentStatus?.toUpperCase() !== "PAID";
+    isYocoOrder &&
+    order.paymentStatus?.toUpperCase() !== "PAID" &&
+    !paymentFailed;
+  const paymentNotCompleted = paymentPending || paymentFailed;
 
-  const statusSteps = paymentPending
+  const statusSteps = paymentNotCompleted
     ? [
         {
-          key: "PAYMENT_PENDING",
-          title: "Payment pending",
-          description: "The restaurant will receive your order after Yoco confirms payment.",
+          key: paymentFailed ? "PAYMENT_FAILED" : "PAYMENT_PENDING",
+          title: paymentFailed ? "Payment not completed" : "Payment pending",
+          description: paymentFailed
+            ? "Yoco confirmed that this checkout was not completed."
+            : "The restaurant will receive your order after Yoco confirms payment.",
         },
       ]
     : [
@@ -185,7 +191,7 @@ export default function OrderScreen() {
     "DELIVERED",
   ];
 
-  const currentIndex = paymentPending ? 0 : statusOrder.indexOf(status);
+  const currentIndex = paymentNotCompleted ? 0 : statusOrder.indexOf(status);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -204,13 +210,15 @@ export default function OrderScreen() {
 
         <View style={styles.statusCard}>
           <Text style={styles.statusIcon}>
-            {paymentPending ? "!" : status === "DELIVERED" ? "✓" : "🍔"}
+            {paymentNotCompleted ? "!" : status === "DELIVERED" ? "✓" : "🍔"}
           </Text>
 
           <Text style={styles.statusTitle}>
-            {paymentPending
-              ? "Payment Not Yet Verified"
-              : status === "PENDING"
+            {paymentFailed
+              ? "Payment Not Completed"
+              : paymentPending
+                ? "Payment Not Yet Verified"
+                : status === "PENDING"
               ? "Order Confirmed"
               : status === "ACCEPTED"
                 ? "Restaurant Accepted"
@@ -230,9 +238,11 @@ export default function OrderScreen() {
           </Text>
 
           <Text style={styles.statusDescription}>
-            {paymentPending
-              ? "Your cart has been kept safe. The restaurant has not received this order yet. Check payment status before trying another payment."
-              : status === "PENDING"
+            {paymentFailed
+              ? "Yoco confirmed that this checkout was not completed. Your cart has been kept safe, and the restaurant has not received this order. You can safely try payment again."
+              : paymentPending
+                ? "Your cart has been kept safe. The restaurant has not received this order yet. Check payment status before trying another payment."
+                : status === "PENDING"
                 ? order.paymentMethod?.toUpperCase() === "CASH"
                   ? "Your order has been placed and is waiting for the restaurant. Payment is due on delivery."
                   : "Your order has been received and is waiting for the restaurant."
@@ -246,7 +256,7 @@ export default function OrderScreen() {
           <Text style={styles.sectionTitle}>Order Status</Text>
 
           {statusSteps.map((step, index) => {
-            const isCompleted = !paymentPending && currentIndex >= index;
+            const isCompleted = !paymentNotCompleted && currentIndex >= index;
 
             const isCurrent = currentIndex === index;
 
@@ -339,6 +349,15 @@ export default function OrderScreen() {
             Your selected delivery address
           </Text>
         </View>
+
+        {paymentFailed ? (
+          <Pressable
+            style={styles.homeButtonLarge}
+            onPress={() => router.push({ pathname: "/payment", params: { orderId: String(order.orderId) } })}
+          >
+            <Text style={styles.homeButtonText}>Try Payment Again</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           style={styles.homeButtonLarge}

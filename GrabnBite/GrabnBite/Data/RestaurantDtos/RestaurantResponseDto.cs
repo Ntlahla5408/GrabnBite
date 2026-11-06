@@ -14,6 +14,8 @@
 
         public string Address { get; set; } = string.Empty;
 
+        public string? Location { get; set; }
+
         public string? ImageUrl { get; set; }
 
         public decimal Latitude { get; set; }

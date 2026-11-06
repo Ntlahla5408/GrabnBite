@@ -510,5 +510,6 @@ function createStyles(colors: typeof AppThemeColors.light) {
 
   buttonPressed: {
     opacity: 0.7,
-    });
+  },
+  });
 }

@@ -120,7 +120,7 @@ export default function CheckoutScreen() {
 
       console.log("CHECKOUT RESULT:", result);
 
-      // We will connect this to payment next.
+      // Create the order, then continue to the existing Yoco payment screen.
       router.push({
         pathname: "/payment",
         params: {
@@ -187,7 +187,7 @@ export default function CheckoutScreen() {
                 <View style={styles.priceRow}><Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Delivery fee</Text><Text style={[styles.priceValue, { color: colors.textSecondary }]}>Not configured</Text></View>
                 <View style={styles.priceRow}><Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Service fee</Text><Text style={[styles.priceValue, { color: colors.textSecondary }]}>Not configured</Text></View>
                 <View style={[styles.grandTotalRow, { borderTopColor: colors.border }]}><Text style={[styles.grandTotalLabel, { color: colors.text }]}>Current order total</Text><Text style={[styles.grandTotalValue, { color: colors.accent }]}>R{itemSubtotal.toFixed(2)}</Text></View>
-                <Text style={[styles.feeNotice, { color: colors.textSecondary }]}>Delivery and service fees are not currently included in GrabnBite's checkout calculation. The order total shown is the food subtotal.</Text>
+                <Text style={[styles.feeNotice, { color: colors.textSecondary }]}>Delivery and service fees are not currently included in GrabnBite's checkout calculation. The order total shown is the food subtotal. Menu prices are revalidated when the order is created, so the final subtotal may change if a restaurant has updated its prices.</Text>
               </View>
             </View>
 

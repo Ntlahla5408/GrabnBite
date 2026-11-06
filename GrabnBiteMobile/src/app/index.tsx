@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -173,7 +173,7 @@ export default function HomeScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open GrabnBite support chat"
-        onPress={() => router.push("/chatbot")}
+        onPress={() => router.push("/chatbot" as Href)}
         style={[styles.chatButton, { backgroundColor: colors.accent }]}
       >
         <Text style={styles.chatButtonIcon}>✦</Text>

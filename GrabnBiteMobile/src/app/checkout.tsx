@@ -430,7 +430,18 @@ export default function CheckoutScreen() {
       {cart && addresses.length > 0 && (
         <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <View style={styles.bottomInfo}><Text style={[styles.bottomLabel, { color: colors.textSecondary }]}>Delivering to</Text><Text style={[styles.bottomValue, { color: colors.text }]} numberOfLines={2}>{selectedAddress ? deliveryAddress : "Select an address"}</Text></View>
-          <Pressable style={({ pressed }) => [styles.checkoutButton, { backgroundColor: colors.accent }, (checkingOut || !selectedAddressId) && styles.disabledButton, pressed && !checkingOut && selectedAddressId && styles.checkoutButtonPressed]} onPress={handleCheckout} disabled={checkingOut || !selectedAddressId}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.checkoutButton,
+              { backgroundColor: colors.accent },
+              (checkingOut || !selectedAddressId) ? styles.disabledButton : undefined,
+              (pressed && !checkingOut && !!selectedAddressId)
+                ? styles.checkoutButtonPressed
+                : undefined,
+            ]}
+            onPress={handleCheckout}
+            disabled={checkingOut || !selectedAddressId}
+          >
             {checkingOut ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.checkoutButtonText}>{selectedPaymentMethod === "CASH" ? "Place Cash Order" : "Proceed to Payment"}</Text>}
           </Pressable>
         </View>

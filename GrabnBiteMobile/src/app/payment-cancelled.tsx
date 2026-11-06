@@ -105,6 +105,15 @@ export default function PaymentCancelledScreen() {
           </Pressable>
         ) : null}
 
+        {orderId ? (
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => router.push({ pathname: "/order", params: { orderId: String(orderId) } })}
+          >
+            <Text style={styles.trackText}>Track My Order</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable
           style={styles.secondaryButton}
           onPress={() => router.replace("/")}
@@ -189,6 +198,11 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: "#1A4B6B",
     fontWeight: "600",
+  },
+  trackText: {
+    color: "#1A4B6B",
+    fontWeight: "700",
+    fontSize: 15,
   },
   spinner: {
     marginTop: 14,

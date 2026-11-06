@@ -35,13 +35,15 @@ export default function HomeHeader() {
 
         {!loading && !user && (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open account options"
             style={({ pressed }) => [
               styles.loginButton,
               pressed && styles.loginButtonPressed,
             ]}
-            onPress={() => router.push("/login")}
+            onPress={() => router.push("/account")}
           >
-            <Text style={styles.loginText}>Login</Text>
+            <Text style={styles.loginText}>Account</Text>
           </Pressable>
         )}
       </View>

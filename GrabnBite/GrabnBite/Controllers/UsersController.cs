@@ -472,6 +472,18 @@ namespace GrabnBite.Controllers
                 return StatusCode(StatusCodes.Status429TooManyRequests,
                     "Please wait before requesting another verification code.");
 
+            if (challenge != null &&
+                now - challenge.ResendWindowStartedAt >= TimeSpan.FromHours(1))
+            {
+                challenge.ResendWindowStartedAt = now;
+                challenge.ResendCount = 0;
+            }
+
+            if (challenge != null &&
+                challenge.ResendCount >= _emailVerificationSettings.MaxResendsPerHour)
+                return StatusCode(StatusCodes.Status429TooManyRequests,
+                    "You have reached the hourly verification-code limit. Please try again later.");
+
             var code = _emailVerificationService.GenerateCode();
             if (challenge == null)
             {
@@ -479,9 +491,14 @@ namespace GrabnBite.Controllers
                 {
                     UserId = user.UserId,
                     CreatedAt = now,
-                    ResendWindowStartedAt = now
+                    ResendWindowStartedAt = now,
+                    ResendCount = 0
                 };
                 _context.EmailVerificationChallenges.Add(challenge);
+            }
+            else
+            {
+                challenge.ResendCount++;
             }
 
             challenge.TargetEmail = targetEmail;

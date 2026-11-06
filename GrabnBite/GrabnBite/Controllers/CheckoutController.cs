@@ -236,13 +236,10 @@ namespace GrabnBite.Controllers
                     return Conflict("You already have an unresolved Yoco payment for this restaurant. Check that payment before starting another checkout. Your cart has been kept.");
                 }
 
-                if (snapshotsMatch && paymentMethod == "YOCO")
+                if (snapshotsMatch &&
+                    paymentMethod == "YOCO" &&
+                    matchingPendingOrder.DeliveryAddressId == dto.DeliveryAddressId)
                 {
-                    if (matchingPendingOrder.DeliveryAddressId != dto.DeliveryAddressId)
-                    {
-                        return Conflict("An unresolved Yoco order already exists with a different delivery address. Select that address or check the existing payment before starting another checkout.");
-                    }
-
                     await transaction.CommitAsync();
 
                     return Ok(new
@@ -259,7 +256,9 @@ namespace GrabnBite.Controllers
 
                 if (snapshotsMatch && !previousPaymentFailed)
                 {
-                    return Conflict("You already have an unresolved Yoco payment for these items. Check its status before placing another order. Your cart has been kept.");
+                    return Conflict(matchingPendingOrder.DeliveryAddressId != dto.DeliveryAddressId
+                        ? "An unresolved Yoco order already exists with a different delivery address. Select that address or check the existing payment before starting another checkout."
+                        : "You already have an unresolved Yoco payment for these items. Check its status before placing another order. Your cart has been kept.");
                 }
             }
 

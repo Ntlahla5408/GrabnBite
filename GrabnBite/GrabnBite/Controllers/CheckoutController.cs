@@ -66,6 +66,12 @@ namespace GrabnBite.Controllers
                 return BadRequest("Invalid delivery address ID.");
             }
 
+            var paymentMethod = dto.PaymentMethod?.Trim().ToUpperInvariant();
+            if (paymentMethod != "YOCO" && paymentMethod != "CASH")
+            {
+                return BadRequest("Invalid payment method. Choose YOCO or CASH.");
+            }
+
             // Prevent two concurrent checkout requests from creating two orders
             // from the same cart. This transaction also keeps order creation and
             // cart clearing atomic.
@@ -190,6 +196,18 @@ namespace GrabnBite.Controllers
                 DeliveryLongitude = address.Longitude,
                 Status = "PENDING",
                 OrderDate = DateTime.UtcNow
+            };
+
+            // Create the payment record in the same transaction as the order.
+            // This guarantees that restaurant visibility can distinguish cash
+            // orders from unpaid Yoco orders without a race between API calls.
+            order.Payment = new Payment
+            {
+                Amount = order.TotalAmount,
+                PaymentStatus = "PENDING",
+                PaymentMethod = paymentMethod!,
+                PaymentReference = $"GNB-PAY-{Guid.NewGuid():N}".Substring(0, 16).ToUpperInvariant(),
+                PaymentDate = DateTime.UtcNow
             };
 
             // --------------------------------------------------------

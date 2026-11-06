@@ -153,7 +153,11 @@ export default function HomeScreen() {
                   cuisine={restaurant.description}
                   isOpen={restaurant.isOpen}
                   imageUrl={restaurant.imageUrl}
-                  deliveryTime="20–35 min"
+                  preparationTime={
+                    restaurant.averagePreparationTimeMinutes != null
+                      ? `${restaurant.averagePreparationTimeMinutes} min prep`
+                      : "Prep time unavailable"
+                  }
                   onPress={() =>
                     router.push({
                       pathname: "/restaurant",

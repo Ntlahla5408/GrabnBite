@@ -1,14 +1,47 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 import { useAuth } from "../../context/authContext";
+import { getCart } from "../../services/cartService";
 
 const logo = require("../../../assets/images/inside-icon.png");
 
 export default function HomeHeader() {
   const { theme } = useThemePreference();
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   const colors = AppThemeColors[theme];
+  const [restaurantCount, setRestaurantCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadCartRestaurantCount() {
+        if (!token) {
+          setRestaurantCount(0);
+          return;
+        }
+
+        try {
+          const carts = await getCart(token);
+          const count = carts.filter((cart) => cart.items.length > 0).length;
+
+          if (isActive) {
+            setRestaurantCount(count);
+          }
+        } catch (error) {
+          console.error("Failed to load cart count:", error);
+        }
+      }
+
+      void loadCartRestaurantCount();
+
+      return () => {
+        isActive = false;
+      };
+    }, [token]),
+  );
   return (
     <View style={[styles.container, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
@@ -31,6 +64,16 @@ export default function HomeHeader() {
           onPress={() => router.push("/cart")}
         >
           <Text style={[styles.cartIcon, { color: colors.text }]}>🛒</Text>
+          {restaurantCount > 0 && (
+            <View
+              style={styles.cartBadge}
+              accessibilityLabel={`${restaurantCount} restaurants in cart`}
+            >
+              <Text style={styles.cartBadgeText}>
+                {restaurantCount > 99 ? "99+" : restaurantCount}
+              </Text>
+            </View>
+          )}
         </Pressable>
 
         {!loading && !user && (
@@ -106,6 +149,28 @@ const styles = StyleSheet.create({
 
   cartIcon: {
     fontSize: 19,
+  },
+
+  cartBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 19,
+    height: 19,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#F97316",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cartBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 13,
   },
 
   signUpButton: {

@@ -107,6 +107,9 @@ export default function AdminDashboard() {
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/account-settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>My Account</Text>
+          </Pressable>
           <Pressable onPress={() => router.push("/settings" as any)}>
             <Text style={{ color: colors.headerText, fontWeight: "700" }}>Settings</Text>
           </Pressable>

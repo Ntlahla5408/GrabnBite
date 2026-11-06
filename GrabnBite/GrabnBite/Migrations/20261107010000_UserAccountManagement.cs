@@ -1,13 +1,9 @@
-using GrabnBite.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace GrabnBite.Migrations
 {
-    [DbContext(typeof(AppDbContext))]
-    [Migration("20261107010000_UserAccountManagement")]
     public partial class UserAccountManagement : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)

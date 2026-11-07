@@ -86,7 +86,6 @@ export default function RestaurantProfileEditScreen() {
       return;
     }
     if (!authLoading && token && user?.role === "Restaurant") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Load the authenticated restaurant profile.
       void loadProfile();
     }
   }, [authLoading, token, user?.role, loadProfile]);

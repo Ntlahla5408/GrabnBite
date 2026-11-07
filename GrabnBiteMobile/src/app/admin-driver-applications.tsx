@@ -160,7 +160,7 @@ export default function AdminDriverApplicationsScreen() {
       setMessage(successMessage);
     } catch (requestError) {
       logAppError("Admin driver applications operation", requestError);
-      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "The requested action could not be completed.", actionLabel: "Try again" }));
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm this review action", message: "The change may already have been saved. Refresh the application and its status before taking another review action.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.driverApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }
@@ -189,7 +189,7 @@ export default function AdminDriverApplicationsScreen() {
       setMessage("Document review saved.");
     } catch (requestError) {
       logAppError("Admin driver applications operation", requestError);
-      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to review this document.", actionLabel: "Try again" }));
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm the document review", message: "The review may already have been saved. Refresh the application before reviewing this document again.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.driverApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }

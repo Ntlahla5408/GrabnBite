@@ -20,6 +20,7 @@ import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { useAuth } from "../context/authContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -243,14 +244,14 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 104,
   },
 
   hero: {
     backgroundColor: "#071B2C",
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 34,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
 
   heroContent: {
@@ -269,9 +270,9 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
-    lineHeight: 36,
+    lineHeight: 32,
     marginBottom: 8,
   },
 
@@ -287,14 +288,14 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 28,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.lg,
   },
 
   center: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
+    paddingVertical: Spacing.xl,
   },
 
   loadingText: {
@@ -317,10 +318,10 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Layout.screenHorizontal,
     backgroundColor: "#0D2638",
-    borderRadius: 18,
+    borderRadius: Radius.panel,
   },
 
   emptyIcon: {

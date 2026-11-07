@@ -100,8 +100,6 @@ export default function OrdersScreen() {
       const result = await apiRequest("/api/Orders/my-orders");
       setError("");
 
-      console.log("MY ORDERS RESULT:", result);
-
       setOrders(result);
     } catch (error) {
       logAppError("Loading customer orders", error);
@@ -127,8 +125,6 @@ export default function OrdersScreen() {
   }
 
   function openOrder(orderId: number) {
-    console.log("OPENING ORDER:", orderId);
-
     router.push({
       pathname: "/order",
       params: {

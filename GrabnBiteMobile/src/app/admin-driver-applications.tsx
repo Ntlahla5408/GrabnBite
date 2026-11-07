@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 const NAVY = "#071B2C";
@@ -73,6 +75,7 @@ const sections: { title: string; keys: string[] }[] = [
 
 export default function AdminDriverApplicationsScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [selected, setSelected] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,8 +91,9 @@ export default function AdminDriverApplicationsScreen() {
       const result = await apiRequest("/api/AdminDriverApplication", {}, token);
       setApplications(result);
       setError("");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load driver applications.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load driver applications.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
@@ -116,8 +120,9 @@ export default function AdminDriverApplicationsScreen() {
       setMessage("");
       const result = await apiRequest("/api/AdminDriverApplication/" + applicationId, {}, token);
       setSelected(result);
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load the driver application.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load the driver application.", actionLabel: "Try again" }));
     } finally {
       setDetailLoading(false);
     }
@@ -141,8 +146,9 @@ export default function AdminDriverApplicationsScreen() {
       await openApplication(selected.driverApplicationId);
       await loadApplications();
       setMessage(successMessage);
-    } catch (requestError: any) {
-      setError(requestError?.message || "The requested action could not be completed.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "The requested action could not be completed.", actionLabel: "Try again" }));
     } finally {
       setWorking(false);
     }
@@ -169,8 +175,9 @@ export default function AdminDriverApplicationsScreen() {
       await openApplication(selected.driverApplicationId);
       await loadApplications();
       setMessage("Document review saved.");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to review this document.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to review this document.", actionLabel: "Try again" }));
     } finally {
       setWorking(false);
     }

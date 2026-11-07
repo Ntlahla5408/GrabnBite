@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import {useCallback, useState, useRef} from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -177,7 +177,7 @@ export default function DriverDashboard() {
       }
 
       loadDriverDataRetryRef.current();
-    }, [user, router, loadDriverData]),
+    }, [user, router]),
   );
 
   const refresh = async () => {

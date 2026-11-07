@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -39,6 +39,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadUsersRetryRef = useRef<() => void>(() => {});
+
   const loadUsers = useCallback(async () => {
     try {
       const data = await apiRequest("/api/Users", {}, token);
@@ -50,11 +52,15 @@ export default function AdminDashboard() {
         title: "We couldn't load the dashboard",
         message: "The account information is temporarily unavailable. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadUsers(); });
+      }), () => { loadUsersRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadUsersRetryRef.current = () => { void loadUsers(); };
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!user) {
@@ -68,7 +74,7 @@ export default function AdminDashboard() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadUsers();
+    loadUsersRetryRef.current();
   }, [user, loadUsers]);
 
   async function handleLogout() {

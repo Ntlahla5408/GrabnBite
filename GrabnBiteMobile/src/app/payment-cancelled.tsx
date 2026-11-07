@@ -64,7 +64,7 @@ export default function PaymentCancelledScreen() {
 
   useEffect(() => {
     if (authLoading) return;
-    void verifyPayment();
+    void Promise.resolve().then(() => verifyPayment());
   }, [authLoading, verifyPayment]);
 
   const paymentFailed = paymentStatus === "FAILED" && !requiresReview;

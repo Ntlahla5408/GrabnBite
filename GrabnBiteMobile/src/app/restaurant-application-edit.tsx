@@ -352,9 +352,20 @@ export default function RestaurantApplicationEditScreen() {
         // Ignore an unstructured server response and show a safe message.
       }
       showError(getUserFacingError(requestError, {
-        title: "We couldn't submit your application",
-        message: missingItemsMessage ?? "Your application has not been submitted. Please review the required information and try again.",
-      }));
+        title: "We couldn't confirm your submission",
+        message: missingItemsMessage ?? "Your draft or submission may already have been saved. Refresh the application status before trying to submit again.",
+        actionLabel: "Refresh application",
+      }), () => {
+        void getRestaurantApplication(application.restaurantApplicationId, token)
+          .then(setApplication)
+          .catch((refreshError: any) => {
+            logAppError("Refreshing restaurant application status", refreshError);
+            showError(getUserFacingError(refreshError, {
+              title: "We couldn't refresh your application",
+              message: "Your application status is still unavailable. Please return to your applications and check again.",
+            }));
+          });
+      });
     } finally {
       setSubmitting(false);
     }

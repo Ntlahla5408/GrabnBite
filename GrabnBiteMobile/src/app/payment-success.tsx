@@ -93,7 +93,6 @@ export default function PaymentSuccessScreen() {
 
   useEffect(() => {
     if (authLoading) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Trigger asynchronous verification after auth restoration.
     verifyPaymentRetryRef.current();
   }, [authLoading, verifyPayment]);
 

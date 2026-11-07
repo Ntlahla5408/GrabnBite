@@ -3,6 +3,8 @@ import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 interface PolicyDocument {
@@ -17,6 +19,7 @@ export default function PolicyReaderScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const policyId = typeof id === "string" ? Number(id) : Number.NaN;
   const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +50,13 @@ export default function PolicyReaderScreen() {
       } catch (error) {
         if (isActive) {
           setPolicy(null);
-          setLoadError(error instanceof Error ? error.message : "Unable to load this policy document.");
+          setLoadError("We couldn't load this policy document. Please try again.");
+          logAppError("Loading a policy document in the reader", error);
+          showError(getUserFacingError(error, {
+            title: "We couldn't open this policy",
+            message: "The policy document is temporarily unavailable. Please try again.",
+            actionLabel: "Try again",
+          }), () => setReloadKey((currentKey) => currentKey + 1));
         }
       } finally {
         if (isActive) {
@@ -58,7 +67,7 @@ export default function PolicyReaderScreen() {
 
     void loadPolicy();
     return () => { isActive = false; };
-  }, [policyId, reloadKey]);
+  }, [policyId, reloadKey, showError]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>

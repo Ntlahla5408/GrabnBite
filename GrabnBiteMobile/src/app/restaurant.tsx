@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Image,
@@ -46,6 +46,8 @@ export default function RestaurantScreen() {
   const [loading, setLoading] = useState(Number.isInteger(restaurantId) && restaurantId > 0);
   const [error, setError] = useState(Number.isInteger(restaurantId) && restaurantId > 0 ? "" : "Restaurant could not be found.");
 
+  const loadRestaurantRetryRef = useRef<() => void>(() => {});
+
   const loadRestaurant = useCallback(async () => {
     try {
       const [restaurantData, menuData, categoryData] = await Promise.all([
@@ -67,16 +69,20 @@ export default function RestaurantScreen() {
         title: "We couldn't load this restaurant",
         message: "The restaurant menu is temporarily unavailable. Please try again.",
         actionLabel: "Try again",
-      }), () => { setLoading(true); void loadRestaurant(); });
+      }), () => { setLoading(true); loadRestaurantRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [restaurantId, showError]);
 
   useEffect(() => {
+    loadRestaurantRetryRef.current = () => { void loadRestaurant(); };
+  }, [loadRestaurant]);
+
+  useEffect(() => {
     if (Number.isInteger(restaurantId) && restaurantId > 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async restaurant loading; state updates occur after the request resolves.
-      void loadRestaurant();
+      loadRestaurantRetryRef.current();
     }
   }, [restaurantId, loadRestaurant]);
 

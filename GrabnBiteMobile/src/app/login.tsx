@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -81,7 +82,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Background Logo */}
       <View pointerEvents="none" style={styles.backgroundLogoContainer}>
@@ -94,6 +95,12 @@ export default function LoginScreen() {
 
       <View style={styles.overlay} />
 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.container}>
         {/* Branding */}
         <View style={styles.brandContainer}>
@@ -170,6 +177,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -206,12 +214,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(7, 27, 44, 0.25)",
   },
 
-  container: {
+  scrollView: {
     flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+  },
+
+  container: {
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 24,
   },
 
   brandContainer: {

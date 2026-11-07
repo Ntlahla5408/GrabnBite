@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { ComponentSize, Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 const logo = require("../../assets/images/inside-icon.png");
 

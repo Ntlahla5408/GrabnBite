@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../context/authContext";
@@ -19,6 +19,8 @@ export default function PaymentSuccessScreen() {
   const [requiresRefundReview, setRequiresRefundReview] = useState(false);
   const [requiresPaymentReview, setRequiresPaymentReview] = useState(false);
   const [message, setMessage] = useState("Checking your payment with Yoco...");
+
+  const verifyPaymentRetryRef = useRef<() => void>(() => {});
 
   const verifyPayment = useCallback(async () => {
     if (authLoading) return;
@@ -79,16 +81,20 @@ export default function PaymentSuccessScreen() {
       showError(getUserFacingError(paymentError, {
         title: "We couldn't verify your payment",
         message: "Yoco's payment status could not be confirmed. Your order has not been marked as paid. Please check again before attempting another payment.",
-      }), () => { void verifyPayment(); });
+      }), () => { verifyPaymentRetryRef.current(); });
     } finally {
       setChecking(false);
     }
   }, [authLoading, token, orderId]);
 
   useEffect(() => {
+    verifyPaymentRetryRef.current = () => { void verifyPayment(); };
+  }, [verifyPayment]);
+
+  useEffect(() => {
     if (authLoading) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Trigger asynchronous verification after auth restoration.
-    void verifyPayment();
+    verifyPaymentRetryRef.current();
   }, [authLoading, verifyPayment]);
 
   return (
@@ -117,7 +123,7 @@ export default function PaymentSuccessScreen() {
         {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
         {!verified && !checking && !paymentFailed && !requiresRefundReview && !requiresPaymentReview ? (
-          <Pressable style={styles.button} onPress={() => void verifyPayment()}>
+          <Pressable style={styles.button} onPress={() => verifyPaymentRetryRef.current()}>
             <Text style={styles.buttonText}>Check Payment Again</Text>
           </Pressable>
         ) : null}

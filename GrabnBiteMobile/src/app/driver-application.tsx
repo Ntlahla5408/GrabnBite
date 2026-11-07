@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   createDriverApplication,
   deleteDriverApplicationDocument,
@@ -223,6 +225,7 @@ const initialForm: Record<string, any> = {
 
 export default function DriverApplicationScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const [application, setApplication] = useState<DriverApplication | null>(null);
   const [form, setForm] = useState<Record<string, any>>(initialForm);
   const [loading, setLoading] = useState(true);
@@ -270,15 +273,24 @@ export default function DriverApplicationScreen() {
         setPolicies([]);
         setAcknowledgedPolicyIds([]);
         setViewedPolicyIds([]);
-        setPoliciesError(policyError?.message || "Unable to load current published policies.");
+        setPoliciesError("Current policy documents could not be loaded. Please refresh and try again.");
+        logAppError("Loading published driver policies", policyError);
+        showError(getUserFacingError(policyError, {
+          title: "We couldn't load the current policies",
+          message: "The documents you need to review are temporarily unavailable. Please try again.",
+        }));
       }
       setError("");
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load your driver application.");
+      logAppError("Loading the driver application", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't load your application",
+        message: "Your driver application details are temporarily unavailable. Please try again.",
+      }));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -349,7 +361,11 @@ export default function DriverApplicationScreen() {
       if (showAlert) setNotice("Your driver partner application draft has been saved.");
       return true;
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to save your application.");
+      logAppError("Saving the driver application draft", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't save your application",
+        message: "Your application changes have not been saved. Please try again.",
+      }));
       return false;
     } finally {
       setSaving(false);
@@ -376,7 +392,11 @@ export default function DriverApplicationScreen() {
       await loadApplication();
       setNotice("Document uploaded successfully.");
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to upload this document.");
+      logAppError("Uploading a driver application document", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't upload this document",
+        message: "The document has not been uploaded. Check the file and your connection, then try again.",
+      }));
     } finally {
       setUploadingType(null);
     }
@@ -388,7 +408,11 @@ export default function DriverApplicationScreen() {
       await deleteDriverApplicationDocument(documentId, token);
       await loadApplication();
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to remove this document.");
+      logAppError("Removing a driver application document", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't remove this document",
+        message: "The document has not been removed. Please try again.",
+      }));
     }
   };
 
@@ -416,11 +440,15 @@ export default function DriverApplicationScreen() {
       await loadApplication();
     } catch (requestError: any) {
       const missing = requestError?.data?.missingItems;
-      setError(
-        Array.isArray(missing) && missing.length
-          ? "Complete these items before submitting: " + missing.join(", ")
-          : requestError?.message || "Unable to submit your application.",
-      );
+      if (Array.isArray(missing) && missing.length) {
+        setError("Complete these items before submitting: " + missing.join(", "));
+      } else {
+        logAppError("Submitting the driver application", requestError);
+        showError(getUserFacingError(requestError, {
+          title: "We couldn't submit your application",
+          message: "Your application has not been submitted. Please review the required information and try again.",
+        }));
+      }
     } finally {
       setSubmitting(false);
     }

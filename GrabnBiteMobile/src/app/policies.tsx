@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -32,6 +32,8 @@ export default function PoliciesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadPoliciesRetryRef = useRef<() => void>(() => {});
+
   const loadPolicies = useCallback(async () => {
     try {
       const data = await apiRequest("/api/Policies");
@@ -43,15 +45,19 @@ export default function PoliciesScreen() {
       showError(getUserFacingError(loadError, {
         title: "We couldn't load the policies",
         message: "Published policy documents are temporarily unavailable. Please try again.",
-      }), () => { void loadPolicies(); });
+      }), () => { loadPoliciesRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
   useEffect(() => {
+    loadPoliciesRetryRef.current = () => { void loadPolicies(); };
+  }, [loadPolicies]);
+
+  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start public policy loading after the screen mounts.
-    void loadPolicies();
+    loadPoliciesRetryRef.current();
   }, [loadPolicies]);
 
   return (
@@ -85,7 +91,7 @@ export default function PoliciesScreen() {
         ) : error ? (
           <View style={styles.message}>
             <Text style={[styles.messageText, { color: "#DC2626" }]}>{error}</Text>
-            <Pressable onPress={() => { void loadPolicies(); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+            <Pressable onPress={() => { loadPoliciesRetryRef.current(); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
               <Text style={styles.retryText}>Try again</Text>
             </Pressable>
           </View>

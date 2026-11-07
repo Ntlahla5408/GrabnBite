@@ -126,9 +126,8 @@ export default function RestaurantProfileEditScreen() {
       setImageUrl(updated.imageUrl ?? "");
       setImageUploadMessage("Restaurant cover image uploaded successfully.");
     } catch (err: any) {
-      setImageUploadError(
-        err?.message || "Unable to upload the restaurant cover image.",
-      );
+      logAppError("Uploading restaurant cover image", err);
+      showError(getUserFacingError(err, { title: "We couldn't upload your cover image", message: "Your cover image hasn't been changed. Please check your connection and try again.", actionLabel: "Try again" }));
     } finally {
       setUploadingImage(false);
     }

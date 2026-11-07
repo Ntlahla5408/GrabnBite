@@ -153,21 +153,32 @@ export default function RestaurantMenuScreen() {
   };
 
   const chooseMenuItemImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to choose a menu item picture.");
-      return;
-    }
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showError({
+          title: "Photo access is needed",
+          message: "Allow photo library access in your device settings to choose a menu item picture.",
+        });
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets.length > 0) {
-      setSelectedImage(result.assets[0]);
+      if (!result.canceled && result.assets.length > 0) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (pickerError) {
+      logAppError("Selecting a menu item picture", pickerError);
+      showError(getUserFacingError(pickerError, {
+        title: "We couldn't open your photos",
+        message: "Your menu item picture has not been changed. Please check photo access and try again.",
+      }));
     }
   };
 

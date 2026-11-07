@@ -1,6 +1,7 @@
 import { router, usePathname } from "expo-router";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ComponentSize, Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 export default function CustomerBottomNav() {
   const pathname = usePathname();
@@ -73,27 +74,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingHorizontal: Layout.screenHorizontalCompact,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
     borderTopWidth: 1,
   },
 
   nav: {
-    height: 64,
+    height: ComponentSize.navigationHeight,
     maxWidth: 600,
     width: "100%",
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderRadius: 18,
+    borderRadius: Radius.panel,
     borderWidth: 1,
   },
 
   tab: {
     flex: 1,
-    height: 64,
+    height: ComponentSize.navigationHeight,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -104,8 +105,8 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 36,
-    height: 30,
+    width: 34,
+    height: 28,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
@@ -117,7 +118,7 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    fontSize: 20,
+    fontSize: 18,
     color: "#7F94A3",
   },
 
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 11,
+    fontSize: Typography.micro,
     fontWeight: "600",
     color: "#7F94A3",
   },

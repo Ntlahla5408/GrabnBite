@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 interface AdminUser {
   userId: number;
@@ -267,8 +268,8 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: "#071B2C",
-    paddingHorizontal: 24,
-    paddingTop: 50,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.xxl,
     paddingBottom: 24,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginTop: 28,
+    marginTop: Spacing.lg,
   },
 
   sectionTitle: {
@@ -328,8 +329,8 @@ const styles = StyleSheet.create({
 
   statCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 20,
+    borderRadius: Radius.card,
+    padding: Layout.cardPadding,
     minWidth: 180,
     flex: 1,
     borderWidth: 1,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
 
   statValue: {
     color: "#071B2C",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -350,10 +351,10 @@ const styles = StyleSheet.create({
 
   dashboardButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 20,
+    padding: Layout.cardPadding,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -380,14 +381,14 @@ const styles = StyleSheet.create({
 
   arrow: {
     color: "#F97316",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "300",
   },
 
   center: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: Spacing.xxl,
   },
 
   loadingText: {
@@ -398,9 +399,9 @@ const styles = StyleSheet.create({
 
   errorCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 25,
-    marginTop: 30,
+    borderRadius: Radius.card,
+    padding: Layout.cardPadding,
+    marginTop: Spacing.xl,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#FECACA",

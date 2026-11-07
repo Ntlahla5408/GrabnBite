@@ -226,13 +226,13 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingVertical: Spacing.lg,
   },
 
   brandContainer: {
     alignItems: "center",
-    marginBottom: 26,
+    marginBottom: Spacing.xl,
   },
 
   brandLogo: {
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
 
   brand: {
     color: "#FFFFFF",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -258,8 +258,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 480,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 28,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
 
     shadowColor: "#000000",
     shadowOffset: {
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
 
   heading: {
     color: "#071B2C",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "700",
     marginBottom: 8,
   },
@@ -283,11 +283,11 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   fieldContainer: {
-    marginBottom: 18,
+    marginBottom: Spacing.md,
   },
 
   label: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 50,
+    height: ComponentSize.inputHeight,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 10,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
 
   loginButton: {
-    height: 52,
+    height: ComponentSize.buttonHeight,
     backgroundColor: "#F97316",
     borderRadius: 10,
     justifyContent: "center",
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 24,
+    marginTop: Spacing.lg,
     gap: 5,
   },
 

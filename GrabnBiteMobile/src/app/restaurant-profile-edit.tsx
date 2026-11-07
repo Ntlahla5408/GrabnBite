@@ -70,11 +70,15 @@ export default function RestaurantProfileEditScreen() {
       setError("");
     } catch (err) {
       logAppError("Restaurant profile operation", err);
-      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "Unable to load your restaurant profile.", actionLabel: "Try again" }));
+      showError(getUserFacingError(err, {
+        title: "We couldn't load your restaurant profile",
+        message: "Your restaurant details are temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadProfile(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!authLoading && user?.role !== "Restaurant") {
@@ -90,26 +94,26 @@ export default function RestaurantProfileEditScreen() {
   async function chooseRestaurantImage() {
     if (!token || !restaurant) return;
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert(
-        "Permission needed",
-        "Allow photo library access to choose a restaurant cover image.",
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-
-    if (result.canceled || result.assets.length === 0) return;
-
-    const asset = result.assets[0];
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showError({
+          title: "Photo access is needed",
+          message: "Allow photo library access in your device settings to choose a restaurant cover image.",
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (result.canceled || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
       setImageUploadMessage("");
       setImageUploadError("");
       setUploadingImage(true);
@@ -125,9 +129,13 @@ export default function RestaurantProfileEditScreen() {
       setRestaurant(updated);
       setImageUrl(updated.imageUrl ?? "");
       setImageUploadMessage("Restaurant cover image uploaded successfully.");
-    } catch (err: any) {
-      logAppError("Uploading restaurant cover image", err);
-      showError(getUserFacingError(err, { title: "We couldn't upload your cover image", message: "Your cover image hasn't been changed. Please check your connection and try again.", actionLabel: "Try again" }));
+    } catch (imageError) {
+      logAppError("Selecting or uploading restaurant cover image", imageError);
+      showError(getUserFacingError(imageError, {
+        title: "We couldn't update your cover image",
+        message: "Your current cover image has not been changed. Please check photo access and try again.",
+        actionLabel: "Try again",
+      }), () => { void chooseRestaurantImage(); });
     } finally {
       setUploadingImage(false);
     }
@@ -154,8 +162,12 @@ export default function RestaurantProfileEditScreen() {
               setRestaurant(updated);
               setImageUrl("");
             } catch (err) {
-      logAppError("Restaurant profile operation", err);
-      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't remove this item. Nothing was removed. Please try again.", actionLabel: "Try again" }));
+      logAppError("Removing restaurant cover image", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't remove your cover image",
+        message: "Your current cover image is still in place. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void removeRestaurantImage(); });
     } finally {
               setUploadingImage(false);
             }
@@ -231,8 +243,12 @@ export default function RestaurantProfileEditScreen() {
         [{ text: "OK", onPress: () => router.replace("/restaurant-dashboard") }],
       );
     } catch (err) {
-      logAppError("Restaurant profile operation", err);
-      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't save your changes. Your information has not been updated. Please try again.", actionLabel: "Try again" }));
+      logAppError("Saving restaurant profile", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't save your restaurant profile",
+        message: "Your restaurant details have not been updated. Please check the information and try again.",
+        actionLabel: "Try again",
+      }), () => { void saveProfile(); });
     } finally {
       setSaving(false);
     }

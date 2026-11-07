@@ -129,6 +129,18 @@ export default function AdminRestaurantApplicationsScreen() {
     void loadApplications();
   }, [user, loadApplications]);
 
+  async function openSignedDocument(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch (documentError) {
+      logAppError("Opening a restaurant application document", documentError);
+      showError(getUserFacingError(documentError, {
+        title: "We couldn't open this document",
+        message: "The document could not be opened. Please try again or refresh the application.",
+      }));
+    }
+  }
+
   async function openApplication(applicationId: number) {
     if (!token) return;
     try {
@@ -237,7 +249,7 @@ export default function AdminRestaurantApplicationsScreen() {
               <Text style={styles.meta}>{document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB</Text>
               {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
               <View style={styles.actionRow}>
-                <Action label="View file" onPress={() => Linking.openURL(document.signedUrl)} disabled={working} secondary />
+                <Action label="View file" onPress={() => { void openSignedDocument(document.signedUrl); }} disabled={working} secondary />
                 <Action label="Approve document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Approved", comment })} disabled={working || document.verificationStatus === "Approved"} />
                 <Action label="Reject document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Rejected", comment })} disabled={working || !comment.trim() || document.verificationStatus === "Rejected"} danger />
               </View>

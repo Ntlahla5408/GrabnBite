@@ -104,7 +104,7 @@ export default function RestaurantMenuScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, showError]);
 
   useEffect(() => {
     if (!authLoading && token && user?.role === "Restaurant") {

@@ -97,7 +97,7 @@ export default function AdminDriverApplicationsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

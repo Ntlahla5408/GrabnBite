@@ -380,7 +380,7 @@ function Field({
   keyboardType = "default", autoCapitalize = "sentences",
 }: {
   label: string; value: string; onChangeText?: (value: string) => void;
-  colors: typeof AppThemeColors.light; editable?: boolean; secureTextEntry?: boolean;
+  colors: ThemeColors; editable?: boolean; secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address" | "phone-pad" | "numeric";
   autoCapitalize?: "none" | "sentences";
 }) {

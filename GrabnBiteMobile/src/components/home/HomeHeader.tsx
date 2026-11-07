@@ -18,7 +18,7 @@ export default function HomeHeader() {
       let isActive = true;
 
       async function loadCartRestaurantCount() {
-        if (!token) {
+        if (!token || user?.role?.trim().toLowerCase() !== "customer") {
           setRestaurantCount(0);
           return;
         }
@@ -40,7 +40,7 @@ export default function HomeHeader() {
       return () => {
         isActive = false;
       };
-    }, [token]),
+    }, [token, user?.role]),
   );
   return (
     <View style={[styles.container, { backgroundColor: colors.header }]}>
@@ -55,6 +55,7 @@ export default function HomeHeader() {
       </View>
 
       <View style={styles.actions}>
+        {(!user || user.role.trim().toLowerCase() === "customer") && (
         <Pressable
           style={({ pressed }) => [
             styles.cartButton,
@@ -75,6 +76,7 @@ export default function HomeHeader() {
             </View>
           )}
         </Pressable>
+        )}
 
         {!loading && !user && (
           <Pressable

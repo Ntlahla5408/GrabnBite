@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -95,6 +95,8 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
+  const loadOrdersRetryRef = useRef<() => void>(() => {});
+
   const loadOrders = useCallback(async () => {
     try {
       const result = await apiRequest("/api/Orders/my-orders");
@@ -107,7 +109,7 @@ export default function OrdersScreen() {
         title: "We couldn't load your orders",
         message: "Your order history is temporarily unavailable. Your placed orders have not been cancelled. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadOrders(); });
+      }), () => { loadOrdersRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -115,8 +117,12 @@ export default function OrdersScreen() {
   }, [showError]);
 
   useEffect(() => {
+    loadOrdersRetryRef.current = () => { void loadOrders(); };
+  }, [loadOrders]);
+
+  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadOrders();
+    loadOrdersRetryRef.current();
   }, [loadOrders]);
 
   async function handleRefresh() {

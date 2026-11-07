@@ -206,10 +206,10 @@ export default function DriverDashboard() {
     } catch (error: any) {
       logAppError("Changing driver availability", error);
       showError(getUserFacingError(error, {
-        title: "We could not update your availability",
-        message: "Your online status was not changed. Please try again.",
-        actionLabel: "Try again",
-      }), () => { void toggleOnline(); });
+        title: "We could not confirm your availability change",
+        message: "Your online status may already have changed. Refresh your driver status before trying the online or offline control again.",
+        actionLabel: "Refresh status",
+      }), () => { setRefreshing(true); void loadDriverData(); });
     } finally {
       setActionLoading(false);
     }
@@ -263,9 +263,9 @@ export default function DriverDashboard() {
       logAppError("Confirming order pickup", error);
       showError(getUserFacingError(error, {
         title: "We could not confirm pickup",
-        message: "The pickup has not been confirmed. Please check the order status and try again.",
-        actionLabel: "Try again",
-      }), () => { void pickupOrder(); });
+        message: "The pickup may already have been recorded. Refresh your active delivery before trying again.",
+        actionLabel: "Refresh delivery",
+      }), () => { setRefreshing(true); void loadDriverData(); });
     } finally {
       setActionLoading(false);
     }
@@ -289,10 +289,10 @@ export default function DriverDashboard() {
     } catch (error: any) {
       logAppError("Starting delivery", error);
       showError(getUserFacingError(error, {
-        title: "We could not start this delivery",
-        message: "The delivery status was not changed. Please check the order and try again.",
-        actionLabel: "Try again",
-      }), () => { void startDelivery(); });
+        title: "We could not confirm the delivery status",
+        message: "The delivery may already have started. Refresh your active delivery before trying another status action.",
+        actionLabel: "Refresh delivery",
+      }), () => { setRefreshing(true); void loadDriverData(); });
     } finally {
       setActionLoading(false);
     }

@@ -85,7 +85,7 @@ export default function PaymentSuccessScreen() {
     } finally {
       setChecking(false);
     }
-  }, [authLoading, token, orderId]);
+  }, [authLoading, token, orderId, showError]);
 
   useEffect(() => {
     verifyPaymentRetryRef.current = () => { void verifyPayment(); };

@@ -220,11 +220,19 @@ export default function AdminPoliciesScreen() {
     } catch (saveError) {
       logAppError("Saving a policy document", saveError);
       showError(
-        getUserFacingError(saveError, {
-          title: "We couldn't save this policy",
-          message: "Your policy changes have not been saved. Please check the details and try again.",
-        }),
-        () => { void handleSave(); },
+        editingId === null
+          ? {
+              ...getUserFacingError(saveError, {
+                title: "We couldn't confirm the policy upload",
+                message: "The upload may have reached the server, but we couldn't confirm the result. Refresh the policy list before trying to add it again.",
+              }),
+              actionLabel: "Refresh policies",
+            }
+          : getUserFacingError(saveError, {
+              title: "We couldn't save this policy",
+              message: "Your policy changes could not be confirmed. Please try again.",
+            }),
+        editingId === null ? () => { void loadPolicies(); } : () => { void handleSave(); },
       );
     } finally {
       setSaving(false);
@@ -244,13 +252,13 @@ export default function AdminPoliciesScreen() {
       await loadPolicies();
     } catch (archiveError) {
       logAppError("Archiving a policy document", archiveError);
-      showError(
-        getUserFacingError(archiveError, {
-          title: "We couldn't archive this policy",
-          message: "The policy has not been archived. Please try again.",
+      showError({
+        ...getUserFacingError(archiveError, {
+          title: "We couldn't confirm the archive",
+          message: "The policy may already have been archived. Refresh the policy list before attempting this action again.",
         }),
-        () => { void archivePolicy(policy); },
-      );
+        actionLabel: "Refresh policies",
+      }, () => { void loadPolicies(); });
     }
   }
 

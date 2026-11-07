@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
 import { useAuth } from "../../context/authContext";
 import { getCart } from "../../services/cartService";
@@ -11,6 +11,8 @@ export default function HomeHeader() {
   const { theme } = useThemePreference();
   const { user, token, loading } = useAuth();
   const colors = AppThemeColors[theme];
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
   const [restaurantCount, setRestaurantCount] = useState(0);
 
   useFocusEffect(
@@ -43,14 +45,16 @@ export default function HomeHeader() {
     }, [token, user?.role]),
   );
   return (
-    <View style={[styles.container, { backgroundColor: colors.header }]}>
+    <View style={[styles.container, isCompact && styles.compactContainer, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
-        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+        <Image source={logo} style={[styles.logoImage, isCompact && styles.compactLogo]} resizeMode="contain" />
 
         <View>
-          <Text style={[styles.logoText, { color: colors.accent }]}>GrabnBite</Text>
+          <Text numberOfLines={1} style={[styles.logoText, isCompact && styles.compactLogoText, { color: colors.accent }]}>GrabnBite</Text>
 
-          <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
+          {!isCompact && (
+            <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
+          )}
         </View>
       </View>
 
@@ -58,6 +62,7 @@ export default function HomeHeader() {
         {(!user || user.role.trim().toLowerCase() === "customer") && (
         <Pressable
           style={({ pressed }) => [
+            isCompact && styles.compactCartButton,
             styles.cartButton,
             { backgroundColor: colors.surface, borderColor: colors.border },
             pressed && styles.buttonPressed,
@@ -83,6 +88,7 @@ export default function HomeHeader() {
             accessibilityRole="button"
             accessibilityLabel="Create an account"
             style={({ pressed }) => [
+              isCompact && styles.compactSignUpButton,
               styles.signUpButton,
               pressed && styles.signUpButtonPressed,
             ]}
@@ -101,9 +107,9 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -113,18 +119,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    minWidth: 0,
   },
 
   logoImage: {
-    width: 48,
-    height: 48,
-    marginRight: 10,
+    width: 42,
+    height: 42,
+    marginRight: 8,
     backgroundColor: "transparent",
   },
 
   logoText: {
     color: "#F97316",
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
   },
 
@@ -137,7 +144,34 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+  },
+
+  compactContainer: {
+    paddingHorizontal: 12,
+    paddingTop: 9,
+    paddingBottom: 8,
+  },
+
+  compactLogo: {
+    width: 34,
+    height: 34,
+    marginRight: 7,
+  },
+
+  compactLogoText: {
+    fontSize: 17,
+  },
+
+  compactCartButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+
+  compactSignUpButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 
   cartButton: {

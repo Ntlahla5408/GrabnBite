@@ -18,16 +18,18 @@ import {
 } from "../services/cartService";
 import { Cart } from "../types/cart";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function CartScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, user, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
   const loadCart = useCallback(async () => {
     if (!token) {
@@ -36,17 +38,20 @@ export default function CartScreen() {
 
     try {
       const data = await getCart(token);
-      setError("");
-
+      
       // Only show restaurants that have at least one item in the customer's cart.
       setCarts(data.filter((cart) => cart.items.length > 0));
     } catch (error) {
-      console.error("Failed to load cart:", error);
-      setError("Unable to load your cart.");
+      logAppError("Loading customer cart", error);
+      showError(getUserFacingError(error, {
+        title: "We could not load your cart",
+        message: "Your cart could not be opened right now. Your items have not been intentionally removed. Please try again in a moment.",
+        actionLabel: "Try again",
+      }), () => { void loadCart(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (authLoading) {
@@ -93,8 +98,12 @@ export default function CartScreen() {
 
       await loadCart();
     } catch (error) {
-      console.error("Failed to update cart item:", error);
-      setError("Unable to update the item.");
+      logAppError("Updating cart quantity", error);
+      showError(getUserFacingError(error, {
+        title: "We could not update this item",
+        message: "Your quantity was not changed. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void changeQuantity(cartItemId, currentQuantity, newQuantity); });
     } finally {
       setUpdatingItemId(null);
     }
@@ -112,8 +121,12 @@ export default function CartScreen() {
 
       await loadCart();
     } catch (error) {
-      console.error("Failed to remove cart item:", error);
-      setError("Unable to remove the item.");
+      logAppError("Removing cart item", error);
+      showError(getUserFacingError(error, {
+        title: "We could not remove this item",
+        message: "The item is still in your cart. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void handleRemoveItem(cartItemId); });
     } finally {
       setUpdatingItemId(null);
     }
@@ -158,11 +171,7 @@ export default function CartScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {error !== "" && (
-          <View style={[styles.errorBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.errorText, { color: theme === "dark" ? "#FCA5A5" : "#B91C1C" }]}>{error}</Text>
-          </View>
-        )}
+
 
         {carts.length === 0 ? (
           <View style={styles.emptyCart}>

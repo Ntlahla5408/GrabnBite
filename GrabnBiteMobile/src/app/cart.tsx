@@ -47,7 +47,7 @@ export default function CartScreen() {
         title: "We could not load your cart",
         message: "Your cart could not be opened right now. Your items have not been intentionally removed. Please try again in a moment.",
         actionLabel: "Try again",
-      }), () => { void loadCart(); });
+      }), () => { setLoading(true); void loadCart(); });
     } finally {
       setLoading(false);
     }

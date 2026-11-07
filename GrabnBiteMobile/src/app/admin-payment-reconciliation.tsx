@@ -76,11 +76,12 @@ export default function AdminPaymentReconciliationScreen() {
     }
     try {
       const result = await apiRequest("/api/payment-reconciliation/open", {}, token);
-      setItems(Array.isArray(result) ? result : []);
+      const queueItems: ReconciliationItem[] = Array.isArray(result) ? result : [];
+      setItems(queueItems);
       // Keep a just-resolved payment selected so its final state and audit event
       // remain visible even after it leaves the open queue.
       setSelected((current) => current
-        ? (result as ReconciliationItem[]).find((item) => item.paymentId === current.paymentId) ?? current
+        ? queueItems.find((item) => item.paymentId === current.paymentId) ?? current
         : null);
     } catch (requestError) {
       logAppError("Loading admin payment reconciliation queue", requestError);

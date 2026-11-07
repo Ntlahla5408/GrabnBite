@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 
@@ -31,6 +33,7 @@ const roles = ["All", "Customer", "Restaurant", "Driver", "Admin"];
 
 export default function AdminUsersScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
@@ -45,12 +48,16 @@ export default function AdminUsersScreen() {
 
       setUsers(data);
     } catch (err) {
-      console.error("Failed to load users:", err);
-      setError("Unable to load users. Please try again.");
+      logAppError("Loading admin users", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't load the user list",
+        message: "Account information is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadUsers(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -31,6 +31,8 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
 
+  const loadCartRetryRef = useRef<() => void>(() => {});
+
   const loadCart = useCallback(async () => {
     if (!token) {
       return;
@@ -47,11 +49,15 @@ export default function CartScreen() {
         title: "We could not load your cart",
         message: "Your cart could not be opened right now. Your items have not been intentionally removed. Please try again in a moment.",
         actionLabel: "Try again",
-      }), () => { setLoading(true); void loadCart(); });
+      }), () => { setLoading(true); loadCartRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadCartRetryRef.current = () => { void loadCart(); };
+  }, [loadCart]);
 
   useEffect(() => {
     if (authLoading) {
@@ -79,7 +85,7 @@ export default function CartScreen() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadCart();
+    loadCartRetryRef.current();
   }, [authLoading, token, user, loadCart]);
 
   async function changeQuantity(
@@ -130,7 +136,7 @@ export default function CartScreen() {
         actionLabel: "Refresh cart",
       }, () => {
         setLoading(true);
-        void loadCart();
+        loadCartRetryRef.current();
       });
     } finally {
       setUpdatingItemId(null);

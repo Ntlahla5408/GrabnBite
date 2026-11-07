@@ -14,6 +14,8 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   changeMyPassword,
   deleteMyProfilePhoto,
@@ -28,6 +30,7 @@ export default function AccountSettingsScreen() {
   const { user, token, loading: authLoading, updateUser } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError: showErrorModal } = useErrorFeedback();
 
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -62,11 +65,16 @@ export default function AccountSettingsScreen() {
       setNewEmail(profile.email ?? "");
       setError("");
     } catch (loadError: any) {
-      setError(loadError?.message || "Unable to load your account details.");
+      logAppError("Loading personal account details", loadError);
+      showErrorModal(getUserFacingError(loadError, {
+        title: "We could not load your account",
+        message: "Your personal details could not be retrieved. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadProfile(); });
     } finally {
       setLoading(false);
     }
-  }, [token, updateUser]);
+  }, [token, updateUser, showErrorModal]);
 
   useEffect(() => {
     if (!authLoading && !user?.userId) {
@@ -86,7 +94,7 @@ export default function AccountSettingsScreen() {
 
   function showError(value: string) {
     setMessage("");
-    setError(value);
+    showErrorModal({ title: "Please check this information", message: value });
   }
 
   async function saveProfile() {
@@ -106,7 +114,12 @@ export default function AccountSettingsScreen() {
       await updateUser(updated);
       showMessage("Your personal details have been saved.");
     } catch (saveError: any) {
-      showError(saveError?.message || "Unable to save your personal details.");
+      logAppError("Saving personal account details", saveError);
+      showErrorModal(getUserFacingError(saveError, {
+        title: "We could not save your details",
+        message: "Your personal details have not been updated. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void saveProfile(); });
     } finally {
       setSavingProfile(false);
     }
@@ -139,7 +152,12 @@ export default function AccountSettingsScreen() {
       await updateUser({ ...user!, profileImageUrl: uploaded.profileImageUrl });
       showMessage("Your profile picture has been updated.");
     } catch (uploadError: any) {
-      showError(uploadError?.message || "Unable to upload your profile picture.");
+      logAppError("Uploading profile photo", uploadError);
+      showErrorModal(getUserFacingError(uploadError, {
+        title: "We could not upload your photo",
+        message: "Your profile picture was not changed. Please choose the photo again and retry.",
+        actionLabel: "Try again",
+      }), () => { void chooseProfilePhoto(); });
     } finally {
       setUploadingPhoto(false);
     }
@@ -154,7 +172,12 @@ export default function AccountSettingsScreen() {
       await updateUser({ ...user!, profileImageUrl: null });
       showMessage("Your profile picture has been removed.");
     } catch (removeError: any) {
-      showError(removeError?.message || "Unable to remove your profile picture.");
+      logAppError("Removing profile photo", removeError);
+      showErrorModal(getUserFacingError(removeError, {
+        title: "We could not remove your photo",
+        message: "Your current profile picture is still in place. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void removeProfilePhoto(); });
     } finally {
       setUploadingPhoto(false);
     }
@@ -173,7 +196,12 @@ export default function AccountSettingsScreen() {
       setEmailPassword("");
       showMessage(result.message);
     } catch (emailError: any) {
-      showError(emailError?.message || "Unable to request an email change.");
+      logAppError("Requesting email address change", emailError);
+      showErrorModal(getUserFacingError(emailError, {
+        title: "We could not send the verification code",
+        message: "Your email address has not been changed. Check the new address and your current password, then try again.",
+        actionLabel: "Try again",
+      }), () => { void sendEmailVerification(); });
     } finally {
       setSavingEmail(false);
     }
@@ -194,7 +222,12 @@ export default function AccountSettingsScreen() {
       setVerificationCode("");
       showMessage(result.message);
     } catch (verifyError: any) {
-      showError(verifyError?.message || "Unable to verify the new email address.");
+      logAppError("Verifying new email address", verifyError);
+      showErrorModal(getUserFacingError(verifyError, {
+        title: "We could not verify your email address",
+        message: "Your email address has not been changed. Check the six-digit code and try again.",
+        actionLabel: "Try again",
+      }), () => { void confirmEmailChange(); });
     } finally {
       setSavingEmail(false);
     }
@@ -221,7 +254,12 @@ export default function AccountSettingsScreen() {
       setConfirmPassword("");
       showMessage(result.message);
     } catch (passwordError: any) {
-      showError(passwordError?.message || "Unable to update your password.");
+      logAppError("Changing account password", passwordError);
+      showErrorModal(getUserFacingError(passwordError, {
+        title: "We could not change your password",
+        message: "Your password has not been changed. Check your current password and try again.",
+        actionLabel: "Try again",
+      }), () => { void savePassword(); });
     } finally {
       setSavingPassword(false);
     }

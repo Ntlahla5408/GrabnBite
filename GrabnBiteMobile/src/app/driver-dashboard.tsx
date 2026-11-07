@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -660,8 +661,8 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: Layout.cardPadding,
+    paddingBottom: Spacing.xl,
   },
 
   center: {
@@ -680,11 +681,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   logo: {
-    fontSize: 28,
+    fontSize: Typography.title,
     fontWeight: "800",
     color: NAVY,
   },
@@ -701,12 +702,12 @@ const styles = StyleSheet.create({
 
   statusCard: {
     backgroundColor: NAVY,
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: Spacing.lg,
   },
 
   statusTitle: {
@@ -759,9 +760,9 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 22,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -773,7 +774,7 @@ const styles = StyleSheet.create({
   },
 
   restaurantName: {
-    fontSize: 18,
+    fontSize: Typography.subheading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -830,7 +831,7 @@ const styles = StyleSheet.create({
   offerAmount: {
     color: GREEN,
     fontWeight: "800",
-    fontSize: 18,
+    fontSize: Typography.subheading,
   },
 
   divider: {
@@ -930,10 +931,10 @@ const styles = StyleSheet.create({
 
   emptyCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: Radius.panel,
+    padding: Spacing.xl,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },

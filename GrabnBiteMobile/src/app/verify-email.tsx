@@ -11,12 +11,15 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   resendEmailVerification,
   verifyEmail,
 } from "../services/authService";
 
 export default function VerifyEmailScreen() {
+  const { showError } = useErrorFeedback();
   const params = useLocalSearchParams<{
     email?: string;
     emailSent?: string;
@@ -69,9 +72,11 @@ export default function VerifyEmailScreen() {
 
       setVerificationSucceeded(true);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "The code could not be verified.",
-      );
+      logAppError("Verifying an email address", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't verify your email",
+        message: "The verification code could not be confirmed. Check the code and try again.",
+      }), () => { void handleVerify(); });
     } finally {
       setLoading(false);
     }
@@ -94,9 +99,11 @@ export default function VerifyEmailScreen() {
         "If the account needs verification, a new code will be sent. Check your inbox and spam folder.",
       );
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Please try again later.",
-      );
+      logAppError("Resending an email verification code", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't send a new code",
+        message: "A new verification code has not been requested. Please try again shortly.",
+      }), () => { void handleResend(); });
     } finally {
       setResending(false);
     }

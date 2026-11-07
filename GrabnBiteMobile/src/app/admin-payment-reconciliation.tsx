@@ -118,7 +118,6 @@ export default function AdminPaymentReconciliationScreen() {
       router.replace("/");
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start queue loading after authorization is checked.
     void loadQueue();
   }, [user, loadQueue]);
 

@@ -15,6 +15,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   createMenuItem,
   deleteMenuItem,
@@ -33,6 +35,7 @@ export default function RestaurantMenuScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [restaurantId, setRestaurantId] = useState<number | null>(null);
   const [restaurantName, setRestaurantName] = useState("");
@@ -95,9 +98,9 @@ export default function RestaurantMenuScreen() {
           (category) => category.restaurantId === restaurant.restaurantId,
         ),
       );
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || "Unable to load menu.");
+    } catch (err) {
+      logAppError("Restaurant menu operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "Unable to load menu.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
@@ -177,8 +180,9 @@ export default function RestaurantMenuScreen() {
       setEditingItem({ ...editingItem, imageUrl: null });
       await loadMenu();
       Alert.alert("Photo removed", "The menu item picture has been removed.");
-    } catch (err: any) {
-      Alert.alert("Unable to remove photo", err?.message || "Please try again.");
+    } catch (err) {
+      logAppError("Restaurant menu operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't remove this item. Nothing was removed. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }

@@ -97,8 +97,15 @@ export default function DriverDashboard() {
         const active = await apiRequest("/api/Delivery/my-delivery", {}, token);
 
         setActiveDelivery(active);
-      } catch {
+      } catch (deliveryError: any) {
         setActiveDelivery(null);
+        if (deliveryError?.status !== 404) {
+          logAppError("Loading the active delivery", deliveryError);
+          showError(getUserFacingError(deliveryError, {
+            title: "We couldn't load your active delivery",
+            message: "Your current delivery details are temporarily unavailable. Please refresh and try again.",
+          }), () => { void loadDriverData(); });
+        }
       }
 
       // Only get available deliveries when online
@@ -111,8 +118,15 @@ export default function DriverDashboard() {
           );
 
           setAvailableDeliveries(available);
-        } catch {
+        } catch (availableError: any) {
           setAvailableDeliveries([]);
+          if (availableError?.status !== 404) {
+            logAppError("Loading available deliveries", availableError);
+            showError(getUserFacingError(availableError, {
+              title: "We couldn't load delivery offers",
+              message: "Available delivery offers are temporarily unavailable. Please refresh and try again.",
+            }), () => { void loadDriverData(); });
+          }
         }
       } else {
         setAvailableDeliveries([]);

@@ -4,11 +4,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 
 import { useAuth } from "../context/authContext";
 import { confirmYocoPayment } from "../services/paymentService";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function PaymentSuccessScreen() {
   const params = useLocalSearchParams<{ orderId?: string }>();
   const orderId = params.orderId;
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [checking, setChecking] = useState(true);
   const [verified, setVerified] = useState(false);
@@ -66,12 +69,17 @@ export default function PaymentSuccessScreen() {
                 ? "Yoco confirmed that this checkout was not completed. You can safely try the payment again."
                 : "Yoco has not confirmed this payment yet. You can check again shortly."
       );
-    } catch {
+    } catch (paymentError) {
       setVerified(false);
       setPaymentFailed(false);
       setRequiresRefundReview(false);
       setRequiresPaymentReview(false);
       setMessage("We could not verify your payment right now. This screen has not marked your order as paid. Please try checking again.");
+      logAppError("Verifying Yoco payment", paymentError);
+      showError(getUserFacingError(paymentError, {
+        title: "We couldn't verify your payment",
+        message: "Yoco's payment status could not be confirmed. Your order has not been marked as paid. Please check again before attempting another payment.",
+      }), () => { void verifyPayment(); });
     } finally {
       setChecking(false);
     }

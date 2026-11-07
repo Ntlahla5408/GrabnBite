@@ -181,7 +181,7 @@ export default function AdminRestaurantApplicationsScreen() {
       setMessage(successMessage);
     } catch (requestError) {
       logAppError("Admin restaurant applications operation", requestError);
-      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "The requested action could not be completed.", actionLabel: "Try again" }));
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm this review action", message: "The change may already have been saved. Refresh the application and its status before taking another review action.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.restaurantApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }

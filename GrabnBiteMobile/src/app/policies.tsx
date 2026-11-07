@@ -56,7 +56,6 @@ export default function PoliciesScreen() {
   }, [loadPolicies]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start public policy loading after the screen mounts.
     loadPoliciesRetryRef.current();
   }, [loadPolicies]);
 

@@ -70,7 +70,10 @@ export default function AdminPaymentReconciliationScreen() {
   const [details, setDetails] = useState("");
 
   const loadQueue = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const result = await apiRequest("/api/payment-reconciliation/open", {}, token);
       setItems(Array.isArray(result) ? result : []);
@@ -81,9 +84,8 @@ export default function AdminPaymentReconciliationScreen() {
       logAppError("Loading admin payment reconciliation queue", requestError);
       showError(getUserFacingError(requestError, {
         title: "We couldn't load payment reconciliation",
-        message: "The payment review queue is temporarily unavailable. Please refresh and try again.",
-        actionLabel: "Refresh queue",
-      }), () => { void loadQueue(); });
+        message: "The payment review queue is temporarily unavailable. Use Refresh to load it again.",
+      }));
     } finally {
       setLoading(false);
     }
@@ -99,9 +101,8 @@ export default function AdminPaymentReconciliationScreen() {
       logAppError("Loading payment reconciliation event history", requestError);
       showError(getUserFacingError(requestError, {
         title: "We couldn't load the payment history",
-        message: "The audit history could not be loaded. Refresh the selected payment to try again.",
-        actionLabel: "Refresh history",
-      }), () => { void loadEvents(paymentId); });
+        message: "The audit history could not be loaded. Use Refresh history to load it again.",
+      }));
     } finally {
       setEventsLoading(false);
     }

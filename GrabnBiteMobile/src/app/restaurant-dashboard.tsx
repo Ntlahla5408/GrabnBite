@@ -123,10 +123,10 @@ export default function RestaurantDashboardScreen() {
     } catch (err: any) {
       logAppError("Updating restaurant order status", err);
       showError(getUserFacingError(err, {
-        title: "We could not update this order",
-        message: "The order status has not been changed. Please check the order and try again.",
-        actionLabel: "Try again",
-      }), () => { void handleAction(order); });
+        title: "We could not confirm the order update",
+        message: "The status change may already have reached the server. Refresh your orders to check the current status before trying another action.",
+        actionLabel: "Refresh orders",
+      }), () => { setRefreshing(true); void loadOrders(); });
     } finally {
       setActionLoading(null);
     }

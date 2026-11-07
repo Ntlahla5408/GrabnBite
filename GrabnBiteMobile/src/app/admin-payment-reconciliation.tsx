@@ -372,6 +372,7 @@ function allowedDefaultStatus(currentStatus: string) {
   if (currentStatus === "NOT_REQUIRED") return "REQUIRED";
   if (currentStatus === "FAILED") return "REQUIRED";
   if (currentStatus === "MANUAL_REVIEW") return "REQUIRED";
+  if (currentStatus === "PENDING") return "MANUAL_REVIEW";
   return "PENDING";
 }
 

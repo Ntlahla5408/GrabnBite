@@ -15,6 +15,8 @@ import {
 
 import CustomerBottomNav from "../components/CustomerBottomNav";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import {
   Address,
@@ -28,6 +30,7 @@ export default function AddressesScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,16 +63,15 @@ export default function AddressesScreen() {
 
       setAddresses(result);
     } catch (error) {
-      console.error("LOAD ADDRESSES ERROR:", error);
-
-      Alert.alert(
-        "Unable to load addresses",
-        "We could not load your saved addresses.",
-      );
+      logAppError("Loading saved delivery addresses", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load your addresses",
+        message: "Your saved delivery addresses are temporarily unavailable. Please try again.",
+      }));
     } finally {
       setLoading(false);
     }
-  }, [authLoading, token]);
+  }, [authLoading, token, showError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,7 +92,11 @@ export default function AddressesScreen() {
 
       setAddresses(result);
     } catch (error) {
-      console.error("REFRESH ADDRESSES ERROR:", error);
+      logAppError("Refreshing saved delivery addresses", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't refresh your addresses",
+        message: "Your saved addresses have not been refreshed. Please try again.",
+      }));
     } finally {
       setRefreshing(false);
     }
@@ -105,7 +111,6 @@ export default function AddressesScreen() {
   };
 
   const handleCreateAddress = async () => {
-    console.log("========== HANDLE CREATE ADDRESS ==========");
     if (
       !streetAddress.trim() ||
       !city.trim() ||
@@ -145,12 +150,11 @@ export default function AddressesScreen() {
 
       Alert.alert("Address saved", "Your delivery address has been saved.");
     } catch (error) {
-      console.error("CREATE ADDRESS ERROR:", error);
-
-      Alert.alert(
-        "Unable to save",
-        "We could not save your address. Please try again.",
-      );
+      logAppError("Creating a delivery address", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't save this address",
+        message: "Your delivery address has not been saved. Please check the details and try again.",
+      }));
     } finally {
       setSaving(false);
     }
@@ -181,12 +185,11 @@ export default function AddressesScreen() {
                 current.filter((item) => item.addressId !== address.addressId),
               );
             } catch (error) {
-              console.error("DELETE ADDRESS ERROR:", error);
-
-              Alert.alert(
-                "Unable to delete",
-                "We could not delete this address.",
-              );
+              logAppError("Deleting a delivery address", error);
+              showError(getUserFacingError(error, {
+                title: "We couldn't delete this address",
+                message: "The address has not been deleted. Please try again.",
+              }));
             }
           },
         },
@@ -214,12 +217,11 @@ export default function AddressesScreen() {
         })),
       );
     } catch (error) {
-      console.error("SET DEFAULT ERROR:", error);
-
-      Alert.alert(
-        "Unable to update",
-        "We could not change your default address.",
-      );
+      logAppError("Changing the default delivery address", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't update your default address",
+        message: "Your default delivery address has not been changed. Please try again.",
+      }));
     }
   };
 
@@ -423,13 +425,6 @@ export default function AddressesScreen() {
               <Pressable
                 style={[styles.saveButton, { backgroundColor: colors.accent }, saving && styles.buttonDisabled]}
                 onPress={() => {
-                  console.log("========== SAVE BUTTON PRESSED ==========");
-                  console.log("saving:", saving);
-                  console.log("street:", streetAddress);
-                  console.log("city:", city);
-                  console.log("province:", province);
-                  console.log("postal:", postalCode);
-
                   handleCreateAddress();
                 }}
                 disabled={saving}

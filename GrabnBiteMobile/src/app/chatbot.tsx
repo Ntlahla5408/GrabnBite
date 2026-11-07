@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { useAuth } from "../context/authContext";
+import { logAppError } from "../services/errorHandler";
 import { ChatMessage, sendChatMessage } from "../services/chatService";
 
 const SUGGESTED_QUESTIONS = [
@@ -98,7 +99,7 @@ export default function ChatbotScreen() {
       } else {
         setErrorMessage("We couldn't send your message. Check your connection and try again.");
       }
-      console.warn("Customer support chat request failed:", typedError.message);
+      logAppError("Sending a customer support message", error);
     } finally {
       setIsSending(false);
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));

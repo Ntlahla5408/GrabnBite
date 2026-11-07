@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -11,6 +11,8 @@ import {
 } from "react-native";
 
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
@@ -87,32 +89,39 @@ function getStatusColor(status: string) {
 export default function OrdersScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+
+  const loadOrdersRetryRef = useRef<() => void>(() => {});
 
   const loadOrders = useCallback(async () => {
     try {
       const result = await apiRequest("/api/Orders/my-orders");
       setError("");
 
-      console.log("MY ORDERS RESULT:", result);
-
       setOrders(result);
     } catch (error) {
-      console.error("Failed to load orders:", error);
-
-      setError("Unable to load your orders. Please try again.");
+      logAppError("Loading customer orders", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load your orders",
+        message: "Your order history is temporarily unavailable. Your placed orders have not been cancelled. Please try again.",
+        actionLabel: "Try again",
+      }), () => { loadOrdersRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadOrders();
+    loadOrdersRetryRef.current = () => { void loadOrders(); };
+  }, [loadOrders]);
+
+  useEffect(() => {
+    loadOrdersRetryRef.current();
   }, [loadOrders]);
 
   async function handleRefresh() {
@@ -121,8 +130,6 @@ export default function OrdersScreen() {
   }
 
   function openOrder(orderId: number) {
-    console.log("OPENING ORDER:", orderId);
-
     router.push({
       pathname: "/order",
       params: {

@@ -8,11 +8,15 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { ComponentSize, Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const logo = require("../../assets/images/inside-icon.png");
 
@@ -22,10 +26,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Error", "Please enter your email and password.");
+      showError({
+        title: "Enter your sign-in details",
+        message: "Please enter both your email address and password to continue.",
+      });
       return;
     }
 
@@ -34,18 +42,17 @@ export default function LoginScreen() {
 
       const result = await login(email.trim(), password);
 
-      console.log("LOGIN SUCCESS:", result);
-      console.log("USER ROLE:", result.role);
-
       Alert.alert("Welcome!", `Welcome back, ${result.firstName}!`);
 
-      if (result.role === "Admin") {
+      const normalizedRole = String(result.role ?? "").trim().toLowerCase();
+
+      if (normalizedRole === "admin") {
         router.replace("/admin-dashboard");
-      } else if (result.role === "Restaurant") {
+      } else if (normalizedRole === "restaurant") {
         router.replace("/restaurant-dashboard");
-      } else if (result.role === "Customer") {
+      } else if (normalizedRole === "customer") {
         router.replace("/");
-      } else if (result.role === "Driver") {
+      } else if (normalizedRole === "driver") {
         router.replace("/driver-dashboard");
       } else {
         Alert.alert(
@@ -54,7 +61,7 @@ export default function LoginScreen() {
         );
       }
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
+      logAppError("Signing in", error);
 
       if (
         error instanceof Error &&
@@ -67,7 +74,10 @@ export default function LoginScreen() {
         return;
       }
 
-      Alert.alert("Login failed", "Please check your email and password.");
+      showError(getUserFacingError(error, {
+        title: "We could not sign you in",
+        message: "The email address or password may be incorrect. Please check your details and try again.",
+      }));
     } finally {
       setLoading(false);
     }
@@ -76,7 +86,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Background Logo */}
       <View pointerEvents="none" style={styles.backgroundLogoContainer}>
@@ -89,6 +99,12 @@ export default function LoginScreen() {
 
       <View style={styles.overlay} />
 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.container}>
         {/* Branding */}
         <View style={styles.brandContainer}>
@@ -165,6 +181,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -201,17 +218,25 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(7, 27, 44, 0.25)",
   },
 
-  container: {
+  scrollView: {
     flex: 1,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+  },
+
+  container: {
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingVertical: Spacing.lg,
   },
 
   brandContainer: {
     alignItems: "center",
-    marginBottom: 26,
+    marginBottom: Spacing.xl,
   },
 
   brandLogo: {
@@ -223,7 +248,7 @@ const styles = StyleSheet.create({
 
   brand: {
     color: "#FFFFFF",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -237,8 +262,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 480,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 28,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
 
     shadowColor: "#000000",
     shadowOffset: {
@@ -253,7 +278,7 @@ const styles = StyleSheet.create({
 
   heading: {
     color: "#071B2C",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "700",
     marginBottom: 8,
   },
@@ -262,11 +287,11 @@ const styles = StyleSheet.create({
     color: "#64748B",
     fontSize: 14,
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   fieldContainer: {
-    marginBottom: 18,
+    marginBottom: Spacing.md,
   },
 
   label: {
@@ -277,7 +302,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 50,
+    height: ComponentSize.inputHeight,
     borderWidth: 1,
     borderColor: "#CBD5E1",
     borderRadius: 10,
@@ -288,7 +313,7 @@ const styles = StyleSheet.create({
   },
 
   loginButton: {
-    height: 52,
+    height: ComponentSize.buttonHeight,
     backgroundColor: "#F97316",
     borderRadius: 10,
     justifyContent: "center",
@@ -314,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 24,
+    marginTop: Spacing.lg,
     gap: 5,
   },
 

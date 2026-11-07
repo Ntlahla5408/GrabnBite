@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -13,6 +13,9 @@ import {
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -63,6 +66,7 @@ export default function DriverDashboard() {
   const { user, token, logout } = useAuth();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   const [availableDeliveries, setAvailableDeliveries] = useState<Delivery[]>(
     [],
@@ -76,6 +80,8 @@ export default function DriverDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const loadDriverDataRetryRef = useRef<() => void>(() => {});
 
   const loadDriverData = useCallback(async () => {
     if (!token) return;
@@ -93,8 +99,15 @@ export default function DriverDashboard() {
         const active = await apiRequest("/api/Delivery/my-delivery", {}, token);
 
         setActiveDelivery(active);
-      } catch {
+      } catch (deliveryError: any) {
         setActiveDelivery(null);
+        if (deliveryError?.status !== 404) {
+          logAppError("Loading the active delivery", deliveryError);
+          showError(getUserFacingError(deliveryError, {
+            title: "We couldn't load your active delivery",
+            message: "Your current delivery details are temporarily unavailable. Please refresh and try again.",
+          }), () => { loadDriverDataRetryRef.current(); });
+        }
       }
 
       // Only get available deliveries when online
@@ -107,8 +120,15 @@ export default function DriverDashboard() {
           );
 
           setAvailableDeliveries(available);
-        } catch {
+        } catch (availableError: any) {
           setAvailableDeliveries([]);
+          if (availableError?.status !== 404) {
+            logAppError("Loading available deliveries", availableError);
+            showError(getUserFacingError(availableError, {
+              title: "We couldn't load delivery offers",
+              message: "Available delivery offers are temporarily unavailable. Please refresh and try again.",
+            }), () => { loadDriverDataRetryRef.current(); });
+          }
         }
       } else {
         setAvailableDeliveries([]);
@@ -127,13 +147,22 @@ export default function DriverDashboard() {
         setActiveDelivery(null);
         setAvailableDeliveries([]);
       } else {
-        console.error("Driver dashboard error:", error);
+        logAppError("Loading driver dashboard", error);
+        showError(getUserFacingError(error, {
+          title: "We could not load your deliveries",
+          message: "Your driver information could not be loaded. Please try again.",
+          actionLabel: "Try again",
+        }), () => { loadDriverDataRetryRef.current(); });
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadDriverDataRetryRef.current = () => { void loadDriverData(); };
+  }, [loadDriverData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,8 +176,8 @@ export default function DriverDashboard() {
         return;
       }
 
-      void loadDriverData();
-    }, [user, router, loadDriverData]),
+      loadDriverDataRetryRef.current();
+    }, [user, router]),
   );
 
   const refresh = async () => {
@@ -181,10 +210,12 @@ export default function DriverDashboard() {
         setAvailableDeliveries([]);
       }
     } catch (error: any) {
-      Alert.alert(
-        "Unable to change status",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Changing driver availability", error);
+      showError(getUserFacingError(error, {
+        title: "We could not confirm your availability change",
+        message: "Your online status may already have changed. Refresh your driver status before trying the online or offline control again.",
+        actionLabel: "Refresh status",
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -208,10 +239,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to accept delivery",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Accepting delivery", error);
+      showError(getUserFacingError(error, {
+        title: "We could not accept this delivery",
+        message: "This delivery has not been accepted by your account. It may have already been assigned to another driver. Refresh and try again.",
+        actionLabel: "Refresh",
+      }), () => { loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -233,10 +266,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to confirm pickup",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Confirming order pickup", error);
+      showError(getUserFacingError(error, {
+        title: "We could not confirm pickup",
+        message: "The pickup may already have been recorded. Refresh your active delivery before trying again.",
+        actionLabel: "Refresh delivery",
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -258,10 +293,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to start delivery",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Starting delivery", error);
+      showError(getUserFacingError(error, {
+        title: "We could not confirm the delivery status",
+        message: "The delivery may already have started. Refresh your active delivery before trying another status action.",
+        actionLabel: "Refresh delivery",
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -299,10 +336,12 @@ export default function DriverDashboard() {
 
               await loadDriverData();
             } catch (error: any) {
-              Alert.alert(
-                "Unable to complete delivery",
-                error.message || "Something went wrong.",
-              );
+              logAppError("Completing delivery", error);
+              showError(getUserFacingError(error, {
+                title: "We could not complete this delivery",
+                message: "The delivery status could not be confirmed. Please check the order before trying again.",
+                actionLabel: "Refresh",
+              }), () => { loadDriverDataRetryRef.current(); });
             } finally {
               setActionLoading(false);
             }
@@ -391,6 +430,9 @@ export default function DriverDashboard() {
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+            <TouchableOpacity onPress={() => router.push("/account-settings" as any)}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>My Account</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/settings" as any)}>
               <Text style={{ color: colors.text, fontWeight: "700" }}>Settings</Text>
             </TouchableOpacity>
@@ -657,8 +699,8 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: Layout.cardPadding,
+    paddingBottom: Spacing.xl,
   },
 
   center: {
@@ -677,11 +719,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   logo: {
-    fontSize: 28,
+    fontSize: Typography.title,
     fontWeight: "800",
     color: NAVY,
   },
@@ -698,12 +740,12 @@ const styles = StyleSheet.create({
 
   statusCard: {
     backgroundColor: NAVY,
-    borderRadius: 18,
-    padding: 20,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+    marginBottom: Spacing.lg,
   },
 
   statusTitle: {
@@ -756,9 +798,9 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 22,
+    borderRadius: Radius.panel,
+    padding: Layout.cardPadding,
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -770,7 +812,7 @@ const styles = StyleSheet.create({
   },
 
   restaurantName: {
-    fontSize: 18,
+    fontSize: Typography.subheading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -827,7 +869,7 @@ const styles = StyleSheet.create({
   offerAmount: {
     color: GREEN,
     fontWeight: "800",
-    fontSize: 18,
+    fontSize: Typography.subheading,
   },
 
   divider: {
@@ -927,10 +969,10 @@ const styles = StyleSheet.create({
 
   emptyCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: Radius.panel,
+    padding: Spacing.xl,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },

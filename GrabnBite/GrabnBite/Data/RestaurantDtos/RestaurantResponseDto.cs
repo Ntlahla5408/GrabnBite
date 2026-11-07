@@ -14,6 +14,8 @@
 
         public string Address { get; set; } = string.Empty;
 
+        public string? Location { get; set; }
+
         public string? ImageUrl { get; set; }
 
         public decimal Latitude { get; set; }
@@ -23,6 +25,8 @@
         public bool IsOpen { get; set; }
 
         public bool IsApproved { get; set; }
+
+        public int? AveragePreparationTimeMinutes { get; set; }
 
         public DateTime CreatedAt { get; set; }
     }

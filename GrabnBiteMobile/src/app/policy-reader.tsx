@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, StatusBar, StyleSheet, Text, View } from 
 import { PdfView } from "react-native-better-pdf";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 interface PolicyDocument {
   policyDocumentId: number;
@@ -17,6 +19,7 @@ export default function PolicyReaderScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const policyId = typeof id === "string" ? Number(id) : Number.NaN;
   const [policy, setPolicy] = useState<PolicyDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +52,12 @@ export default function PolicyReaderScreen() {
       } catch (error) {
         if (isActive) {
           setPolicy(null);
-          setLoadError(error instanceof Error ? error.message : "Unable to load this policy document.");
+          setLoadError("Unable to load this policy document. Please try again.");
+          logAppError("Loading a published policy document", error);
+          showError(getUserFacingError(error, {
+            title: "We couldn't open this policy",
+            message: "This policy document is temporarily unavailable. Please try again.",
+          }), () => { setReloadKey((current) => current + 1); });
         }
       } finally {
         if (isActive) {
@@ -60,7 +68,7 @@ export default function PolicyReaderScreen() {
 
     void loadPolicy();
     return () => { isActive = false; };
-  }, [policyId, reloadKey]);
+  }, [policyId, reloadKey, showError]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -101,7 +109,12 @@ export default function PolicyReaderScreen() {
             }}
             onError={(error) => {
               if (error.page === undefined) {
-                setLoadError(error.message);
+                setLoadError("The policy PDF could not be displayed. Please try again.");
+                logAppError("Displaying a published policy PDF", error);
+                showError(getUserFacingError(error, {
+                  title: "We couldn't display this PDF",
+                  message: "The policy document could not be displayed. Please try opening it again.",
+                }));
               }
             }}
           />

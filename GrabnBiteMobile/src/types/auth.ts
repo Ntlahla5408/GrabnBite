@@ -3,7 +3,11 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber?: string;
   role: string;
+  profileImageUrl?: string | null;
+  isEmailVerified?: boolean;
+  isActive?: boolean;
 }
 
 export interface LoginResponse extends User {

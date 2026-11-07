@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, type Href } from "expo-router";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,17 +20,38 @@ import { getRestaurants } from "../services/restaurantService";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { useAuth } from "../context/authContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useThemePreference();
   const { user } = useAuth();
+  const { showError } = useErrorFeedback();
   const colors = AppThemeColors[theme];
+  const normalizedRole = user?.role?.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!normalizedRole || normalizedRole === "customer") {
+      return;
+    }
+
+    if (normalizedRole === "driver") {
+      router.replace("/driver-dashboard");
+    } else if (normalizedRole === "restaurant") {
+      router.replace("/restaurant-dashboard");
+    } else if (normalizedRole === "admin") {
+      router.replace("/admin-dashboard");
+    }
+  }, [normalizedRole, router]);
 
   const [search, setSearch] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadRestaurantsRetryRef = useRef<() => void>(() => {});
 
   const loadRestaurants = useCallback(async () => {
     try {
@@ -44,17 +65,28 @@ export default function HomeScreen() {
 
       setRestaurants(approvedRestaurants);
     } catch (err) {
-      console.error("Failed to load restaurants:", err);
-      setError("Unable to load restaurants. Please try again.");
+      logAppError("Loading restaurant list", err);
+      setError("failed");
+      showError(getUserFacingError(err, {
+        title: "We could not load restaurants",
+        message: "Restaurants are not available right now because GrabnBite could not retrieve them. Please try again shortly.",
+        actionLabel: "Try again",
+      }), () => { setLoading(true); loadRestaurantsRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadRestaurants();
+    loadRestaurantsRetryRef.current = () => { void loadRestaurants(); };
   }, [loadRestaurants]);
+
+  useEffect(() => {
+    if (user && normalizedRole !== "customer") {
+      return;
+    }
+    loadRestaurantsRetryRef.current();
+  }, [loadRestaurants, user, normalizedRole]);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
@@ -71,6 +103,10 @@ export default function HomeScreen() {
       );
     });
   }, [restaurants, search]);
+
+  if (user && normalizedRole !== "customer") {
+    return null;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -122,12 +158,6 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {!loading && error !== "" && (
-            <View style={styles.center}>
-              <Text style={[styles.errorText, { color: colors.accent }]}>{error}</Text>
-            </View>
-          )}
-
           {!loading && error === "" && filteredRestaurants.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>🍽️</Text>
@@ -151,9 +181,14 @@ export default function HomeScreen() {
                   key={restaurant.restaurantId}
                   name={restaurant.name}
                   cuisine={restaurant.description}
+                  location={restaurant.location?.trim() || "Location unavailable"}
                   isOpen={restaurant.isOpen}
                   imageUrl={restaurant.imageUrl}
-                  deliveryTime="20–35 min"
+                  preparationTime={
+                    restaurant.averagePreparationTimeMinutes != null
+                      ? `${restaurant.averagePreparationTimeMinutes} min prep`
+                      : "Prep time unavailable"
+                  }
                   onPress={() =>
                     router.push({
                       pathname: "/restaurant",
@@ -173,7 +208,7 @@ export default function HomeScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open GrabnBite support chat"
-        onPress={() => router.push("/chatbot")}
+        onPress={() => router.push("/chatbot" as Href)}
         style={[styles.chatButton, { backgroundColor: colors.accent }]}
       >
         <Text style={styles.chatButtonIcon}>✦</Text>
@@ -215,14 +250,14 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 104,
   },
 
   hero: {
     backgroundColor: "#071B2C",
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 34,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
 
   heroContent: {
@@ -241,9 +276,9 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
-    lineHeight: 36,
+    lineHeight: 32,
     marginBottom: 8,
   },
 
@@ -259,14 +294,14 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 28,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.lg,
   },
 
   center: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
+    paddingVertical: Spacing.xl,
   },
 
   loadingText: {
@@ -289,10 +324,10 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Layout.screenHorizontal,
     backgroundColor: "#0D2638",
-    borderRadius: 18,
+    borderRadius: Radius.panel,
   },
 
   emptyIcon: {

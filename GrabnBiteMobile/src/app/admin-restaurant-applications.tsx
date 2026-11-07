@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 interface ApplicationSummary {
@@ -90,6 +92,7 @@ interface ApplicationDetail {
 
 export default function AdminRestaurantApplicationsScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [selected, setSelected] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,12 +108,13 @@ export default function AdminRestaurantApplicationsScreen() {
       const result = await apiRequest("/api/AdminRestaurantApplication", {}, token);
       setApplications(result);
       setError("");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load restaurant applications.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load restaurant applications.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {
@@ -125,6 +129,18 @@ export default function AdminRestaurantApplicationsScreen() {
     void loadApplications();
   }, [user, loadApplications]);
 
+  async function openSignedDocument(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch (documentError) {
+      logAppError("Opening a restaurant application document", documentError);
+      showError(getUserFacingError(documentError, {
+        title: "We couldn't open this document",
+        message: "The document could not be opened. Please try again or refresh the application.",
+      }));
+    }
+  }
+
   async function openApplication(applicationId: number) {
     if (!token) return;
     try {
@@ -137,8 +153,9 @@ export default function AdminRestaurantApplicationsScreen() {
         token,
       );
       setSelected(result);
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load the application.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load the application.", actionLabel: "Try again" }));
     } finally {
       setDetailLoading(false);
     }
@@ -162,8 +179,9 @@ export default function AdminRestaurantApplicationsScreen() {
       await openApplication(selected.restaurantApplicationId);
       await loadApplications();
       setMessage(successMessage);
-    } catch (requestError: any) {
-      setError(requestError?.message || "The requested action could not be completed.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm this review action", message: "The change may already have been saved. Refresh the application and its status before taking another review action.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.restaurantApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }
@@ -231,7 +249,7 @@ export default function AdminRestaurantApplicationsScreen() {
               <Text style={styles.meta}>{document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB</Text>
               {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
               <View style={styles.actionRow}>
-                <Action label="View file" onPress={() => Linking.openURL(document.signedUrl)} disabled={working} secondary />
+                <Action label="View file" onPress={() => { void openSignedDocument(document.signedUrl); }} disabled={working} secondary />
                 <Action label="Approve document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Approved", comment })} disabled={working || document.verificationStatus === "Approved"} />
                 <Action label="Reject document" onPress={() => performAction(`/documents/${document.restaurantDocumentId}/review`, { status: "Rejected", comment })} disabled={working || !comment.trim() || document.verificationStatus === "Rejected"} danger />
               </View>

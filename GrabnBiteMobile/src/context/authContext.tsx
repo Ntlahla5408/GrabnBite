@@ -11,6 +11,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { login as loginApi } from "../services/authService";
 import { LoginResponse, User } from "../types/auth";
+import { logAppError } from "../services/errorHandler";
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
+  updateUser: (updatedUser: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(storedUser);
       }
     } catch (error) {
-      console.error("Failed to load session:", error);
+      logAppError("Loading the saved session", error);
     } finally {
       setLoading(false);
     }
@@ -115,6 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lastName: result.lastName,
       email: result.email,
       role: result.role,
+      phoneNumber: result.phoneNumber,
+      profileImageUrl: result.profileImageUrl ?? null,
+      isEmailVerified: result.isEmailVerified,
+      isActive: result.isActive,
     };
 
     await saveToken(result.token);
@@ -125,6 +131,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return result;
   }
+
+  const updateUser = useCallback(async (updatedUser: User) => {
+    await saveUser(updatedUser);
+    setUser(updatedUser);
+  }, []);
 
   async function logout() {
     await removeSession();
@@ -141,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

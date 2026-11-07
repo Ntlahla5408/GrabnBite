@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 const NAVY = "#071B2C";
@@ -73,6 +75,7 @@ const sections: { title: string; keys: string[] }[] = [
 
 export default function AdminDriverApplicationsScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [selected, setSelected] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,12 +91,13 @@ export default function AdminDriverApplicationsScreen() {
       const result = await apiRequest("/api/AdminDriverApplication", {}, token);
       setApplications(result);
       setError("");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load driver applications.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load driver applications.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {
@@ -108,6 +112,18 @@ export default function AdminDriverApplicationsScreen() {
     void loadApplications();
   }, [user, loadApplications]);
 
+  async function openSignedDocument(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch (documentError) {
+      logAppError("Opening a driver application document", documentError);
+      showError(getUserFacingError(documentError, {
+        title: "We couldn't open this document",
+        message: "The document could not be opened. Please try again or refresh the application.",
+      }));
+    }
+  }
+
   async function openApplication(applicationId: number) {
     if (!token) return;
     try {
@@ -116,8 +132,9 @@ export default function AdminDriverApplicationsScreen() {
       setMessage("");
       const result = await apiRequest("/api/AdminDriverApplication/" + applicationId, {}, token);
       setSelected(result);
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load the driver application.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load the driver application.", actionLabel: "Try again" }));
     } finally {
       setDetailLoading(false);
     }
@@ -141,8 +158,9 @@ export default function AdminDriverApplicationsScreen() {
       await openApplication(selected.driverApplicationId);
       await loadApplications();
       setMessage(successMessage);
-    } catch (requestError: any) {
-      setError(requestError?.message || "The requested action could not be completed.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm this review action", message: "The change may already have been saved. Refresh the application and its status before taking another review action.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.driverApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }
@@ -169,8 +187,9 @@ export default function AdminDriverApplicationsScreen() {
       await openApplication(selected.driverApplicationId);
       await loadApplications();
       setMessage("Document review saved.");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to review this document.");
+    } catch (requestError) {
+      logAppError("Admin driver applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't confirm the document review", message: "The review may already have been saved. Refresh the application before reviewing this document again.", actionLabel: "Refresh application" }), () => { if (selected) { void openApplication(selected.driverApplicationId); void loadApplications(); } });
     } finally {
       setWorking(false);
     }
@@ -227,7 +246,7 @@ export default function AdminDriverApplicationsScreen() {
               <Text style={styles.body}>{document.originalFileName}</Text>
               <Text style={styles.meta}>Status: {document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB</Text>
               {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
-              <Pressable onPress={() => void Linking.openURL(document.signedUrl)} style={styles.openButton}>
+              <Pressable onPress={() => void openSignedDocument(document.signedUrl)} style={styles.openButton}>
                 <Text style={styles.openButtonText}>Open document</Text>
               </Pressable>
               {document.verificationStatus === "Pending" ? (

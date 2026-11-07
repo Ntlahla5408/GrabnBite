@@ -1,26 +1,33 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../context/authContext";
 import { confirmYocoPayment } from "../services/paymentService";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function PaymentSuccessScreen() {
   const params = useLocalSearchParams<{ orderId?: string }>();
   const orderId = params.orderId;
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [checking, setChecking] = useState(true);
   const [verified, setVerified] = useState(false);
+  const [paymentFailed, setPaymentFailed] = useState(false);
   const [requiresRefundReview, setRequiresRefundReview] = useState(false);
   const [requiresPaymentReview, setRequiresPaymentReview] = useState(false);
   const [message, setMessage] = useState("Checking your payment with Yoco...");
+
+  const verifyPaymentRetryRef = useRef<() => void>(() => {});
 
   const verifyPayment = useCallback(async () => {
     if (authLoading) return;
 
     if (!token || !orderId || !Number.isInteger(Number(orderId)) || Number(orderId) <= 0) {
       setVerified(false);
+      setPaymentFailed(false);
       setRequiresRefundReview(false);
       setRequiresPaymentReview(false);
       setMessage("We could not verify this payment. Sign in and open your order to check its current status.");
@@ -32,9 +39,12 @@ export default function PaymentSuccessScreen() {
     try {
       const result = await confirmYocoPayment(Number(orderId), token);
       const isPaid = result.paymentStatus?.toUpperCase() === "PAID";
+      const isFailed = result.paymentStatus?.toUpperCase() === "FAILED";
       const orderWasCancelled = result.orderStatus?.toUpperCase() === "CANCELLED";
       const refundReviewRequired = isPaid && orderWasCancelled;
-      const paymentReviewRequired = isPaid && !orderWasCancelled && result.requiresReconciliation === true;
+      const paymentReviewRequired =
+        !orderWasCancelled &&
+        (result.requiresReconciliation === true || result.refundStatus !== "NOT_REQUIRED");
 
       // Once the backend has verified payment, take the customer straight to
       // the order-tracking screen instead of leaving them on a success screen.
@@ -46,6 +56,7 @@ export default function PaymentSuccessScreen() {
         return;
       }
 
+      setPaymentFailed(isFailed && !orderWasCancelled && !paymentReviewRequired);
       setRequiresRefundReview(refundReviewRequired);
       setRequiresPaymentReview(paymentReviewRequired);
       setVerified(isPaid && !orderWasCancelled && !paymentReviewRequired);
@@ -56,22 +67,33 @@ export default function PaymentSuccessScreen() {
             ? "Yoco confirmed a payment, but this transaction needs further review before the order can proceed. Do not make another payment. Please contact support for an update."
             : isPaid
               ? "Yoco has confirmed your payment."
-              : "Yoco has not confirmed this payment yet. You can check again shortly."
+              : isFailed
+                ? "Yoco confirmed that this checkout was not completed. You can safely try the payment again."
+                : "Yoco has not confirmed this payment yet. You can check again shortly."
       );
-    } catch {
+    } catch (paymentError) {
       setVerified(false);
+      setPaymentFailed(false);
       setRequiresRefundReview(false);
       setRequiresPaymentReview(false);
       setMessage("We could not verify your payment right now. This screen has not marked your order as paid. Please try checking again.");
+      logAppError("Verifying Yoco payment", paymentError);
+      showError(getUserFacingError(paymentError, {
+        title: "We couldn't verify your payment",
+        message: "Yoco's payment status could not be confirmed. Your order has not been marked as paid. Please check again before attempting another payment.",
+      }), () => { verifyPaymentRetryRef.current(); });
     } finally {
       setChecking(false);
     }
-  }, [authLoading, token, orderId]);
+  }, [authLoading, token, orderId, showError]);
+
+  useEffect(() => {
+    verifyPaymentRetryRef.current = () => { void verifyPayment(); };
+  }, [verifyPayment]);
 
   useEffect(() => {
     if (authLoading) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Trigger asynchronous verification after auth restoration.
-    void verifyPayment();
+    verifyPaymentRetryRef.current();
   }, [authLoading, verifyPayment]);
 
   return (
@@ -88,18 +110,31 @@ export default function PaymentSuccessScreen() {
               ? "Order Cancelled — Refund Review"
               : requiresPaymentReview
                 ? "Payment Review Required"
-                : verified
-                ? "Payment Successful"
-                : "Payment Not Yet Verified"}
+                : paymentFailed
+                  ? "Payment Not Completed"
+                  : verified
+                    ? "Payment Successful"
+                    : "Payment Not Yet Verified"}
         </Text>
 
         <Text style={styles.message}>{message}</Text>
 
         {orderId ? <Text style={styles.order}>Order #{orderId}</Text> : null}
 
-        {!verified && !checking && !requiresRefundReview && !requiresPaymentReview ? (
-          <Pressable style={styles.button} onPress={() => void verifyPayment()}>
+        {!verified && !checking && !paymentFailed && !requiresRefundReview && !requiresPaymentReview ? (
+          <Pressable style={styles.button} onPress={() => verifyPaymentRetryRef.current()}>
             <Text style={styles.buttonText}>Check Payment Again</Text>
+          </Pressable>
+        ) : null}
+
+        {paymentFailed ? (
+          <Pressable
+            style={styles.button}
+            onPress={() =>
+              router.replace({ pathname: "/payment", params: { orderId: String(orderId) } })
+            }
+          >
+            <Text style={styles.buttonText}>Try Payment Again</Text>
           </Pressable>
         ) : null}
 

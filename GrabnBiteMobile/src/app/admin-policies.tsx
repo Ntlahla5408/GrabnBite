@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { apiRequest } from "../services/api";
 
@@ -38,6 +40,7 @@ interface PickedPdf {
 
 export default function AdminPoliciesScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
 
@@ -58,12 +61,18 @@ export default function AdminPoliciesScreen() {
       setPolicies(data);
       setError("");
     } catch (loadError) {
-      console.error("Failed to load policy documents:", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Unable to load policy documents.");
+      logAppError("Loading policy documents", loadError);
+      showError(
+        getUserFacingError(loadError, {
+          title: "We couldn't load the policies",
+          message: "Your policy list could not be loaded. Please try again.",
+        }),
+        () => { void loadPolicies(); },
+      );
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (authLoading) {
@@ -79,8 +88,6 @@ export default function AdminPoliciesScreen() {
       router.replace("/");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Load admin policy data after the role check.
     void loadPolicies();
   }, [user, authLoading, loadPolicies]);
 
@@ -126,9 +133,13 @@ export default function AdminPoliciesScreen() {
         size: asset.size,
       });
     } catch (pickerError) {
-      Alert.alert(
-        "Unable to select document",
-        pickerError instanceof Error ? pickerError.message : "Please try selecting the PDF again.",
+      logAppError("Selecting a policy PDF", pickerError);
+      showError(
+        getUserFacingError(pickerError, {
+          title: "We couldn't select that PDF",
+          message: "Please try choosing the PDF again.",
+        }),
+        () => { void choosePdf(); },
       );
     }
   }
@@ -205,10 +216,21 @@ export default function AdminPoliciesScreen() {
           : "The policy document has been updated.",
       );
     } catch (saveError) {
-      console.error("Failed to save policy:", saveError);
-      Alert.alert(
-        "Unable to save policy",
-        saveError instanceof Error ? saveError.message : "Please try again.",
+      logAppError("Saving a policy document", saveError);
+      showError(
+        editingId === null
+          ? {
+              ...getUserFacingError(saveError, {
+                title: "We couldn't confirm the policy upload",
+                message: "The upload may have reached the server, but we couldn't confirm the result. Refresh the policy list before trying to add it again.",
+              }),
+              actionLabel: "Refresh policies",
+            }
+          : getUserFacingError(saveError, {
+              title: "We couldn't save this policy",
+              message: "Your policy changes could not be confirmed. Please try again.",
+            }),
+        editingId === null ? () => { void loadPolicies(); } : () => { void handleSave(); },
       );
     } finally {
       setSaving(false);
@@ -227,10 +249,14 @@ export default function AdminPoliciesScreen() {
       }
       await loadPolicies();
     } catch (archiveError) {
-      Alert.alert(
-        "Unable to archive policy",
-        archiveError instanceof Error ? archiveError.message : "Please try again.",
-      );
+      logAppError("Archiving a policy document", archiveError);
+      showError({
+        ...getUserFacingError(archiveError, {
+          title: "We couldn't confirm the archive",
+          message: "The policy may already have been archived. Refresh the policy list before attempting this action again.",
+        }),
+        actionLabel: "Refresh policies",
+      }, () => { void loadPolicies(); });
     }
   }
 

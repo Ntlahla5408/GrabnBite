@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
     ActivityIndicator,
     TouchableOpacity,
@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 
@@ -31,12 +33,15 @@ const roles = ["All", "Customer", "Restaurant", "Driver", "Admin"];
 
 export default function AdminUsersScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadUsersRetryRef = useRef<() => void>(() => {});
 
   const loadUsers = useCallback(async () => {
     try {
@@ -45,12 +50,20 @@ export default function AdminUsersScreen() {
 
       setUsers(data);
     } catch (err) {
-      console.error("Failed to load users:", err);
-      setError("Unable to load users. Please try again.");
+      logAppError("Loading admin users", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't load the user list",
+        message: "Account information is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { loadUsersRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadUsersRetryRef.current = () => { void loadUsers(); };
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!user) {
@@ -62,9 +75,7 @@ export default function AdminUsersScreen() {
       router.replace("/");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadUsers();
+    loadUsersRetryRef.current();
   }, [user, loadUsers]);
 
   const filteredUsers = useMemo(() => {

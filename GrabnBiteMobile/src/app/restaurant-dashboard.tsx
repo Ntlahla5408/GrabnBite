@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 import {
   acceptRestaurantOrder,
   getRestaurantOrders,
@@ -21,6 +22,8 @@ import {
   RestaurantOrder,
 } from "../services/restaurantOrderService";
 import { getMyRestaurant } from "../services/restaurantService";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F28C28";
@@ -32,13 +35,13 @@ export default function RestaurantDashboardScreen() {
   const { user, token, loading: authLoading } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   // ALL STATE HOOKS
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
   // EFFECTS / CALLBACK HOOKS
   useEffect(() => {
@@ -47,11 +50,12 @@ export default function RestaurantDashboardScreen() {
     }
   }, [authLoading, user]);
 
+  const loadOrdersRetryRef = useRef<() => void>(() => {});
+
   const loadOrders = useCallback(async () => {
     if (!token) return;
 
     try {
-      setError("");
 
       try {
         await getMyRestaurant(token);
@@ -68,12 +72,21 @@ export default function RestaurantDashboardScreen() {
       const data = await getRestaurantOrders(token);
       setOrders(data);
     } catch (err: any) {
-      setError(err?.message || "Unable to load restaurant orders.");
+      logAppError("Loading restaurant orders", err);
+      showError(getUserFacingError(err, {
+        title: "We could not load your orders",
+        message: "Your restaurant orders could not be retrieved. Please try again.",
+        actionLabel: "Try again",
+      }), () => { setRefreshing(true); loadOrdersRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadOrdersRetryRef.current = () => { void loadOrders(); };
+  }, [loadOrders]);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,7 +116,6 @@ export default function RestaurantDashboardScreen() {
 
     try {
       setActionLoading(order.orderId);
-      setError("");
 
       if (order.status === "PENDING") {
         await acceptRestaurantOrder(order.orderId, token);
@@ -115,7 +127,12 @@ export default function RestaurantDashboardScreen() {
 
       await loadOrders();
     } catch (err: any) {
-      setError(err?.message || "Unable to update the order.");
+      logAppError("Updating restaurant order status", err);
+      showError(getUserFacingError(err, {
+        title: "We could not confirm the order update",
+        message: "The status change may already have reached the server. Refresh your orders to check the current status before trying another action.",
+        actionLabel: "Refresh orders",
+      }), () => { setRefreshing(true); loadOrdersRetryRef.current(); });
     } finally {
       setActionLoading(null);
     }
@@ -169,14 +186,19 @@ export default function RestaurantDashboardScreen() {
           ) : null}
         </View>
 
-        <Pressable
-          style={styles.headerIcon}
-          accessibilityRole="button"
-          accessibilityLabel="Open settings"
-          onPress={() => router.push("/settings" as any)}
-        >
-          <Text style={styles.headerIconText}>⚙️</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/account-settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>My Account</Text>
+          </Pressable>
+          <Pressable
+            style={styles.headerIcon}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+            onPress={() => router.push("/settings" as any)}
+          >
+            <Text style={styles.headerIconText}>⚙️</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -185,12 +207,6 @@ export default function RestaurantDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={refreshOrders} />
         }
       >
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
         <View style={styles.summaryRow}>
           <SummaryCard label="New Orders" value={pendingOrders.length} colors={colors} />
           <SummaryCard label="Accepted" value={acceptedOrders.length} colors={colors} />
@@ -313,6 +329,13 @@ function OrderSection({
 
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700" }}>PAYMENT</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: "800" }}>
+                {order.paymentMethod?.toUpperCase() === "CASH" ? "Cash on Delivery" : "Yoco"} · {order.paymentStatus?.toUpperCase() === "PAID" ? "Paid" : "Pay on delivery"}
+              </Text>
+            </View>
+
             {order.items.map((item) => (
               <View key={item.orderItemId} style={styles.itemRow}>
                 <Text style={styles.quantity}>{item.quantity}×</Text>
@@ -412,8 +435,8 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: NAVY,
-    paddingHorizontal: 24,
-    paddingTop: 55,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.xxl,
     paddingBottom: 22,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -429,7 +452,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -453,15 +476,15 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: Layout.cardPadding,
+    paddingBottom: Spacing.xl,
   },
 
   summaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   summaryCard: {
@@ -477,7 +500,7 @@ const styles = StyleSheet.create({
   },
 
   summaryValue: {
-    fontSize: 25,
+    fontSize: Typography.heading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -489,7 +512,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   sectionHeader: {
@@ -499,7 +522,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 20,
+    fontSize: Typography.subheading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -525,10 +548,10 @@ const styles = StyleSheet.create({
 
   orderCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E1E8EF",
-    padding: 18,
+    padding: Layout.cardPadding,
     marginBottom: 12,
     elevation: 2,
   },
@@ -644,16 +667,16 @@ const styles = StyleSheet.create({
 
   emptyBox: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E1E8EF",
-    padding: 35,
+    padding: Spacing.xl,
     alignItems: "center",
     marginTop: 20,
   },
 
   emptyIcon: {
-    fontSize: 38,
+    fontSize: Typography.title,
     marginBottom: 12,
   },
 
@@ -686,7 +709,7 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND,
     justifyContent: "center",
     alignItems: "center",
-    padding: 25,
+    padding: Layout.cardPadding,
   },
 
   loadingText: {
@@ -695,7 +718,7 @@ const styles = StyleSheet.create({
   },
 
   errorTitle: {
-    fontSize: 20,
+    fontSize: Typography.subheading,
     fontWeight: "700",
     color: NAVY,
     marginBottom: 18,
@@ -703,7 +726,7 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     backgroundColor: ORANGE,
-    paddingHorizontal: 35,
+    paddingHorizontal: Layout.screenHorizontal,
     paddingVertical: 13,
     borderRadius: 10,
   },
@@ -716,7 +739,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#071B2C",
     borderRadius: 14,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     flexDirection: "row",
     alignItems: "center",
   },

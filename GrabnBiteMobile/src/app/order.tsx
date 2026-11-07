@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -10,6 +10,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
@@ -30,6 +32,8 @@ interface Order {
   userId: number;
   restaurantId: number;
   deliveryAddressId: number;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
   orderItems: OrderItem[];
 }
 
@@ -37,6 +41,7 @@ export default function OrderScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -48,6 +53,8 @@ export default function OrderScreen() {
   const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
 
+  const loadOrderRetryRef = useRef<() => void>(() => {});
+
   const loadOrder = useCallback(async () => {
     if (!token || !orderId) return;
 
@@ -55,17 +62,22 @@ export default function OrderScreen() {
       const result = await apiRequest(`/api/Orders/${orderId}`, {}, token);
       setError("");
 
-      console.log("ORDER RESULT:", result);
-
       setOrder(result);
     } catch (error) {
-      console.error("Failed to load order:", error);
-
-      setError("Unable to load your order. Please try again.");
+      logAppError("Loading customer order details", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load this order",
+        message: "The details for this order are temporarily unavailable. Your order has not been cancelled. Please try again.",
+        actionLabel: "Try again",
+      }), () => { loadOrderRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, [token, orderId]);
+  }, [token, orderId, showError]);
+
+  useEffect(() => {
+    loadOrderRetryRef.current = () => { void loadOrder(); };
+  }, [loadOrder]);
 
   useEffect(() => {
     if (authLoading) {
@@ -78,8 +90,7 @@ export default function OrderScreen() {
     }
 
     if (Number.isInteger(orderId) && orderId > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-      void loadOrder();
+      loadOrderRetryRef.current();
     }
   }, [authLoading, token, orderId, loadOrder]);
 
@@ -117,8 +128,25 @@ export default function OrderScreen() {
   }
 
   const status = order.status.toUpperCase();
+  const isYocoOrder = order.paymentMethod?.toUpperCase() === "YOCO";
+  const paymentFailed = isYocoOrder && order.paymentStatus?.toUpperCase() === "FAILED";
+  const paymentPending =
+    isYocoOrder &&
+    order.paymentStatus?.toUpperCase() !== "PAID" &&
+    !paymentFailed;
+  const paymentNotCompleted = paymentPending || paymentFailed;
 
-  const statusSteps = [
+  const statusSteps = paymentNotCompleted
+    ? [
+        {
+          key: paymentFailed ? "PAYMENT_FAILED" : "PAYMENT_PENDING",
+          title: paymentFailed ? "Payment not completed" : "Payment pending",
+          description: paymentFailed
+            ? "Yoco confirmed that this checkout was not completed."
+            : "The restaurant will receive your order after Yoco confirms payment.",
+        },
+      ]
+    : [
     {
       key: "PENDING",
       title: "Order placed",
@@ -172,7 +200,7 @@ export default function OrderScreen() {
     "DELIVERED",
   ];
 
-  const currentIndex = statusOrder.indexOf(status);
+  const currentIndex = paymentNotCompleted ? 0 : statusOrder.indexOf(status);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -191,11 +219,15 @@ export default function OrderScreen() {
 
         <View style={styles.statusCard}>
           <Text style={styles.statusIcon}>
-            {status === "DELIVERED" ? "✓" : "🍔"}
+            {paymentNotCompleted ? "!" : status === "DELIVERED" ? "✓" : "🍔"}
           </Text>
 
           <Text style={styles.statusTitle}>
-            {status === "PENDING"
+            {paymentFailed
+              ? "Payment Not Completed"
+              : paymentPending
+                ? "Payment Not Yet Verified"
+                : status === "PENDING"
               ? "Order Confirmed"
               : status === "ACCEPTED"
                 ? "Restaurant Accepted"
@@ -215,11 +247,17 @@ export default function OrderScreen() {
           </Text>
 
           <Text style={styles.statusDescription}>
-            {status === "PENDING"
-              ? "Your order has been received and is waiting for the restaurant."
-              : status === "DELIVERED"
-                ? "Enjoy your meal!"
-                : "We'll keep you updated as your order progresses."}
+            {paymentFailed
+              ? "Yoco confirmed that this checkout was not completed. Your cart has been kept safe, and the restaurant has not received this order. You can safely try payment again."
+              : paymentPending
+                ? "Your cart has been kept safe. The restaurant has not received this order yet. Check payment status before trying another payment."
+                : status === "PENDING"
+                ? order.paymentMethod?.toUpperCase() === "CASH"
+                  ? "Your order has been placed and is waiting for the restaurant. Payment is due on delivery."
+                  : "Your order has been received and is waiting for the restaurant."
+                : status === "DELIVERED"
+                  ? "Enjoy your meal!"
+                  : "We'll keep you updated as your order progresses."}
           </Text>
         </View>
 
@@ -227,7 +265,7 @@ export default function OrderScreen() {
           <Text style={styles.sectionTitle}>Order Status</Text>
 
           {statusSteps.map((step, index) => {
-            const isCompleted = currentIndex >= index;
+            const isCompleted = !paymentNotCompleted && currentIndex >= index;
 
             const isCurrent = currentIndex === index;
 
@@ -320,6 +358,15 @@ export default function OrderScreen() {
             Your selected delivery address
           </Text>
         </View>
+
+        {paymentFailed ? (
+          <Pressable
+            style={styles.homeButtonLarge}
+            onPress={() => router.push({ pathname: "/payment", params: { orderId: String(order.orderId) } })}
+          >
+            <Text style={styles.homeButtonText}>Try Payment Again</Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           style={styles.homeButtonLarge}

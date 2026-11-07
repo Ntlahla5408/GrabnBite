@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 interface PolicyDocument {
   policyDocumentId: number;
@@ -25,9 +27,12 @@ interface PolicyDocument {
 export default function PoliciesScreen() {
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const [policies, setPolicies] = useState<PolicyDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadPoliciesRetryRef = useRef<() => void>(() => {});
 
   const loadPolicies = useCallback(async () => {
     try {
@@ -35,16 +40,23 @@ export default function PoliciesScreen() {
       setPolicies(data);
       setError("");
     } catch (loadError) {
-      console.error("Failed to load published policies:", loadError);
+      logAppError("Loading published policy documents", loadError);
       setError("Unable to load policy documents. Please try again.");
+      showError(getUserFacingError(loadError, {
+        title: "We couldn't load the policies",
+        message: "Published policy documents are temporarily unavailable. Please try again.",
+      }), () => { loadPoliciesRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start public policy loading after the screen mounts.
-    void loadPolicies();
+    loadPoliciesRetryRef.current = () => { void loadPolicies(); };
+  }, [loadPolicies]);
+
+  useEffect(() => {
+    loadPoliciesRetryRef.current();
   }, [loadPolicies]);
 
   return (
@@ -78,7 +90,7 @@ export default function PoliciesScreen() {
         ) : error ? (
           <View style={styles.message}>
             <Text style={[styles.messageText, { color: "#DC2626" }]}>{error}</Text>
-            <Pressable onPress={() => { void loadPolicies(); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
+            <Pressable onPress={() => { loadPoliciesRetryRef.current(); }} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
               <Text style={styles.retryText}>Try again</Text>
             </Pressable>
           </View>

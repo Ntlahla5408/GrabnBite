@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -18,16 +18,20 @@ import {
 } from "../services/cartService";
 import { Cart } from "../types/cart";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function CartScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
-  const { token, loading: authLoading } = useAuth();
+  const { token, user, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
-  const [error, setError] = useState("");
+
+  const loadCartRetryRef = useRef<() => void>(() => {});
 
   const loadCart = useCallback(async () => {
     if (!token) {
@@ -36,20 +40,42 @@ export default function CartScreen() {
 
     try {
       const data = await getCart(token);
-      setError("");
-
+      
       // Only show restaurants that have at least one item in the customer's cart.
       setCarts(data.filter((cart) => cart.items.length > 0));
     } catch (error) {
-      console.error("Failed to load cart:", error);
-      setError("Unable to load your cart.");
+      logAppError("Loading customer cart", error);
+      showError(getUserFacingError(error, {
+        title: "We could not load your cart",
+        message: "Your cart could not be opened right now. Your items have not been intentionally removed. Please try again in a moment.",
+        actionLabel: "Try again",
+      }), () => { setLoading(true); loadCartRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadCartRetryRef.current = () => { void loadCart(); };
+  }, [loadCart]);
 
   useEffect(() => {
     if (authLoading) {
+      return;
+    }
+
+    if (user && user.role.trim().toLowerCase() !== "customer") {
+      const role = user.role.trim().toLowerCase();
+      const destination =
+        role === "driver"
+          ? "/driver-dashboard"
+          : role === "restaurant"
+            ? "/restaurant-dashboard"
+            : role === "admin"
+              ? "/admin-dashboard"
+              : "/login";
+
+      router.replace(destination as any);
       return;
     }
 
@@ -57,10 +83,8 @@ export default function CartScreen() {
       router.replace("/login");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadCart();
-  }, [authLoading, token, loadCart]);
+    loadCartRetryRef.current();
+  }, [authLoading, token, user, loadCart]);
 
   async function changeQuantity(
     cartItemId: number,
@@ -78,8 +102,12 @@ export default function CartScreen() {
 
       await loadCart();
     } catch (error) {
-      console.error("Failed to update cart item:", error);
-      setError("Unable to update the item.");
+      logAppError("Updating cart quantity", error);
+      showError(getUserFacingError(error, {
+        title: "We could not update this item",
+        message: "Your quantity was not changed. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void changeQuantity(cartItemId, currentQuantity, newQuantity); });
     } finally {
       setUpdatingItemId(null);
     }
@@ -97,8 +125,17 @@ export default function CartScreen() {
 
       await loadCart();
     } catch (error) {
-      console.error("Failed to remove cart item:", error);
-      setError("Unable to remove the item.");
+      logAppError("Removing cart item", error);
+      showError({
+        ...getUserFacingError(error, {
+          title: "We couldn't confirm the item removal",
+          message: "The item may already have been removed. Refresh your cart to check its current contents before trying again.",
+        }),
+        actionLabel: "Refresh cart",
+      }, () => {
+        setLoading(true);
+        loadCartRetryRef.current();
+      });
     } finally {
       setUpdatingItemId(null);
     }
@@ -143,11 +180,7 @@ export default function CartScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {error !== "" && (
-          <View style={[styles.errorBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.errorText, { color: theme === "dark" ? "#FCA5A5" : "#B91C1C" }]}>{error}</Text>
-          </View>
-        )}
+
 
         {carts.length === 0 ? (
           <View style={styles.emptyCart}>
@@ -297,7 +330,7 @@ export default function CartScreen() {
                   <Text style={styles.checkoutLabel}>READY TO ORDER?</Text>
 
                   <Text style={styles.checkoutButtonText}>
-                    Proceed to Checkout
+                    Review Order
                   </Text>
                 </View>
 

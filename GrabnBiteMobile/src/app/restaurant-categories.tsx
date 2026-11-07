@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { getMyRestaurant } from "../services/restaurantService";
 import {
   createMenuCategory,
@@ -23,6 +25,7 @@ import {
 
 export default function RestaurantCategoriesScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const [restaurantId, setRestaurantId] = useState<number | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [name, setName] = useState("");
@@ -41,12 +44,13 @@ export default function RestaurantCategoriesScreen() {
       const all = await getMenuCategories();
       setCategories(all.filter((item) => item.restaurantId === restaurant.restaurantId));
       setError("");
-    } catch (err: any) {
-      setError(err?.message || "Unable to load menu categories.");
+    } catch (err) {
+      logAppError("Restaurant categories operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "Unable to load menu categories.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, showError]);
 
   useEffect(() => {
     if (!authLoading && user?.role !== "Restaurant") {
@@ -91,8 +95,9 @@ export default function RestaurantCategoriesScreen() {
       resetForm();
       await loadCategories();
       Alert.alert("Saved", editing ? "Category updated." : "Category created.");
-    } catch (err: any) {
-      Alert.alert("Unable to save category", err?.message || "Please try again.");
+    } catch (err) {
+      logAppError("Restaurant categories operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't save your changes. Your information has not been updated. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }
@@ -112,9 +117,10 @@ export default function RestaurantCategoriesScreen() {
             try {
               await deleteMenuCategory(restaurantId, category.menuCategoryId, token);
               await loadCategories();
-            } catch (err: any) {
-              Alert.alert("Unable to delete category", err?.message || "Please try again.");
-            }
+            } catch (err) {
+      logAppError("Restaurant categories operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't remove this item. Nothing was removed. Please try again.", actionLabel: "Try again" }));
+    }
           },
         },
       ],

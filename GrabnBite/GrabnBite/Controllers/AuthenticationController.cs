@@ -364,7 +364,11 @@ namespace GrabnBite.Controllers
                 firstName = user.FirstName,
                 lastName = user.LastName,
                 email = user.Email,
-                role = user.Role.Name
+                phoneNumber = user.PhoneNumber,
+                role = user.Role.Name,
+                profileImageUrl = user.ProfileImageUrl,
+                isEmailVerified = user.IsEmailVerified,
+                isActive = user.IsActive
             });
         }
 

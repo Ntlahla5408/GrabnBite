@@ -15,6 +15,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   createMenuItem,
   deleteMenuItem,
@@ -33,6 +35,7 @@ export default function RestaurantMenuScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [restaurantId, setRestaurantId] = useState<number | null>(null);
   const [restaurantName, setRestaurantName] = useState("");
@@ -95,13 +98,13 @@ export default function RestaurantMenuScreen() {
           (category) => category.restaurantId === restaurant.restaurantId,
         ),
       );
-    } catch (err: any) {
-      console.error(err);
-      setError(err?.message || "Unable to load menu.");
+    } catch (err) {
+      logAppError("Restaurant menu operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "Unable to load menu.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, showError]);
 
   useEffect(() => {
     if (!authLoading && token && user?.role === "Restaurant") {
@@ -150,21 +153,32 @@ export default function RestaurantMenuScreen() {
   };
 
   const chooseMenuItemImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission needed", "Allow photo library access to choose a menu item picture.");
-      return;
-    }
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showError({
+          title: "Photo access is needed",
+          message: "Allow photo library access in your device settings to choose a menu item picture.",
+        });
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets.length > 0) {
-      setSelectedImage(result.assets[0]);
+      if (!result.canceled && result.assets.length > 0) {
+        setSelectedImage(result.assets[0]);
+      }
+    } catch (pickerError) {
+      logAppError("Selecting a menu item picture", pickerError);
+      showError(getUserFacingError(pickerError, {
+        title: "We couldn't open your photos",
+        message: "Your menu item picture has not been changed. Please check photo access and try again.",
+      }));
     }
   };
 
@@ -177,8 +191,9 @@ export default function RestaurantMenuScreen() {
       setEditingItem({ ...editingItem, imageUrl: null });
       await loadMenu();
       Alert.alert("Photo removed", "The menu item picture has been removed.");
-    } catch (err: any) {
-      Alert.alert("Unable to remove photo", err?.message || "Please try again.");
+    } catch (err) {
+      logAppError("Restaurant menu operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't remove this item. Nothing was removed. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }
@@ -284,11 +299,8 @@ export default function RestaurantMenuScreen() {
           : "Menu item added successfully.",
       );
     } catch (err: any) {
-      console.error(err);
-      Alert.alert(
-        "Unable to save",
-        err?.message || "Something went wrong while saving the item.",
-      );
+      logAppError("Saving restaurant menu item", err);
+      showError(getUserFacingError(err, { title: "We couldn't save this menu item", message: "Your menu item has not been saved. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }
@@ -324,11 +336,8 @@ export default function RestaurantMenuScreen() {
 
               Alert.alert("Deleted", "Menu item deleted successfully.");
             } catch (err: any) {
-              console.error(err);
-              Alert.alert(
-                "Unable to delete",
-                err?.message || "Something went wrong while deleting.",
-              );
+              logAppError("Deleting restaurant menu item", err);
+              showError(getUserFacingError(err, { title: "We couldn't delete this menu item", message: "The menu item could not be removed. Please try again.", actionLabel: "Try again" }));
             } finally {
               setDeletingId(null);
             }

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   getMyRestaurantApplications,
   createRestaurantApplication,
@@ -19,11 +21,14 @@ import {
 
 export default function RestaurantProfileScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const [applications, setApplications] = useState<RestaurantApplicationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [creatingApplication, setCreatingApplication] = useState(false);
   const [error, setError] = useState("");
+
+  const loadApplicationsRetryRef = useRef<() => void>(() => {});
 
   const loadApplications = useCallback(async () => {
     if (!token) return;
@@ -33,12 +38,21 @@ export default function RestaurantProfileScreen() {
       setError("");
       setApplications(results);
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load your partner applications.");
+      logAppError("Loading restaurant partner applications", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't load your applications",
+        message: "Your restaurant partner applications are temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { setLoading(true); loadApplicationsRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadApplicationsRetryRef.current = () => { void loadApplications(); };
+  }, [loadApplications]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -60,7 +74,12 @@ export default function RestaurantProfileScreen() {
         setApplications(results);
       } catch (requestError: any) {
         if (active) {
-          setError(requestError?.message || "Unable to load your partner applications.");
+          logAppError("Loading restaurant partner applications", requestError);
+          showError(getUserFacingError(requestError, {
+            title: "We couldn't load your applications",
+            message: "Your restaurant partner applications are temporarily unavailable. Please try again.",
+            actionLabel: "Try again",
+          }), () => { setLoading(true); loadApplicationsRetryRef.current(); });
         }
       } finally {
         if (active) setLoading(false);
@@ -72,7 +91,7 @@ export default function RestaurantProfileScreen() {
     return () => {
       active = false;
     };
-  }, [authLoading, token, user?.role]);
+  }, [authLoading, token, user?.role, showError, loadApplications]);
 
   if (authLoading || loading) {
     return (
@@ -104,7 +123,7 @@ export default function RestaurantProfileScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              void loadApplications();
+              loadApplicationsRetryRef.current();
             }}
           />
         }
@@ -123,7 +142,11 @@ export default function RestaurantProfileScreen() {
                 `/restaurant-application-edit?applicationId=${created.restaurantApplicationId}` as any,
               );
             } catch (createError: any) {
-              setError(createError?.message || "Unable to create another application.");
+              logAppError("Creating a restaurant partner application", createError);
+              showError(getUserFacingError(createError, {
+                title: "We couldn't start another application",
+                message: "A new restaurant application has not been created. Please try again.",
+              }));
             } finally {
               setCreatingApplication(false);
             }

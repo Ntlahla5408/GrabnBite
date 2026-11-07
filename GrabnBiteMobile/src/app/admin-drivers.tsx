@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -13,6 +12,8 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -33,6 +34,7 @@ type Filter = "All" | "Approved" | "Pending" | "Online" | "Offline";
 export default function AdminDrivers() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [search, setSearch] = useState("");
@@ -40,18 +42,28 @@ export default function AdminDrivers() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const loadDriversRetryRef = useRef<() => void>(() => {});
+
   const loadDrivers = useCallback(async () => {
     try {
       const data = await apiRequest("/api/Driver", {}, token);
 
       setDrivers(data);
-    } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to load drivers.");
+    } catch (error) {
+      logAppError("Loading admin driver records", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load drivers",
+        message: "Driver information is temporarily unavailable. Please refresh and try again.",
+      }), () => { setRefreshing(true); loadDriversRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadDriversRetryRef.current = () => { void loadDrivers(); };
+  }, [loadDrivers]);
 
   useEffect(() => {
     if (!user) {
@@ -63,9 +75,7 @@ export default function AdminDrivers() {
       router.replace("/");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadDrivers();
+    loadDriversRetryRef.current();
   }, [user, router, loadDrivers]);
 
   const onRefresh = () => {

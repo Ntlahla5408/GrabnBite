@@ -1,29 +1,69 @@
-import { router } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
+import { ComponentSize, Layout, Spacing, Typography } from "../../constants/designSystem";
 import { useAuth } from "../../context/authContext";
+import { getCart } from "../../services/cartService";
 
 const logo = require("../../../assets/images/inside-icon.png");
 
 export default function HomeHeader() {
   const { theme } = useThemePreference();
-  const { user, loading } = useAuth();
+  const { user, token, loading } = useAuth();
   const colors = AppThemeColors[theme];
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
+  const [restaurantCount, setRestaurantCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      async function loadCartRestaurantCount() {
+        if (!token || user?.role?.trim().toLowerCase() !== "customer") {
+          setRestaurantCount(0);
+          return;
+        }
+
+        try {
+          const carts = await getCart(token);
+          const count = carts.filter((cart) => cart.items.length > 0).length;
+
+          if (isActive) {
+            setRestaurantCount(count);
+          }
+        } catch (error) {
+          console.error("Failed to load cart count:", error);
+        }
+      }
+
+      void loadCartRestaurantCount();
+
+      return () => {
+        isActive = false;
+      };
+    }, [token, user?.role]),
+  );
   return (
-    <View style={[styles.container, { backgroundColor: colors.header }]}>
+    <View style={[styles.container, isCompact && styles.compactContainer, { backgroundColor: colors.header }]}>
       <View style={styles.brandContainer}>
-        <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+        <Image source={logo} style={[styles.logoImage, isCompact && styles.compactLogo]} resizeMode="contain" />
 
         <View>
-          <Text style={[styles.logoText, { color: colors.accent }]}>GrabnBite</Text>
+          <Text numberOfLines={1} style={[styles.logoText, isCompact && styles.compactLogoText, { color: colors.accent }]}>GrabnBite</Text>
 
-          <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
+          {!isCompact && (
+            <Text style={[styles.tagline, { color: colors.textSecondary }]}>Your next meal starts here.</Text>
+          )}
         </View>
       </View>
 
       <View style={styles.actions}>
+        {(!user || user.role.trim().toLowerCase() === "customer") && (
         <Pressable
           style={({ pressed }) => [
+            isCompact && styles.compactCartButton,
             styles.cartButton,
             { backgroundColor: colors.surface, borderColor: colors.border },
             pressed && styles.buttonPressed,
@@ -31,17 +71,31 @@ export default function HomeHeader() {
           onPress={() => router.push("/cart")}
         >
           <Text style={[styles.cartIcon, { color: colors.text }]}>🛒</Text>
+          {restaurantCount > 0 && (
+            <View
+              style={styles.cartBadge}
+              accessibilityLabel={`${restaurantCount} restaurants in cart`}
+            >
+              <Text style={styles.cartBadgeText}>
+                {restaurantCount > 99 ? "99+" : restaurantCount}
+              </Text>
+            </View>
+          )}
         </Pressable>
+        )}
 
         {!loading && !user && (
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create an account"
             style={({ pressed }) => [
-              styles.loginButton,
-              pressed && styles.loginButtonPressed,
+              isCompact && styles.compactSignUpButton,
+              styles.signUpButton,
+              pressed && styles.signUpButtonPressed,
             ]}
-            onPress={() => router.push("/login")}
+            onPress={() => router.push("/register")}
           >
-            <Text style={styles.loginText}>Login</Text>
+            <Text style={styles.signUpText}>Sign up</Text>
           </Pressable>
         )}
       </View>
@@ -54,9 +108,9 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 12,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -66,18 +120,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    minWidth: 0,
   },
 
   logoImage: {
-    width: 48,
-    height: 48,
-    marginRight: 10,
+    width: ComponentSize.iconButton,
+    height: ComponentSize.iconButton,
+    marginRight: 8,
     backgroundColor: "transparent",
   },
 
   logoText: {
     color: "#F97316",
-    fontSize: 22,
+    fontSize: Typography.subheading,
     fontWeight: "800",
   },
 
@@ -90,12 +145,39 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+  },
+
+  compactContainer: {
+    paddingHorizontal: Layout.screenHorizontalCompact,
+    paddingTop: 9,
+    paddingBottom: 8,
+  },
+
+  compactLogo: {
+    width: 34,
+    height: 34,
+    marginRight: 7,
+  },
+
+  compactLogoText: {
+    fontSize: 17,
+  },
+
+  compactCartButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+
+  compactSignUpButton: {
+    paddingHorizontal: Layout.screenHorizontalCompact,
+    paddingVertical: 8,
   },
 
   cartButton: {
-    width: 42,
-    height: 42,
+    width: ComponentSize.iconButton,
+    height: ComponentSize.iconButton,
     borderRadius: 21,
     borderWidth: 1,
     justifyContent: "center",
@@ -106,14 +188,36 @@ const styles = StyleSheet.create({
     fontSize: 19,
   },
 
-  loginButton: {
+  cartBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 19,
+    height: 19,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#F97316",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cartBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 13,
+  },
+
+  signUpButton: {
     backgroundColor: "#F97316",
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
   },
 
-  loginText: {
+  signUpText: {
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 13,
@@ -123,7 +227,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  loginButtonPressed: {
+  signUpButtonPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.97 }],
   },

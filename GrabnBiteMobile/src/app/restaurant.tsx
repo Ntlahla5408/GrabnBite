@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Image,
@@ -11,13 +11,15 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 import { addCartItem, getCart } from "../services/cartService";
-import { getRestaurantMenu } from "../services/menuService";
+import { getMenuCategories, getRestaurantMenu } from "../services/menuService";
 import { getRestaurant } from "../services/restaurantService";
 
 import { Cart } from "../types/cart";
-import { MenuItem } from "../types/menu";
+import { MenuCategory, MenuItem } from "../types/menu";
 import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
@@ -25,6 +27,7 @@ export default function RestaurantScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [cart, setCart] = useState<Cart[]>([]);
   const [addingItemId, setAddingItemId] = useState<number | null>(null);
@@ -38,58 +41,89 @@ export default function RestaurantScreen() {
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
 
   const [loading, setLoading] = useState(Number.isInteger(restaurantId) && restaurantId > 0);
   const [error, setError] = useState(Number.isInteger(restaurantId) && restaurantId > 0 ? "" : "Restaurant could not be found.");
 
+  const loadRestaurantRetryRef = useRef<() => void>(() => {});
+
   const loadRestaurant = useCallback(async () => {
     try {
-      const [restaurantData, menuData] = await Promise.all([
+      const [restaurantData, menuData, categoryData] = await Promise.all([
         getRestaurant(restaurantId),
         getRestaurantMenu(restaurantId),
+        getMenuCategories(),
       ]);
 
       setError("");
       setRestaurant(restaurantData);
       setMenuItems(menuData.filter((item) => item.isAvailable));
+      setMenuCategories(
+        categoryData.filter((category) => category.restaurantId === restaurantId),
+      );
     } catch (err) {
-      console.error("Failed to load restaurant:", err);
+      logAppError("Loading restaurant details and menu", err);
       setError("Unable to load restaurant. Please try again.");
+      showError(getUserFacingError(err, {
+        title: "We couldn't load this restaurant",
+        message: "The restaurant menu is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { setLoading(true); loadRestaurantRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, showError]);
+
+  useEffect(() => {
+    loadRestaurantRetryRef.current = () => { void loadRestaurant(); };
+  }, [loadRestaurant]);
 
   useEffect(() => {
     if (Number.isInteger(restaurantId) && restaurantId > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async restaurant loading; state updates occur after the request resolves.
-      void loadRestaurant();
+      loadRestaurantRetryRef.current();
     }
   }, [restaurantId, loadRestaurant]);
 
+  // Refresh the customer's carts whenever this restaurant screen becomes active.
+  // This restores the existing subtotal when navigating away and returning.
+  useFocusEffect(
+    useCallback(() => {
+      if (authLoading || !token) {
+        return;
+      }
+
+      let isActive = true;
+
+      getCart(token)
+        .then((updatedCart) => {
+          if (isActive) {
+            setCart(updatedCart);
+          }
+        })
+        .catch((cartError) => {
+          logAppError("Loading the customer's cart", cartError);
+          showError(getUserFacingError(cartError, {
+            title: "We couldn't refresh your cart",
+            message: "Your current cart details may be out of date. Please try again.",
+          }));
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [authLoading, token, showError]),
+  );
+
   const categories = useMemo(() => {
-    const categoryIds = Array.from(
-      new Set(menuItems.map((item) => item.menuCategoryId)),
+    const categoryIdsWithAvailableItems = new Set(
+      menuItems.map((item) => item.menuCategoryId),
     );
 
-    return categoryIds;
-  }, [menuItems]);
-
-  function getCategoryName(categoryId: number) {
-    switch (categoryId) {
-      case 1:
-        return "Burgers";
-
-      case 2:
-        return "Meals";
-
-      case 3:
-        return "Drinks";
-
-      default:
-        return "Menu";
-    }
-  }
+    return menuCategories.filter((category) =>
+      categoryIdsWithAvailableItems.has(category.menuCategoryId),
+    );
+  }, [menuCategories, menuItems]);
 
   async function handleAddToCart(menuItemId: number) {
     if (authLoading) {
@@ -118,8 +152,12 @@ export default function RestaurantScreen() {
       setCart(updatedCart);
       setCartMessage("Item added to cart.");
     } catch (error) {
-      console.error("Failed to add item to cart:", error);
-      setCartMessage("Unable to add item to cart.");
+      logAppError("Adding a menu item to the cart", error);
+      setCartMessage("");
+      showError(getUserFacingError(error, {
+        title: "We couldn't add this item",
+        message: "This item has not been added to your cart. Please check your connection and try again.",
+      }));
     } finally {
       setAddingItemId(null);
     }
@@ -149,10 +187,11 @@ export default function RestaurantScreen() {
     );
   }
 
-  const cartTotal = cart.reduce(
-    (total, currentCart) => total + currentCart.totalAmount,
-    0,
-  );
+  // Show only the subtotal for the restaurant currently being viewed.
+  // Other restaurants' carts remain saved and are still available on the Cart screen.
+  const cartTotal = cart
+    .filter((currentCart) => currentCart.restaurantId === restaurantId)
+    .reduce((total, currentCart) => total + currentCart.totalAmount, 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -219,7 +258,11 @@ export default function RestaurantScreen() {
                 <>
                   <Text style={[styles.metaDivider, { color: colors.textSecondary }]}>•</Text>
 
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>20–35 min</Text>
+                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                    {restaurant.averagePreparationTimeMinutes != null
+                      ? `${restaurant.averagePreparationTimeMinutes} min prep`
+                      : "Prep time unavailable"}
+                  </Text>
                 </>
               )}
             </View>
@@ -244,16 +287,22 @@ export default function RestaurantScreen() {
           </View>
         )}
 
-        {categories.map((categoryId) => {
+        {categories.map((category) => {
           const categoryItems = menuItems.filter(
-            (item) => item.menuCategoryId === categoryId,
+            (item) => item.menuCategoryId === category.menuCategoryId,
           );
 
           return (
-            <View key={categoryId} style={styles.categorySection}>
+            <View key={category.menuCategoryId} style={styles.categorySection}>
               <Text style={[styles.categoryTitle, { color: colors.accent }]}>
-                {getCategoryName(categoryId)}
+                {category.name}
               </Text>
+
+              {category.description?.trim() ? (
+                <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>
+                  {category.description}
+                </Text>
+              ) : null}
 
               {categoryItems.map((item) => (
                 <View key={item.menuItemId} style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -542,6 +591,12 @@ const styles = StyleSheet.create({
     color: "#102A43",
     fontSize: 20,
     fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  categoryDescription: {
+    fontSize: 13,
+    lineHeight: 19,
     marginBottom: 12,
   },
 

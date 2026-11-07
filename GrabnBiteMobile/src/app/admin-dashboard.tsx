@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,8 +11,11 @@ import {
 
 import { router } from "expo-router";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 
 interface AdminUser {
   userId: number;
@@ -30,10 +33,13 @@ export default function AdminDashboard() {
   const { user, token, logout } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadUsersRetryRef = useRef<() => void>(() => {});
 
   const loadUsers = useCallback(async () => {
     try {
@@ -41,12 +47,20 @@ export default function AdminDashboard() {
       setError("");
       setUsers(data);
     } catch (err) {
-      console.error("Failed to load admin users:", err);
-      setError("Unable to load dashboard data.");
+      logAppError("Loading admin dashboard users", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't load the dashboard",
+        message: "The account information is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { loadUsersRetryRef.current(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
+
+  useEffect(() => {
+    loadUsersRetryRef.current = () => { void loadUsers(); };
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!user) {
@@ -58,9 +72,7 @@ export default function AdminDashboard() {
       router.replace("/");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadUsers();
+    loadUsersRetryRef.current();
   }, [user, loadUsers]);
 
   async function handleLogout() {
@@ -73,8 +85,16 @@ export default function AdminDashboard() {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          router.replace("/login");
+          try {
+            await logout();
+            router.replace("/login");
+          } catch (logoutError) {
+            logAppError("Logging out from the admin dashboard", logoutError);
+            showError(getUserFacingError(logoutError, {
+              title: "We couldn't log you out",
+              message: "Your session could not be cleared. Please try again.",
+            }));
+          }
         },
       },
     ]);
@@ -107,6 +127,9 @@ export default function AdminDashboard() {
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Pressable onPress={() => router.push("/account-settings" as any)}>
+            <Text style={{ color: colors.headerText, fontWeight: "700" }}>My Account</Text>
+          </Pressable>
           <Pressable onPress={() => router.push("/settings" as any)}>
             <Text style={{ color: colors.headerText, fontWeight: "700" }}>Settings</Text>
           </Pressable>
@@ -203,6 +226,13 @@ export default function AdminDashboard() {
               />
 
               <DashboardButton
+                title="Payment Reconciliation"
+                subtitle="Review unresolved payments, inspect audit history and record verified refund outcomes."
+                colors={colors}
+                onPress={() => router.push("/admin-payment-reconciliation" as any)}
+              />
+
+              <DashboardButton
                 title="Policy Management"
                 subtitle="Add, update, publish and archive customer policy documents."
                 colors={colors}
@@ -264,8 +294,8 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: "#071B2C",
-    paddingHorizontal: 24,
-    paddingTop: 50,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.xxl,
     paddingBottom: 24,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -274,7 +304,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -307,7 +337,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginTop: 28,
+    marginTop: Spacing.lg,
   },
 
   sectionTitle: {
@@ -325,8 +355,8 @@ const styles = StyleSheet.create({
 
   statCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 20,
+    borderRadius: Radius.card,
+    padding: Layout.cardPadding,
     minWidth: 180,
     flex: 1,
     borderWidth: 1,
@@ -335,7 +365,7 @@ const styles = StyleSheet.create({
 
   statValue: {
     color: "#071B2C",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -347,10 +377,10 @@ const styles = StyleSheet.create({
 
   dashboardButton: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    padding: 20,
+    padding: Layout.cardPadding,
     marginBottom: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -377,14 +407,14 @@ const styles = StyleSheet.create({
 
   arrow: {
     color: "#F97316",
-    fontSize: 30,
+    fontSize: Typography.title,
     fontWeight: "300",
   },
 
   center: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: Spacing.xxl,
   },
 
   loadingText: {
@@ -395,9 +425,9 @@ const styles = StyleSheet.create({
 
   errorCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 25,
-    marginTop: 30,
+    borderRadius: Radius.card,
+    padding: Layout.cardPadding,
+    marginTop: Spacing.xl,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#FECACA",

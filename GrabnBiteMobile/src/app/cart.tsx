@@ -22,7 +22,7 @@ import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 export default function CartScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
-  const { token, loading: authLoading } = useAuth();
+  const { token, user, loading: authLoading } = useAuth();
 
   const [carts, setCarts] = useState<Cart[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +53,21 @@ export default function CartScreen() {
       return;
     }
 
+    if (user && user.role.trim().toLowerCase() !== "customer") {
+      const role = user.role.trim().toLowerCase();
+      const destination =
+        role === "driver"
+          ? "/driver-dashboard"
+          : role === "restaurant"
+            ? "/restaurant-dashboard"
+            : role === "admin"
+              ? "/admin-dashboard"
+              : "/login";
+
+      router.replace(destination as any);
+      return;
+    }
+
     if (!token) {
       router.replace("/login");
       return;
@@ -60,7 +75,7 @@ export default function CartScreen() {
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadCart();
-  }, [authLoading, token, loadCart]);
+  }, [authLoading, token, user, loadCart]);
 
   async function changeQuantity(
     cartItemId: number,

@@ -10,6 +10,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
@@ -39,6 +41,7 @@ export default function OrderScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const params = useLocalSearchParams<{
     orderId?: string;
@@ -61,13 +64,16 @@ export default function OrderScreen() {
 
       setOrder(result);
     } catch (error) {
-      console.error("Failed to load order:", error);
-
-      setError("Unable to load your order. Please try again.");
+      logAppError("Loading customer order details", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load this order",
+        message: "The details for this order are temporarily unavailable. Your order has not been cancelled. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadOrder(); });
     } finally {
       setLoading(false);
     }
-  }, [token, orderId]);
+  }, [token, orderId, showError]);
 
   useEffect(() => {
     if (authLoading) {

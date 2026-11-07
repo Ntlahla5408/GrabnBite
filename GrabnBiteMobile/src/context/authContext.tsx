@@ -11,6 +11,7 @@ import * as SecureStore from "expo-secure-store";
 
 import { login as loginApi } from "../services/authService";
 import { LoginResponse, User } from "../types/auth";
+import { logAppError } from "../services/errorHandler";
 
 interface AuthContextType {
   user: User | null;
@@ -93,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(storedUser);
       }
     } catch (error) {
-      console.error("Failed to load session:", error);
+      logAppError("Loading the saved session", error);
     } finally {
       setLoading(false);
     }

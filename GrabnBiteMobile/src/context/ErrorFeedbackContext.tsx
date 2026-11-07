@@ -38,8 +38,8 @@ export function ErrorFeedbackProvider({ children }: { children: React.ReactNode 
         visible={currentError !== null}
         title={currentError?.title ?? ""}
         message={currentError?.message ?? ""}
-        actionLabel={currentError?.actionLabel}
-        onAction={handleAction}
+        actionLabel={action ? currentError?.actionLabel : undefined}
+        onAction={action ? handleAction : undefined}
         onClose={hideError}
       />
     </ErrorFeedbackContext.Provider>

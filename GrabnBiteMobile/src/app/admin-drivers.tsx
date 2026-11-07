@@ -43,6 +43,8 @@ export default function AdminDrivers() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const loadDriversRetryRef = useRef<() => void>(() => {});
+
   const loadDrivers = useCallback(async () => {
     try {
       const data = await apiRequest("/api/Driver", {}, token);
@@ -53,12 +55,16 @@ export default function AdminDrivers() {
       showError(getUserFacingError(error, {
         title: "We couldn't load drivers",
         message: "Driver information is temporarily unavailable. Please refresh and try again.",
-      }), () => { setRefreshing(true); void loadDrivers(); });
+      }), () => { setRefreshing(true); loadDriversRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadDriversRetryRef.current = () => { void loadDrivers(); };
+  }, [loadDrivers]);
 
   useEffect(() => {
     if (!user) {
@@ -72,7 +78,7 @@ export default function AdminDrivers() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadDrivers();
+    loadDriversRetryRef.current();
   }, [user, router, loadDrivers]);
 
   const onRefresh = () => {

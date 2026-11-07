@@ -13,6 +13,8 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -33,6 +35,7 @@ type Filter = "All" | "Approved" | "Pending" | "Online" | "Offline";
 export default function AdminDrivers() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [search, setSearch] = useState("");
@@ -45,13 +48,17 @@ export default function AdminDrivers() {
       const data = await apiRequest("/api/Driver", {}, token);
 
       setDrivers(data);
-    } catch (error: any) {
-      Alert.alert("Error", error?.message || "Failed to load drivers.");
+    } catch (error) {
+      logAppError("Loading admin driver records", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load drivers",
+        message: "Driver information is temporarily unavailable. Please refresh and try again.",
+      }), () => { setRefreshing(true); void loadDrivers(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

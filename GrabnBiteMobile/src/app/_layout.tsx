@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { AuthProvider } from "../context/authContext";
+import { ErrorFeedbackProvider } from "../context/ErrorFeedbackContext";
 import { AppThemeColors, ThemePreferenceProvider, useThemePreference } from "../context/ThemeContext";
 
 function RootNavigator() {
@@ -20,7 +21,9 @@ export default function RootLayout() {
   return (
     <ThemePreferenceProvider>
       <AuthProvider>
-        <RootNavigator />
+        <ErrorFeedbackProvider>
+          <RootNavigator />
+        </ErrorFeedbackProvider>
       </AuthProvider>
     </ThemePreferenceProvider>
   );

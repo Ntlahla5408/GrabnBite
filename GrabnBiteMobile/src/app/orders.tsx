@@ -11,6 +11,8 @@ import {
 } from "react-native";
 
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 
 interface OrderItem {
@@ -87,6 +89,7 @@ function getStatusColor(status: string) {
 export default function OrdersScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,14 +104,17 @@ export default function OrdersScreen() {
 
       setOrders(result);
     } catch (error) {
-      console.error("Failed to load orders:", error);
-
-      setError("Unable to load your orders. Please try again.");
+      logAppError("Loading customer orders", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load your orders",
+        message: "Your order history is temporarily unavailable. Your placed orders have not been cancelled. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadOrders(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.

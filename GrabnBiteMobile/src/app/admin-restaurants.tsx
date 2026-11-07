@@ -11,6 +11,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 interface Restaurant {
@@ -32,6 +34,7 @@ const filters = ["All", "Approved", "Pending"];
 
 export default function AdminRestaurantsScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [search, setSearch] = useState("");
@@ -46,12 +49,16 @@ export default function AdminRestaurantsScreen() {
 
       setRestaurants(data);
     } catch (err) {
-      console.error("Failed to load restaurants:", err);
-      setError("Unable to load restaurants. Please try again.");
+      logAppError("Loading admin restaurants", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't load restaurants",
+        message: "Restaurant information is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadRestaurants(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

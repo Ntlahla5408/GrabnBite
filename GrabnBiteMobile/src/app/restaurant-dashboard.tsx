@@ -75,7 +75,7 @@ export default function RestaurantDashboardScreen() {
         title: "We could not load your orders",
         message: "Your restaurant orders could not be retrieved. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadOrders(); });
+      }), () => { setRefreshing(true); void loadOrders(); });
     } finally {
       setLoading(false);
       setRefreshing(false);

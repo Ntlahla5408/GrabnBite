@@ -21,11 +21,14 @@ import { Restaurant } from "../types/restaurant";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { useAuth } from "../context/authContext";
 import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { theme } = useThemePreference();
   const { user } = useAuth();
+  const { showError } = useErrorFeedback();
   const colors = AppThemeColors[theme];
   const normalizedRole = user?.role?.trim().toLowerCase();
 
@@ -60,12 +63,17 @@ export default function HomeScreen() {
 
       setRestaurants(approvedRestaurants);
     } catch (err) {
-      console.error("Failed to load restaurants:", err);
-      setError("Unable to load restaurants. Please try again.");
+      logAppError("Loading restaurant list", err);
+      setError("failed");
+      showError(getUserFacingError(err, {
+        title: "We could not load restaurants",
+        message: "Restaurants are not available right now because GrabnBite could not retrieve them. Please try again shortly.",
+        actionLabel: "Try again",
+      }), () => { void loadRestaurants(); });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     if (user && normalizedRole !== "customer") {
@@ -143,12 +151,6 @@ export default function HomeScreen() {
               <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
                 Finding restaurants near you...
               </Text>
-            </View>
-          )}
-
-          {!loading && error !== "" && (
-            <View style={styles.center}>
-              <Text style={[styles.errorText, { color: colors.accent }]}>{error}</Text>
             </View>
           )}
 

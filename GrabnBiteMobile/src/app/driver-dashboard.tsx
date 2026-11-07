@@ -14,6 +14,8 @@ import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F97316";
@@ -64,6 +66,7 @@ export default function DriverDashboard() {
   const { user, token, logout } = useAuth();
   const { theme, isDark } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   const [availableDeliveries, setAvailableDeliveries] = useState<Delivery[]>(
     [],
@@ -128,13 +131,18 @@ export default function DriverDashboard() {
         setActiveDelivery(null);
         setAvailableDeliveries([]);
       } else {
-        console.error("Driver dashboard error:", error);
+        logAppError("Loading driver dashboard", error);
+        showError(getUserFacingError(error, {
+          title: "We could not load your deliveries",
+          message: "Your driver information could not be loaded. Please try again.",
+          actionLabel: "Try again",
+        }), () => { void loadDriverData(); });
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -182,10 +190,12 @@ export default function DriverDashboard() {
         setAvailableDeliveries([]);
       }
     } catch (error: any) {
-      Alert.alert(
-        "Unable to change status",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Changing driver availability", error);
+      showError(getUserFacingError(error, {
+        title: "We could not update your availability",
+        message: "Your online status was not changed. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void toggleOnline(); });
     } finally {
       setActionLoading(false);
     }
@@ -209,10 +219,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to accept delivery",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Accepting delivery", error);
+      showError(getUserFacingError(error, {
+        title: "We could not accept this delivery",
+        message: "This delivery has not been accepted by your account. It may have already been assigned to another driver. Refresh and try again.",
+        actionLabel: "Refresh",
+      }), () => { void loadDriverData(); });
     } finally {
       setActionLoading(false);
     }
@@ -234,10 +246,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to confirm pickup",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Confirming order pickup", error);
+      showError(getUserFacingError(error, {
+        title: "We could not confirm pickup",
+        message: "The pickup has not been confirmed. Please check the order status and try again.",
+        actionLabel: "Try again",
+      }), () => { void pickupOrder(); });
     } finally {
       setActionLoading(false);
     }
@@ -259,10 +273,12 @@ export default function DriverDashboard() {
 
       await loadDriverData();
     } catch (error: any) {
-      Alert.alert(
-        "Unable to start delivery",
-        error.message || "Something went wrong.",
-      );
+      logAppError("Starting delivery", error);
+      showError(getUserFacingError(error, {
+        title: "We could not start this delivery",
+        message: "The delivery status was not changed. Please check the order and try again.",
+        actionLabel: "Try again",
+      }), () => { void startDelivery(); });
     } finally {
       setActionLoading(false);
     }
@@ -300,10 +316,12 @@ export default function DriverDashboard() {
 
               await loadDriverData();
             } catch (error: any) {
-              Alert.alert(
-                "Unable to complete delivery",
-                error.message || "Something went wrong.",
-              );
+              logAppError("Completing delivery", error);
+              showError(getUserFacingError(error, {
+                title: "We could not complete this delivery",
+                message: "The delivery status could not be confirmed. Please check the order before trying again.",
+                actionLabel: "Refresh",
+              }), () => { void loadDriverData(); });
             } finally {
               setActionLoading(false);
             }

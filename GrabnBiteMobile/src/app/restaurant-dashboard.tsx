@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 
 import {
   ActivityIndicator,
@@ -50,6 +50,8 @@ export default function RestaurantDashboardScreen() {
     }
   }, [authLoading, user]);
 
+  const loadOrdersRetryRef = useRef<() => void>(() => {});
+
   const loadOrders = useCallback(async () => {
     if (!token) return;
 
@@ -75,12 +77,16 @@ export default function RestaurantDashboardScreen() {
         title: "We could not load your orders",
         message: "Your restaurant orders could not be retrieved. Please try again.",
         actionLabel: "Try again",
-      }), () => { setRefreshing(true); void loadOrders(); });
+      }), () => { setRefreshing(true); loadOrdersRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadOrdersRetryRef.current = () => { void loadOrders(); };
+  }, [loadOrders]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,7 +132,7 @@ export default function RestaurantDashboardScreen() {
         title: "We could not confirm the order update",
         message: "The status change may already have reached the server. Refresh your orders to check the current status before trying another action.",
         actionLabel: "Refresh orders",
-      }), () => { setRefreshing(true); void loadOrders(); });
+      }), () => { setRefreshing(true); loadOrdersRetryRef.current(); });
     } finally {
       setActionLoading(null);
     }

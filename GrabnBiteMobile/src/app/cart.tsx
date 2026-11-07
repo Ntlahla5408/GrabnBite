@@ -83,8 +83,6 @@ export default function CartScreen() {
       router.replace("/login");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     loadCartRetryRef.current();
   }, [authLoading, token, user, loadCart]);
 

@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 interface AdminUser {
@@ -30,6 +32,7 @@ const ROLES = ["Customer", "Restaurant", "Driver", "Admin"];
 export default function AdminUserEditScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
@@ -64,18 +67,15 @@ export default function AdminUserEditScreen() {
       setSelectedRole(data.role);
       setIsActive(data.isActive);
     } catch (error) {
-      console.error("LOAD USER ERROR:", error);
-
-      Alert.alert(
-        "Error",
-        "Could not load the user."
-      );
-
-      router.back();
+      logAppError("Loading an admin-managed user", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't load this user",
+        message: "The account details are temporarily unavailable. Please try again.",
+      }), () => { void loadUser(); });
     } finally {
       setLoading(false);
     }
-  }, [token, userId]);
+  }, [token, userId, showError]);
 
   useEffect(() => {
     if (!user || user.role !== "Admin") {
@@ -139,14 +139,11 @@ export default function AdminUserEditScreen() {
 
       await loadUser();
     } catch (error) {
-      console.error("UPDATE USER ERROR:", error);
-
-      Alert.alert(
-        "Update Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not update the user."
-      );
+      logAppError("Updating user details", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't save these details",
+        message: "The user's account details have not been changed. Please try again.",
+      }), () => { void saveDetails(); });
     } finally {
       setSaving(false);
     }
@@ -185,14 +182,11 @@ export default function AdminUserEditScreen() {
         `User role changed to ${role}.`
       );
     } catch (error) {
-      console.error("CHANGE ROLE ERROR:", error);
-
-      Alert.alert(
-        "Role Update Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not change the user's role."
-      );
+      logAppError("Changing a user's role", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't change this user's role",
+        message: "The user's permissions have not been changed. Please try again.",
+      }), () => { void changeRole(role); });
     } finally {
       setActionLoading(false);
     }
@@ -231,14 +225,11 @@ export default function AdminUserEditScreen() {
           : "User has been deactivated."
       );
     } catch (error) {
-      console.error("STATUS UPDATE ERROR:", error);
-
-      Alert.alert(
-        "Status Update Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not update the user's status."
-      );
+      logAppError("Changing a user's account status", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't update this account",
+        message: "The user's active status has not been changed. Please try again.",
+      }), () => { void toggleStatus(); });
     } finally {
       setActionLoading(false);
     }
@@ -289,14 +280,11 @@ export default function AdminUserEditScreen() {
         ]
       );
     } catch (error) {
-      console.error("DELETE USER ERROR:", error);
-
-      Alert.alert(
-        "Delete Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not delete the user."
-      );
+      logAppError("Deleting a user account", error);
+      showError(getUserFacingError(error, {
+        title: "We couldn't delete this user",
+        message: "The account has not been deleted. Please try again.",
+      }), () => { void performDelete(); });
     } finally {
       setActionLoading(false);
     }

@@ -2,6 +2,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { AppThemeColors, useThemePreference } from "../../context/ThemeContext";
+import { ComponentSize, Layout, Spacing, Typography } from "../../constants/designSystem";
 import { useAuth } from "../../context/authContext";
 import { getCart } from "../../services/cartService";
 
@@ -107,9 +108,9 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 1200,
     alignSelf: "center",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -123,15 +124,15 @@ const styles = StyleSheet.create({
   },
 
   logoImage: {
-    width: 42,
-    height: 42,
+    width: ComponentSize.iconButton,
+    height: ComponentSize.iconButton,
     marginRight: 8,
     backgroundColor: "transparent",
   },
 
   logoText: {
     color: "#F97316",
-    fontSize: 20,
+    fontSize: Typography.subheading,
     fontWeight: "800",
   },
 
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   },
 
   compactContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Layout.screenHorizontalCompact,
     paddingTop: 9,
     paddingBottom: 8,
   },
@@ -170,13 +171,13 @@ const styles = StyleSheet.create({
   },
 
   compactSignUpButton: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Layout.screenHorizontalCompact,
     paddingVertical: 8,
   },
 
   cartButton: {
-    width: 42,
-    height: 42,
+    width: ComponentSize.iconButton,
+    height: ComponentSize.iconButton,
     borderRadius: 21,
     borderWidth: 1,
     justifyContent: "center",

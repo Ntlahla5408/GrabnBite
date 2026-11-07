@@ -88,8 +88,6 @@ export default function AdminPoliciesScreen() {
       router.replace("/");
       return;
     }
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Load admin policy data after the role check.
     void loadPolicies();
   }, [user, authLoading, loadPolicies]);
 

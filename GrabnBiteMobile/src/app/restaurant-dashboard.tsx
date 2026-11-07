@@ -22,6 +22,8 @@ import {
   RestaurantOrder,
 } from "../services/restaurantOrderService";
 import { getMyRestaurant } from "../services/restaurantService";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const NAVY = "#071B2C";
 const ORANGE = "#F28C28";
@@ -33,13 +35,13 @@ export default function RestaurantDashboardScreen() {
   const { user, token, loading: authLoading } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   // ALL STATE HOOKS
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [error, setError] = useState("");
 
   // EFFECTS / CALLBACK HOOKS
   useEffect(() => {
@@ -52,7 +54,6 @@ export default function RestaurantDashboardScreen() {
     if (!token) return;
 
     try {
-      setError("");
 
       try {
         await getMyRestaurant(token);
@@ -69,12 +70,17 @@ export default function RestaurantDashboardScreen() {
       const data = await getRestaurantOrders(token);
       setOrders(data);
     } catch (err: any) {
-      setError(err?.message || "Unable to load restaurant orders.");
+      logAppError("Loading restaurant orders", err);
+      showError(getUserFacingError(err, {
+        title: "We could not load your orders",
+        message: "Your restaurant orders could not be retrieved. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadOrders(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,7 +110,6 @@ export default function RestaurantDashboardScreen() {
 
     try {
       setActionLoading(order.orderId);
-      setError("");
 
       if (order.status === "PENDING") {
         await acceptRestaurantOrder(order.orderId, token);
@@ -116,7 +121,12 @@ export default function RestaurantDashboardScreen() {
 
       await loadOrders();
     } catch (err: any) {
-      setError(err?.message || "Unable to update the order.");
+      logAppError("Updating restaurant order status", err);
+      showError(getUserFacingError(err, {
+        title: "We could not update this order",
+        message: "The order status has not been changed. Please check the order and try again.",
+        actionLabel: "Try again",
+      }), () => { void handleAction(order); });
     } finally {
       setActionLoading(null);
     }
@@ -191,12 +201,6 @@ export default function RestaurantDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={refreshOrders} />
         }
       >
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
         <View style={styles.summaryRow}>
           <SummaryCard label="New Orders" value={pendingOrders.length} colors={colors} />
           <SummaryCard label="Accepted" value={acceptedOrders.length} colors={colors} />

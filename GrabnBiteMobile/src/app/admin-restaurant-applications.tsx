@@ -114,7 +114,7 @@ export default function AdminRestaurantApplicationsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

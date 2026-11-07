@@ -53,8 +53,6 @@ type PaymentEvent = {
   createdAt: string;
 };
 
-const refundStatuses = ["REQUIRED", "PENDING", "SUCCEEDED", "FAILED", "MANUAL_REVIEW"];
-
 export default function AdminPaymentReconciliationScreen() {
   const { user, token } = useAuth();
   const { showError } = useErrorFeedback();
@@ -308,7 +306,7 @@ export default function AdminPaymentReconciliationScreen() {
 
             <Text style={styles.sectionTitle}>Record a verified refund outcome</Text>
             <Text style={styles.notice}>
-              Recording a status only updates GrabnBite's audit record. It does not send money or call Yoco. Confirm the actual outcome in the provider dashboard first.
+              Recording a status only updates GrabnBite&apos;s audit record. It does not send money or call Yoco. Confirm the actual outcome in the provider dashboard first.
             </Text>
             {allowedNextStatuses.length === 0 ? (
               <Text style={styles.muted}>No refund status transitions are available from {selected.refundStatus}.</Text>

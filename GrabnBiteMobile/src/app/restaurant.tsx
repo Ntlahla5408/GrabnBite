@@ -11,6 +11,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 import { addCartItem, getCart } from "../services/cartService";
 import { getMenuCategories, getRestaurantMenu } from "../services/menuService";
@@ -25,6 +27,7 @@ export default function RestaurantScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const [cart, setCart] = useState<Cart[]>([]);
   const [addingItemId, setAddingItemId] = useState<number | null>(null);
@@ -58,12 +61,17 @@ export default function RestaurantScreen() {
         categoryData.filter((category) => category.restaurantId === restaurantId),
       );
     } catch (err) {
-      console.error("Failed to load restaurant:", err);
+      logAppError("Loading restaurant details and menu", err);
       setError("Unable to load restaurant. Please try again.");
+      showError(getUserFacingError(err, {
+        title: "We couldn't load this restaurant",
+        message: "The restaurant menu is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { setLoading(true); void loadRestaurant(); });
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, showError]);
 
   useEffect(() => {
     if (Number.isInteger(restaurantId) && restaurantId > 0) {
@@ -89,13 +97,17 @@ export default function RestaurantScreen() {
           }
         })
         .catch((cartError) => {
-          console.error("Failed to load cart for restaurant:", cartError);
+          logAppError("Loading the customer's cart", cartError);
+          showError(getUserFacingError(cartError, {
+            title: "We couldn't refresh your cart",
+            message: "Your current cart details may be out of date. Please try again.",
+          }));
         });
 
       return () => {
         isActive = false;
       };
-    }, [authLoading, token]),
+    }, [authLoading, token, showError]),
   );
 
   const categories = useMemo(() => {
@@ -135,8 +147,12 @@ export default function RestaurantScreen() {
       setCart(updatedCart);
       setCartMessage("Item added to cart.");
     } catch (error) {
-      console.error("Failed to add item to cart:", error);
-      setCartMessage("Unable to add item to cart.");
+      logAppError("Adding a menu item to the cart", error);
+      setCartMessage("");
+      showError(getUserFacingError(error, {
+        title: "We couldn't add this item",
+        message: "This item has not been added to your cart. Please check your connection and try again.",
+      }));
     } finally {
       setAddingItemId(null);
     }

@@ -81,8 +81,16 @@ export default function AdminDashboard() {
         text: "Logout",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          router.replace("/login");
+          try {
+            await logout();
+            router.replace("/login");
+          } catch (logoutError) {
+            logAppError("Logging out from the admin dashboard", logoutError);
+            showError(getUserFacingError(logoutError, {
+              title: "We couldn't log you out",
+              message: "Your session could not be cleared. Please try again.",
+            }));
+          }
         },
       },
     ]);

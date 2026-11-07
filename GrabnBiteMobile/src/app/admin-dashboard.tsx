@@ -222,6 +222,13 @@ export default function AdminDashboard() {
               />
 
               <DashboardButton
+                title="Payment Reconciliation"
+                subtitle="Review unresolved payments, inspect audit history and record verified refund outcomes."
+                colors={colors}
+                onPress={() => router.push("/admin-payment-reconciliation" as any)}
+              />
+
+              <DashboardButton
                 title="Policy Management"
                 subtitle="Add, update, publish and archive customer policy documents."
                 colors={colors}

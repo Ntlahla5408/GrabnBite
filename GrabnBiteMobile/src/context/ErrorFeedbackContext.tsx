@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import ErrorModal from "../components/feedback/ErrorModal";
-import { UserFacingError } from "../services/errorHandler";
+import type { UserFacingError } from "../services/errorHandler";
 
 type ErrorFeedbackContextValue = {
   showError: (error: UserFacingError, onAction?: () => void) => void;

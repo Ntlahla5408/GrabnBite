@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -28,6 +28,8 @@ export default function RestaurantProfileScreen() {
   const [creatingApplication, setCreatingApplication] = useState(false);
   const [error, setError] = useState("");
 
+  const loadApplicationsRetryRef = useRef<() => void>(() => {});
+
   const loadApplications = useCallback(async () => {
     if (!token) return;
 
@@ -41,12 +43,16 @@ export default function RestaurantProfileScreen() {
         title: "We couldn't load your applications",
         message: "Your restaurant partner applications are temporarily unavailable. Please try again.",
         actionLabel: "Try again",
-      }), () => { setLoading(true); void loadApplications(); });
+      }), () => { setLoading(true); loadApplicationsRetryRef.current(); });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadApplicationsRetryRef.current = () => { void loadApplications(); };
+  }, [loadApplications]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -73,7 +79,7 @@ export default function RestaurantProfileScreen() {
             title: "We couldn't load your applications",
             message: "Your restaurant partner applications are temporarily unavailable. Please try again.",
             actionLabel: "Try again",
-          }), () => { setLoading(true); void loadApplications(); });
+          }), () => { setLoading(true); loadApplicationsRetryRef.current(); });
         }
       } finally {
         if (active) setLoading(false);
@@ -117,7 +123,7 @@ export default function RestaurantProfileScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              void loadApplications();
+              loadApplicationsRetryRef.current();
             }}
           />
         }

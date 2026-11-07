@@ -122,11 +122,16 @@ export default function CartScreen() {
       await loadCart();
     } catch (error) {
       logAppError("Removing cart item", error);
-      showError(getUserFacingError(error, {
-        title: "We could not remove this item",
-        message: "The item is still in your cart. Please try again.",
-        actionLabel: "Try again",
-      }), () => { void handleRemoveItem(cartItemId); });
+      showError({
+        ...getUserFacingError(error, {
+          title: "We couldn't confirm the item removal",
+          message: "The item may already have been removed. Refresh your cart to check its current contents before trying again.",
+        }),
+        actionLabel: "Refresh cart",
+      }, () => {
+        setLoading(true);
+        void loadCart();
+      });
     } finally {
       setUpdatingItemId(null);
     }

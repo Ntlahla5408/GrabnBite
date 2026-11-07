@@ -15,6 +15,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   deleteRestaurantImage,
   getMyRestaurant,
@@ -25,6 +27,7 @@ import { Restaurant } from "../types/restaurant";
 
 export default function RestaurantProfileEditScreen() {
   const { user, token, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -65,8 +68,9 @@ export default function RestaurantProfileEditScreen() {
       );
       setIsOpen(data.isOpen);
       setError("");
-    } catch (err: any) {
-      setError(err?.message || "Unable to load your restaurant profile.");
+    } catch (err) {
+      logAppError("Restaurant profile operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "Unable to load your restaurant profile.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
@@ -150,12 +154,10 @@ export default function RestaurantProfileEditScreen() {
               );
               setRestaurant(updated);
               setImageUrl("");
-            } catch (err: any) {
-              Alert.alert(
-                "Unable to remove cover image",
-                err?.message || "Please try again.",
-              );
-            } finally {
+            } catch (err) {
+      logAppError("Restaurant profile operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't remove this item. Nothing was removed. Please try again.", actionLabel: "Try again" }));
+    } finally {
               setUploadingImage(false);
             }
           },
@@ -229,11 +231,9 @@ export default function RestaurantProfileEditScreen() {
         "Your restaurant details have been saved.",
         [{ text: "OK", onPress: () => router.replace("/restaurant-dashboard") }],
       );
-    } catch (err: any) {
-      Alert.alert(
-        "Update failed",
-        err?.message || "Unable to update your profile.",
-      );
+    } catch (err) {
+      logAppError("Restaurant profile operation", err);
+      showError(getUserFacingError(err, { title: "We couldn't complete this action", message: "We couldn't save your changes. Your information has not been updated. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }

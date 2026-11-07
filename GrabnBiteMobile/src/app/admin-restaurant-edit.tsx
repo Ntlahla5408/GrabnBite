@@ -14,6 +14,8 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { apiRequest } from "../services/api";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 interface Restaurant {
   restaurantId: number;
@@ -32,6 +34,7 @@ interface Restaurant {
 
 export default function AdminRestaurantEditScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
   const { restaurantId } = useLocalSearchParams<{
     restaurantId: string;
   }>();
@@ -85,12 +88,16 @@ export default function AdminRestaurantEditScreen() {
       );
       setIsOpen(data.isOpen ?? false);
     } catch (err) {
-      console.error("Failed to load restaurant:", err);
-      setError("Unable to load restaurant. Please try again.");
+      logAppError("Loading restaurant details for administration", err);
+      setError("Unable to load restaurant details.");
+      showError(getUserFacingError(err, {
+        title: "We couldn't load this restaurant",
+        message: "The restaurant details are temporarily unavailable. Please try again.",
+      }), () => { void loadRestaurant(); });
     } finally {
       setLoading(false);
     }
-  }, [restaurantId, token]);
+  }, [restaurantId, token, showError]);
 
   useEffect(() => {
     if (!user) {
@@ -131,10 +138,12 @@ export default function AdminRestaurantEditScreen() {
           ? "Restaurant approved successfully. It can now appear to customers."
           : "Approval removed. The restaurant is now hidden from customers.",
       );
-    } catch (err: any) {
-      setApprovalError(
-        err?.message || "Unable to update restaurant approval. Please try again.",
-      );
+    } catch (err) {
+      logAppError("Updating restaurant approval", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't update restaurant approval",
+        message: "The restaurant's approval status has not been changed. Please try again.",
+      }), () => { void updateApproval(isApproved); });
     } finally {
       setApprovalLoading(false);
     }
@@ -204,12 +213,11 @@ export default function AdminRestaurantEditScreen() {
         },
       ]);
     } catch (err) {
-      console.error("Failed to update restaurant:", err);
-
-      Alert.alert(
-        "Update failed",
-        "Unable to update the restaurant. Please try again.",
-      );
+      logAppError("Saving restaurant details in admin", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't save this restaurant",
+        message: "The restaurant details have not been updated. Please check the information and try again.",
+      }), () => { void saveRestaurant(); });
     } finally {
       setSaving(false);
     }

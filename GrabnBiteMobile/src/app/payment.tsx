@@ -13,11 +13,14 @@ import {
 import { useAuth } from "../context/authContext";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { createYocoPayment } from "../services/paymentService";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function PaymentScreen() {
   const { token, loading: authLoading } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const styles = createStyles(colors);
 
   const params = useLocalSearchParams<{
@@ -58,13 +61,19 @@ export default function PaymentScreen() {
 
       setCheckoutUrl(result.redirectUrl);
       setError("");
-    } catch {
-      console.error("Failed to create Yoco payment.");
-      setError("Unable to start payment. Please try again.");
+    } catch (paymentError) {
+      logAppError("Starting Yoco payment", paymentError);
+      setError("We could not prepare the payment. Check your order status before trying again.");
+      showError(getUserFacingError(paymentError, {
+        title: "We could not prepare your payment",
+        message: "Your order may already have a pending payment. Check the order status before attempting payment again.",
+      }), () => {
+        router.replace({ pathname: "/order", params: { orderId: String(orderId) } });
+      });
     } finally {
       setLoading(false);
     }
-  }, [token, orderId]);
+  }, [token, orderId, showError]);
 
   useEffect(() => {
     if (
@@ -101,10 +110,16 @@ export default function PaymentScreen() {
 
         setCheckoutUrl(result.redirectUrl);
         setError("");
-      } catch {
+      } catch (paymentError) {
         if (!cancelled) {
-          console.error("Failed to create Yoco payment.");
-          setError("Unable to start payment. Please try again.");
+          logAppError("Preparing Yoco payment", paymentError);
+          setError("We could not prepare the payment. Check your order status before trying again.");
+          showError(getUserFacingError(paymentError, {
+            title: "We could not prepare your payment",
+            message: "Your order may already have a pending payment. Check the order status before attempting payment again.",
+          }), () => {
+            router.replace({ pathname: "/order", params: { orderId: String(orderId) } });
+          });
         }
       } finally {
         if (!cancelled) {
@@ -118,7 +133,7 @@ export default function PaymentScreen() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, token, orderId]);
+  }, [authLoading, token, orderId, showError]);
 
   useEffect(() => {
     let previousAppState = AppState.currentState;
@@ -161,8 +176,13 @@ export default function PaymentScreen() {
     } catch (openError) {
       checkoutOpenedRef.current = false;
       setPaymentOpened(false);
-      console.error("Failed to open the Yoco payment page.", openError);
-      setError("Unable to open the payment page. Please check your connection and try again.");
+      logAppError("Opening Yoco payment page", openError);
+      setError("We could not open the secure payment page. Please check your connection and try again.");
+      showError(getUserFacingError(openError, {
+        title: "We could not open the payment page",
+        message: "Your payment page did not open. Your order is still awaiting payment. Please check your connection and try again.",
+        actionLabel: "Try again",
+      }), () => { void openPayment(); });
     } finally {
       setOpeningPayment(false);
     }

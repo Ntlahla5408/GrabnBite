@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "GrabnBite",
+    "slug": "GrabnBite",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/android-icon.png",
+    "scheme": "grabnbitemobile",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/android-icon.png"
+    },
+    "android": {
+      "icon": "./assets/images/android-icon.png",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.grubnbite.app"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/android-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B1F33",
+          "image": "./assets/images/loadingscreen-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GrabnBite to access your photos so you can upload restaurant and menu item pictures.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "decacac0-103e-48f6-9afc-77a98b65c7a5"
+      }
+    }
+  }
+}

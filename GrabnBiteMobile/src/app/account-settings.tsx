@@ -82,7 +82,6 @@ export default function AccountSettingsScreen() {
       return;
     }
     if (!authLoading && token) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Load the authenticated profile when this screen opens.
       void loadProfile();
     }
   }, [authLoading, token, user?.userId, loadProfile]);

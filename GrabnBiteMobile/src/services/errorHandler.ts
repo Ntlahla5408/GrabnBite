@@ -34,8 +34,7 @@ export function getUserFacingError(
   if (status === 401) {
     return {
       title: "Please sign in again",
-      message: "Your session may have expired. Sign in again to continue.",
-      actionLabel: "Sign in",
+      message: "Your session may have expired. Please sign in again to continue.",
     };
   }
 

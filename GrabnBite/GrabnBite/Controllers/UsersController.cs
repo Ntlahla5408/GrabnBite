@@ -2,6 +2,7 @@
 using GrabnBite.DTOs.User;
 using GrabnBite.Configuration;
 using GrabnBite.Services;
+using GrabnBite.Models.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

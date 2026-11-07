@@ -445,9 +445,10 @@ export default function DriverApplicationScreen() {
       } else {
         logAppError("Submitting the driver application", requestError);
         showError(getUserFacingError(requestError, {
-          title: "We couldn't submit your application",
-          message: "Your application has not been submitted. Please review the required information and try again.",
-        }));
+          title: "We couldn't confirm your submission",
+          message: "Your application may already have been submitted. Refresh its status before trying to submit again.",
+          actionLabel: "Refresh application",
+        }), () => { void loadApplication(); });
       }
     } finally {
       setSubmitting(false);

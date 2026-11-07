@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "../context/authContext";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
 import {
   acceptRestaurantOrder,
   getRestaurantOrders,
@@ -424,8 +425,8 @@ const styles = StyleSheet.create({
 
   header: {
     backgroundColor: NAVY,
-    paddingHorizontal: 24,
-    paddingTop: 55,
+    paddingHorizontal: Layout.screenHorizontal,
+    paddingTop: Spacing.xxl,
     paddingBottom: 22,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -441,7 +442,7 @@ const styles = StyleSheet.create({
 
   headerTitle: {
     color: "#FFFFFF",
-    fontSize: 26,
+    fontSize: Typography.title,
     fontWeight: "800",
   },
 
@@ -465,15 +466,15 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: Layout.cardPadding,
+    paddingBottom: Spacing.xl,
   },
 
   summaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   summaryCard: {
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
   },
 
   summaryValue: {
-    fontSize: 25,
+    fontSize: Typography.heading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -501,7 +502,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
   },
 
   sectionHeader: {
@@ -511,7 +512,7 @@ const styles = StyleSheet.create({
   },
 
   sectionTitle: {
-    fontSize: 20,
+    fontSize: Typography.subheading,
     fontWeight: "800",
     color: NAVY,
   },
@@ -537,10 +538,10 @@ const styles = StyleSheet.create({
 
   orderCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E1E8EF",
-    padding: 18,
+    padding: Layout.cardPadding,
     marginBottom: 12,
     elevation: 2,
   },
@@ -656,16 +657,16 @@ const styles = StyleSheet.create({
 
   emptyBox: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: Radius.card,
     borderWidth: 1,
     borderColor: "#E1E8EF",
-    padding: 35,
+    padding: Spacing.xl,
     alignItems: "center",
     marginTop: 20,
   },
 
   emptyIcon: {
-    fontSize: 38,
+    fontSize: Typography.title,
     marginBottom: 12,
   },
 
@@ -698,7 +699,7 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND,
     justifyContent: "center",
     alignItems: "center",
-    padding: 25,
+    padding: Layout.cardPadding,
   },
 
   loadingText: {
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
   },
 
   errorTitle: {
-    fontSize: 20,
+    fontSize: Typography.subheading,
     fontWeight: "700",
     color: NAVY,
     marginBottom: 18,
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     backgroundColor: ORANGE,
-    paddingHorizontal: 35,
+    paddingHorizontal: Layout.screenHorizontal,
     paddingVertical: 13,
     borderRadius: 10,
   },
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#071B2C",
     borderRadius: 14,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: Spacing.lg,
     flexDirection: "row",
     alignItems: "center",
   },

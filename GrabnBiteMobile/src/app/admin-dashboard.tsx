@@ -11,6 +11,8 @@ import {
 
 import { router } from "expo-router";
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
 import { Layout, Radius, Spacing, Typography } from "../constants/designSystem";
@@ -31,6 +33,7 @@ export default function AdminDashboard() {
   const { user, token, logout } = useAuth();
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +45,16 @@ export default function AdminDashboard() {
       setError("");
       setUsers(data);
     } catch (err) {
-      console.error("Failed to load admin users:", err);
-      setError("Unable to load dashboard data.");
+      logAppError("Loading admin dashboard users", err);
+      showError(getUserFacingError(err, {
+        title: "We couldn't load the dashboard",
+        message: "The account information is temporarily unavailable. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadUsers(); });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, showError]);
 
   useEffect(() => {
     if (!user) {

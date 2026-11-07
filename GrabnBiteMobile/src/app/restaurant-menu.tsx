@@ -288,11 +288,8 @@ export default function RestaurantMenuScreen() {
           : "Menu item added successfully.",
       );
     } catch (err: any) {
-      console.error(err);
-      Alert.alert(
-        "Unable to save",
-        err?.message || "Something went wrong while saving the item.",
-      );
+      logAppError("Saving restaurant menu item", err);
+      showError(getUserFacingError(err, { title: "We couldn't save this menu item", message: "Your menu item has not been saved. Please try again.", actionLabel: "Try again" }));
     } finally {
       setSaving(false);
     }
@@ -328,11 +325,8 @@ export default function RestaurantMenuScreen() {
 
               Alert.alert("Deleted", "Menu item deleted successfully.");
             } catch (err: any) {
-              console.error(err);
-              Alert.alert(
-                "Unable to delete",
-                err?.message || "Something went wrong while deleting.",
-              );
+              logAppError("Deleting restaurant menu item", err);
+              showError(getUserFacingError(err, { title: "We couldn't delete this menu item", message: "The menu item could not be removed. Please try again.", actionLabel: "Try again" }));
             } finally {
               setDeletingId(null);
             }

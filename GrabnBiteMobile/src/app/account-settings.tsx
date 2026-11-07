@@ -127,21 +127,22 @@ export default function AccountSettingsScreen() {
 
   async function chooseProfilePhoto() {
     if (!token) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      showError("Allow photo library access to choose a profile picture.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.82,
-    });
-    if (result.canceled || result.assets.length === 0) return;
-
-    const asset = result.assets[0];
     try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        showError("Allow photo library access to choose a profile picture.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.82,
+      });
+      if (result.canceled || result.assets.length === 0) return;
+
+      const asset = result.assets[0];
       setUploadingPhoto(true);
       const uploaded = await uploadMyProfilePhoto({
         uri: asset.uri,
@@ -151,11 +152,11 @@ export default function AccountSettingsScreen() {
       setProfileImageUrl(uploaded.profileImageUrl);
       await updateUser({ ...user!, profileImageUrl: uploaded.profileImageUrl });
       showMessage("Your profile picture has been updated.");
-    } catch (uploadError: any) {
-      logAppError("Uploading profile photo", uploadError);
-      showErrorModal(getUserFacingError(uploadError, {
-        title: "We could not upload your photo",
-        message: "Your profile picture was not changed. Please choose the photo again and retry.",
+    } catch (photoError: any) {
+      logAppError("Selecting or uploading profile photo", photoError);
+      showErrorModal(getUserFacingError(photoError, {
+        title: "We could not update your photo",
+        message: "Your profile picture was not changed. Please check photo access and try again.",
         actionLabel: "Try again",
       }), () => { void chooseProfilePhoto(); });
     } finally {

@@ -25,7 +25,7 @@ export default function CheckoutScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
   const { showError } = useErrorFeedback();
-  const { token, loading: authLoading } = useAuth();
+  const { token, user, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
     cartId?: string;
@@ -55,7 +55,7 @@ export default function CheckoutScreen() {
   const [addressFormError, setAddressFormError] = useState("");
 
   const loadAddresses = useCallback(async () => {
-    if (!token) {
+    if (!token || !user || user.role.trim().toLowerCase() !== "customer") {
       return;
     }
 
@@ -89,19 +89,36 @@ export default function CheckoutScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token, cartId, restaurantId, showError]);
+  }, [token, user, cartId, restaurantId, showError]);
 
   useEffect(() => {
     if (authLoading) {
       return;
     }
 
-    if (!token) {
+    if (!token || !user) {
       router.replace("/login");
       return;
     }
+
+    const normalizedRole = user.role.trim().toLowerCase();
+
+    if (normalizedRole !== "customer") {
+      const destination =
+        normalizedRole === "driver"
+          ? "/driver-dashboard"
+          : normalizedRole === "restaurant"
+            ? "/restaurant-dashboard"
+            : normalizedRole === "admin"
+              ? "/admin-dashboard"
+              : "/login";
+
+      router.replace(destination as any);
+      return;
+    }
+
     void loadAddresses();
-  }, [authLoading, token, loadAddresses]);
+  }, [authLoading, token, user, loadAddresses]);
 
   function openAddressModal() {
     setAddressFormError("");

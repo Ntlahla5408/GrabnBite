@@ -48,6 +48,8 @@ export default function AdminUserEditScreen() {
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const loadUserRetryRef = useRef<() => void>(() => {});
+
   const loadUser = useCallback(async () => {
     if (!token || !userId) return;
 
@@ -71,11 +73,15 @@ export default function AdminUserEditScreen() {
       showError(getUserFacingError(error, {
         title: "We couldn't load this user",
         message: "The account details are temporarily unavailable. Please try again.",
-      }), () => { void loadUser(); });
+      }), () => { loadUserRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [token, userId, showError]);
+
+  useEffect(() => {
+    loadUserRetryRef.current = () => { void loadUser(); };
+  }, [loadUser]);
 
   useEffect(() => {
     if (!user || user.role !== "Admin") {
@@ -84,7 +90,7 @@ export default function AdminUserEditScreen() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadUser();
+    loadUserRetryRef.current();
   }, [user, loadUser]);
 
   const saveDetails = async () => {

@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +14,8 @@ import {
 } from "react-native";
 import { register } from "../services/authService";
 import { ComponentSize, Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const logo = require("../../assets/images/inside-icon.png");
 
@@ -27,20 +28,9 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [accountType, setAccountType] = useState<"Customer" | "Restaurant" | "Driver">("Customer");
   const [loading, setLoading] = useState(false);
+  const { showError } = useErrorFeedback();
 
   const handleRegister = async () => {
-    console.log("CREATE ACCOUNT PRESSED");
-
-    console.log("FORM DATA:", {
-      firstName,
-      lastName,
-      email,
-      phoneNumber,
-      passwordEntered: !!password,
-      confirmPasswordEntered: !!confirmPassword,
-      accountType,
-    });
-
     if (
       !firstName.trim() ||
       !lastName.trim() ||
@@ -49,29 +39,19 @@ export default function RegisterScreen() {
       !password ||
       !confirmPassword
     ) {
-      console.log("VALIDATION FAILED");
-
-      Alert.alert("Error", "Please complete all fields.");
+      showError({ title: "Complete your details", message: "Please fill in all the required fields before creating your account." });
       return;
     }
 
-    console.log("VALIDATION PASSED");
-
     if (password !== confirmPassword) {
-      console.log("PASSWORDS DO NOT MATCH");
-
-      Alert.alert("Error", "Passwords do not match.");
+      showError({ title: "Passwords do not match", message: "The passwords you entered are different. Check both fields and try again." });
       return;
     }
 
     if (password.length < 6) {
-      console.log("PASSWORD TOO SHORT");
-
-      Alert.alert("Error", "Password must be at least 6 characters long.");
+      showError({ title: "Choose a stronger password", message: "Your password must contain at least 6 characters." });
       return;
     }
-
-    console.log("STARTING REGISTER API CALL");
 
     try {
       setLoading(true);
@@ -85,8 +65,6 @@ export default function RegisterScreen() {
         accountType,
       );
 
-      console.log("REGISTER SUCCESS:", result);
-
       router.replace({
         pathname: "/verify-email",
         params: {
@@ -95,12 +73,12 @@ export default function RegisterScreen() {
         },
       });
     } catch (error) {
-      console.error("REGISTER ERROR:", error);
-
-      Alert.alert(
-        "Registration failed",
-        "We could not create your account. Please check your details and try again.",
-      );
+      logAppError("Creating customer account", error);
+      showError(getUserFacingError(error, {
+        title: "We could not create your account",
+        message: "GrabnBite could not complete your registration. Please check your details and try again.",
+        actionLabel: "Try again",
+      }), () => { void handleRegister(); });
     } finally {
       setLoading(false);
     }

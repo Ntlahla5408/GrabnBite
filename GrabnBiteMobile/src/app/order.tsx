@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -53,6 +53,8 @@ export default function OrderScreen() {
   const [loading, setLoading] = useState(Number.isInteger(orderId) && orderId > 0);
   const [error, setError] = useState(Number.isInteger(orderId) && orderId > 0 ? "" : "Invalid order.");
 
+  const loadOrderRetryRef = useRef<() => void>(() => {});
+
   const loadOrder = useCallback(async () => {
     if (!token || !orderId) return;
 
@@ -67,11 +69,15 @@ export default function OrderScreen() {
         title: "We couldn't load this order",
         message: "The details for this order are temporarily unavailable. Your order has not been cancelled. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadOrder(); });
+      }), () => { loadOrderRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [token, orderId, showError]);
+
+  useEffect(() => {
+    loadOrderRetryRef.current = () => { void loadOrder(); };
+  }, [loadOrder]);
 
   useEffect(() => {
     if (authLoading) {
@@ -85,7 +91,7 @@ export default function OrderScreen() {
 
     if (Number.isInteger(orderId) && orderId > 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-      void loadOrder();
+      loadOrderRetryRef.current();
     }
   }, [authLoading, token, orderId, loadOrder]);
 

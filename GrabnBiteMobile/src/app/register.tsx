@@ -256,10 +256,7 @@ export default function RegisterScreen() {
                 pressed && styles.buttonPressed,
                 loading && styles.buttonDisabled,
               ]}
-              onPress={() => {
-                console.log("BUTTON PRESSED");
-                handleRegister();
-              }}
+              onPress={handleRegister}
               disabled={loading}
             >
               {loading ? (

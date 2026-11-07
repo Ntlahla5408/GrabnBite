@@ -1,5 +1,5 @@
 import { useRouter, type Href } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -51,6 +51,8 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadRestaurantsRetryRef = useRef<() => void>(() => {});
+
   const loadRestaurants = useCallback(async () => {
     try {
       const data = await getRestaurants();
@@ -69,11 +71,15 @@ export default function HomeScreen() {
         title: "We could not load restaurants",
         message: "Restaurants are not available right now because GrabnBite could not retrieve them. Please try again shortly.",
         actionLabel: "Try again",
-      }), () => { setLoading(true); void loadRestaurants(); });
+      }), () => { setLoading(true); loadRestaurantsRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [showError]);
+
+  useEffect(() => {
+    loadRestaurantsRetryRef.current = () => { void loadRestaurants(); };
+  }, [loadRestaurants]);
 
   useEffect(() => {
     if (user && normalizedRole !== "customer") {
@@ -81,7 +87,7 @@ export default function HomeScreen() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadRestaurants();
+    loadRestaurantsRetryRef.current();
   }, [loadRestaurants, user, normalizedRole]);
 
   const filteredRestaurants = useMemo(() => {

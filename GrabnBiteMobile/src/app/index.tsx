@@ -26,6 +26,21 @@ export default function HomeScreen() {
   const { theme } = useThemePreference();
   const { user } = useAuth();
   const colors = AppThemeColors[theme];
+  const normalizedRole = user?.role?.trim().toLowerCase();
+
+  useEffect(() => {
+    if (!normalizedRole || normalizedRole === "customer") {
+      return;
+    }
+
+    if (normalizedRole === "driver") {
+      router.replace("/driver-dashboard");
+    } else if (normalizedRole === "restaurant") {
+      router.replace("/restaurant-dashboard");
+    } else if (normalizedRole === "admin") {
+      router.replace("/admin-dashboard");
+    }
+  }, [normalizedRole, router]);
 
   const [search, setSearch] = useState("");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -52,9 +67,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    if (user && normalizedRole !== "customer") {
+      return;
+    }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
     void loadRestaurants();
-  }, [loadRestaurants]);
+  }, [loadRestaurants, user, normalizedRole]);
 
   const filteredRestaurants = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
@@ -71,6 +90,10 @@ export default function HomeScreen() {
       );
     });
   }, [restaurants, search]);
+
+  if (user && normalizedRole !== "customer") {
+    return null;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

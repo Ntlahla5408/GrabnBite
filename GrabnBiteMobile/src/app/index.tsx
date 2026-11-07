@@ -69,7 +69,7 @@ export default function HomeScreen() {
         title: "We could not load restaurants",
         message: "Restaurants are not available right now because GrabnBite could not retrieve them. Please try again shortly.",
         actionLabel: "Try again",
-      }), () => { void loadRestaurants(); });
+      }), () => { setLoading(true); void loadRestaurants(); });
     } finally {
       setLoading(false);
     }

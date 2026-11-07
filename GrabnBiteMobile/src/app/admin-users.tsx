@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState, useRef} from "react";
 import {
     ActivityIndicator,
     TouchableOpacity,
@@ -41,6 +41,8 @@ export default function AdminUsersScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadUsersRetryRef = useRef<() => void>(() => {});
+
   const loadUsers = useCallback(async () => {
     try {
       const data = await apiRequest("/api/Users", {}, token);
@@ -53,11 +55,15 @@ export default function AdminUsersScreen() {
         title: "We couldn't load the user list",
         message: "Account information is temporarily unavailable. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadUsers(); });
+      }), () => { loadUsersRetryRef.current(); });
     } finally {
       setLoading(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadUsersRetryRef.current = () => { void loadUsers(); };
+  }, [loadUsers]);
 
   useEffect(() => {
     if (!user) {
@@ -71,7 +77,7 @@ export default function AdminUsersScreen() {
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async data loading; state updates occur after the request resolves.
-    void loadUsers();
+    loadUsersRetryRef.current();
   }, [user, loadUsers]);
 
   const filteredUsers = useMemo(() => {

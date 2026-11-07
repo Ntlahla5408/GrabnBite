@@ -60,8 +60,6 @@ export default function OrderScreen() {
       const result = await apiRequest(`/api/Orders/${orderId}`, {}, token);
       setError("");
 
-      console.log("ORDER RESULT:", result);
-
       setOrder(result);
     } catch (error) {
       logAppError("Loading customer order details", error);

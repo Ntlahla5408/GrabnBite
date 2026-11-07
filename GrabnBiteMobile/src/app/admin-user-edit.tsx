@@ -281,10 +281,13 @@ export default function AdminUserEditScreen() {
       );
     } catch (error) {
       logAppError("Deleting a user account", error);
-      showError(getUserFacingError(error, {
-        title: "We couldn't delete this user",
-        message: "The account has not been deleted. Please try again.",
-      }), () => { void performDelete(); });
+      showError({
+        ...getUserFacingError(error, {
+          title: "We couldn't confirm the deletion",
+          message: "We couldn't confirm whether the account was deleted. Return to the user list and refresh it before attempting this action again.",
+        }),
+        actionLabel: "Back to users",
+      }, () => router.replace("/admin-users"));
     } finally {
       setActionLoading(false);
     }

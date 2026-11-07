@@ -85,7 +85,7 @@ export default function CheckoutScreen() {
         title: "We could not load checkout",
         message: "Your delivery addresses and order details could not be loaded. Please try again.",
         actionLabel: "Try again",
-      }), () => { void loadAddresses(); });
+      }), () => { setLoading(true); void loadAddresses(); });
     } finally {
       setLoading(false);
     }

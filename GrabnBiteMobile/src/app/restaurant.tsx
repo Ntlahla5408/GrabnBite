@@ -81,7 +81,6 @@ export default function RestaurantScreen() {
 
   useEffect(() => {
     if (Number.isInteger(restaurantId) && restaurantId > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Start async restaurant loading; state updates occur after the request resolves.
       loadRestaurantRetryRef.current();
     }
   }, [restaurantId, loadRestaurant]);

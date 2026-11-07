@@ -64,10 +64,10 @@ export default function PaymentScreen() {
     } catch (paymentError) {
       logAppError("Starting Yoco payment", paymentError);
       setError("We could not prepare the payment. Check your order status before trying again.");
-      showError(getUserFacingError(paymentError, {
+      showError({ ...getUserFacingError(paymentError, {
         title: "We could not prepare your payment",
         message: "Your order may already have a pending payment. Check the order status before attempting payment again.",
-      }), () => {
+      }), actionLabel: "View order" }, () => {
         router.replace({ pathname: "/order", params: { orderId: String(orderId) } });
       });
     } finally {
@@ -114,10 +114,10 @@ export default function PaymentScreen() {
         if (!cancelled) {
           logAppError("Preparing Yoco payment", paymentError);
           setError("We could not prepare the payment. Check your order status before trying again.");
-          showError(getUserFacingError(paymentError, {
+          showError({ ...getUserFacingError(paymentError, {
             title: "We could not prepare your payment",
             message: "Your order may already have a pending payment. Check the order status before attempting payment again.",
-          }), () => {
+          }), actionLabel: "View order" }, () => {
             router.replace({ pathname: "/order", params: { orderId: String(orderId) } });
           });
         }

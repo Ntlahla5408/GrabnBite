@@ -50,7 +50,7 @@ export default function RestaurantCategoriesScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token, user?.role]);
+  }, [token, user?.role, showError]);
 
   useEffect(() => {
     if (!authLoading && user?.role !== "Restaurant") {

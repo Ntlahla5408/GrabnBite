@@ -39,13 +39,15 @@ export default function LoginScreen() {
 
       Alert.alert("Welcome!", `Welcome back, ${result.firstName}!`);
 
-      if (result.role === "Admin") {
+      const normalizedRole = String(result.role ?? "").trim().toLowerCase();
+
+      if (normalizedRole === "admin") {
         router.replace("/admin-dashboard");
-      } else if (result.role === "Restaurant") {
+      } else if (normalizedRole === "restaurant") {
         router.replace("/restaurant-dashboard");
-      } else if (result.role === "Customer") {
+      } else if (normalizedRole === "customer") {
         router.replace("/");
-      } else if (result.role === "Driver") {
+      } else if (normalizedRole === "driver") {
         router.replace("/driver-dashboard");
       } else {
         Alert.alert(

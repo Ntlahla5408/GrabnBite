@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import {useCallback, useState, useRef} from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -81,6 +81,8 @@ export default function DriverDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const loadDriverDataRetryRef = useRef<() => void>(() => {});
+
   const loadDriverData = useCallback(async () => {
     if (!token) return;
 
@@ -104,7 +106,7 @@ export default function DriverDashboard() {
           showError(getUserFacingError(deliveryError, {
             title: "We couldn't load your active delivery",
             message: "Your current delivery details are temporarily unavailable. Please refresh and try again.",
-          }), () => { void loadDriverData(); });
+          }), () => { loadDriverDataRetryRef.current(); });
         }
       }
 
@@ -125,7 +127,7 @@ export default function DriverDashboard() {
             showError(getUserFacingError(availableError, {
               title: "We couldn't load delivery offers",
               message: "Available delivery offers are temporarily unavailable. Please refresh and try again.",
-            }), () => { void loadDriverData(); });
+            }), () => { loadDriverDataRetryRef.current(); });
           }
         }
       } else {
@@ -150,13 +152,17 @@ export default function DriverDashboard() {
           title: "We could not load your deliveries",
           message: "Your driver information could not be loaded. Please try again.",
           actionLabel: "Try again",
-        }), () => { void loadDriverData(); });
+        }), () => { loadDriverDataRetryRef.current(); });
       }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [token, showError]);
+
+  useEffect(() => {
+    loadDriverDataRetryRef.current = () => { void loadDriverData(); };
+  }, [loadDriverData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,7 +176,7 @@ export default function DriverDashboard() {
         return;
       }
 
-      void loadDriverData();
+      loadDriverDataRetryRef.current();
     }, [user, router, loadDriverData]),
   );
 
@@ -209,7 +215,7 @@ export default function DriverDashboard() {
         title: "We could not confirm your availability change",
         message: "Your online status may already have changed. Refresh your driver status before trying the online or offline control again.",
         actionLabel: "Refresh status",
-      }), () => { setRefreshing(true); void loadDriverData(); });
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -238,7 +244,7 @@ export default function DriverDashboard() {
         title: "We could not accept this delivery",
         message: "This delivery has not been accepted by your account. It may have already been assigned to another driver. Refresh and try again.",
         actionLabel: "Refresh",
-      }), () => { void loadDriverData(); });
+      }), () => { loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -265,7 +271,7 @@ export default function DriverDashboard() {
         title: "We could not confirm pickup",
         message: "The pickup may already have been recorded. Refresh your active delivery before trying again.",
         actionLabel: "Refresh delivery",
-      }), () => { setRefreshing(true); void loadDriverData(); });
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -292,7 +298,7 @@ export default function DriverDashboard() {
         title: "We could not confirm the delivery status",
         message: "The delivery may already have started. Refresh your active delivery before trying another status action.",
         actionLabel: "Refresh delivery",
-      }), () => { setRefreshing(true); void loadDriverData(); });
+      }), () => { setRefreshing(true); loadDriverDataRetryRef.current(); });
     } finally {
       setActionLoading(false);
     }
@@ -335,7 +341,7 @@ export default function DriverDashboard() {
                 title: "We could not complete this delivery",
                 message: "The delivery status could not be confirmed. Please check the order before trying again.",
                 actionLabel: "Refresh",
-              }), () => { void loadDriverData(); });
+              }), () => { loadDriverDataRetryRef.current(); });
             } finally {
               setActionLoading(false);
             }

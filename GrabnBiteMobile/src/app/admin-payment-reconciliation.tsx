@@ -118,7 +118,7 @@ export default function AdminPaymentReconciliationScreen() {
       router.replace("/");
       return;
     }
-    void loadQueue();
+    void Promise.resolve().then(() => loadQueue());
   }, [user, loadQueue]);
 
   const canResolveDelayedCheckout = Boolean(

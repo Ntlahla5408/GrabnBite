@@ -112,6 +112,18 @@ export default function AdminDriverApplicationsScreen() {
     void loadApplications();
   }, [user, loadApplications]);
 
+  async function openSignedDocument(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch (documentError) {
+      logAppError("Opening a driver application document", documentError);
+      showError(getUserFacingError(documentError, {
+        title: "We couldn't open this document",
+        message: "The document could not be opened. Please try again or refresh the application.",
+      }));
+    }
+  }
+
   async function openApplication(applicationId: number) {
     if (!token) return;
     try {
@@ -234,7 +246,7 @@ export default function AdminDriverApplicationsScreen() {
               <Text style={styles.body}>{document.originalFileName}</Text>
               <Text style={styles.meta}>Status: {document.verificationStatus} · {(document.fileSize / 1024).toFixed(0)} KB</Text>
               {document.adminComment ? <Text style={styles.meta}>Review note: {document.adminComment}</Text> : null}
-              <Pressable onPress={() => void Linking.openURL(document.signedUrl)} style={styles.openButton}>
+              <Pressable onPress={() => void openSignedDocument(document.signedUrl)} style={styles.openButton}>
                 <Text style={styles.openButtonText}>Open document</Text>
               </Pressable>
               {document.verificationStatus === "Pending" ? (

@@ -12,6 +12,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import { apiRequest } from "../services/api";
 
 interface ApplicationSummary {
@@ -90,6 +92,7 @@ interface ApplicationDetail {
 
 export default function AdminRestaurantApplicationsScreen() {
   const { user, token } = useAuth();
+  const { showError } = useErrorFeedback();
   const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [selected, setSelected] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,8 +108,9 @@ export default function AdminRestaurantApplicationsScreen() {
       const result = await apiRequest("/api/AdminRestaurantApplication", {}, token);
       setApplications(result);
       setError("");
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load restaurant applications.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load restaurant applications.", actionLabel: "Try again" }));
     } finally {
       setLoading(false);
     }
@@ -137,8 +141,9 @@ export default function AdminRestaurantApplicationsScreen() {
         token,
       );
       setSelected(result);
-    } catch (requestError: any) {
-      setError(requestError?.message || "Unable to load the application.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "Unable to load the application.", actionLabel: "Try again" }));
     } finally {
       setDetailLoading(false);
     }
@@ -162,8 +167,9 @@ export default function AdminRestaurantApplicationsScreen() {
       await openApplication(selected.restaurantApplicationId);
       await loadApplications();
       setMessage(successMessage);
-    } catch (requestError: any) {
-      setError(requestError?.message || "The requested action could not be completed.");
+    } catch (requestError) {
+      logAppError("Admin restaurant applications operation", requestError);
+      showError(getUserFacingError(requestError, { title: "We couldn't complete this action", message: "The requested action could not be completed.", actionLabel: "Try again" }));
     } finally {
       setWorking(false);
     }

@@ -18,10 +18,13 @@ import { Cart } from "../types/cart";
 import { createCheckout } from "../services/checkoutService";
 import { Address } from "../types/address";
 import { AppThemeColors, useThemePreference } from "../context/ThemeContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 export default function CheckoutScreen() {
   const { theme } = useThemePreference();
   const colors = AppThemeColors[theme];
+  const { showError } = useErrorFeedback();
   const { token, loading: authLoading } = useAuth();
 
   const params = useLocalSearchParams<{
@@ -42,7 +45,6 @@ export default function CheckoutScreen() {
 
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [error, setError] = useState("");
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [addressLabel, setAddressLabel] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
@@ -59,11 +61,13 @@ export default function CheckoutScreen() {
 
     try {
       const [result, customerCarts] = await Promise.all([getAddresses(token), getCart(token)]);
-      setError("");
       setAddresses(result);
       const matchingCart = customerCarts.find((customerCart) => customerCart.cartId === cartId && customerCart.restaurantId === restaurantId && customerCart.items.length > 0);
       setCart(matchingCart ?? null);
-      if (!matchingCart) setError("This cart is empty or is no longer available. Please return to your cart.");
+      if (!matchingCart) showError({
+        title: "Your cart is no longer available",
+        message: "This cart is empty or has changed. Return to your cart and review your items before continuing.",
+      });
 
       // Automatically select the default address.
       const defaultAddress = result.find((address) => address.isDefault);
@@ -76,12 +80,16 @@ export default function CheckoutScreen() {
         setSelectedAddressId(null);
       }
     } catch (error) {
-      console.error("Failed to load addresses:", error);
-      setError("Unable to load your delivery addresses.");
+      logAppError("Loading checkout addresses and cart", error);
+      showError(getUserFacingError(error, {
+        title: "We could not load checkout",
+        message: "Your delivery addresses and order details could not be loaded. Please try again.",
+        actionLabel: "Try again",
+      }), () => { void loadAddresses(); });
     } finally {
       setLoading(false);
     }
-  }, [token, cartId, restaurantId]);
+  }, [token, cartId, restaurantId, showError]);
 
   useEffect(() => {
     if (authLoading) {
@@ -143,8 +151,12 @@ export default function CheckoutScreen() {
       setProvince("");
       setPostalCode("");
     } catch (saveError) {
-      console.error("Failed to save delivery address:", saveError);
-      setAddressFormError("We could not save this address. Please try again.");
+      logAppError("Saving delivery address", saveError);
+      showError(getUserFacingError(saveError, {
+        title: "We could not save this address",
+        message: "Your new delivery address was not saved. Please check your connection and try again.",
+        actionLabel: "Try again",
+      }), () => { void handleSaveAddress(); });
     } finally {
       setSavingAddress(false);
     }
@@ -157,23 +169,22 @@ export default function CheckoutScreen() {
     }
 
     if (!cart) {
-      setError("Your cart is no longer available. Please return to your cart.");
+      showError({ title: "Your cart is no longer available", message: "Return to your cart and review your items before placing an order." });
       return;
     }
 
     if (!cartId) {
-      setError("Invalid cart.");
+      showError({ title: "We could not identify your cart", message: "Return to your cart, select your items again and continue to checkout." });
       return;
     }
 
     if (!selectedAddressId) {
-      setError("Please select a delivery address.");
+      showError({ title: "Choose a delivery address", message: "Select where you would like your order delivered before continuing." });
       return;
     }
 
     try {
       setCheckingOut(true);
-      setError("");
 
       const result = await createCheckout(
         {
@@ -203,11 +214,11 @@ export default function CheckoutScreen() {
         });
       }
     } catch (error) {
-      console.error("Checkout failed:", error);
-      const apiMessage = error instanceof Error
-        ? error.message.replace(/ \(HTTP \d+\)$/, "")
-        : "";
-      setError(apiMessage || "Unable to create your order. Please try again.");
+      logAppError("Creating customer order", error);
+      showError(getUserFacingError(error, {
+        title: "We could not place your order",
+        message: "GrabnBite could not confirm that your order was placed. Please check your orders before trying again to avoid submitting the same order twice.",
+      }));
     } finally {
       setCheckingOut(false);
     }
@@ -240,8 +251,6 @@ export default function CheckoutScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Review your order</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Check your items, total and delivery address before payment.</Text>
         </View>
-
-        {error ? <View style={[styles.errorBox, { borderColor: colors.border, backgroundColor: colors.surface }]}><Text style={[styles.errorText, { color: theme === "dark" ? "#FCA5A5" : "#B42318" }]}>{error}</Text></View> : null}
 
         {!cart ? (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

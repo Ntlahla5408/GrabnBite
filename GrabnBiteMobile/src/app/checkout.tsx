@@ -195,7 +195,6 @@ export default function CheckoutScreen() {
         token,
       );
 
-      console.log("CHECKOUT RESULT:", result);
 
       if (selectedPaymentMethod === "CASH") {
         // The backend creates the CASH payment record atomically with the order.

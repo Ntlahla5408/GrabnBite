@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { useAuth } from "../context/authContext";
 import { ComponentSize, Layout, Radius, Spacing, Typography } from "../constants/designSystem";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 
 const logo = require("../../assets/images/inside-icon.png");
 
@@ -24,10 +26,14 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const { showError } = useErrorFeedback();
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert("Error", "Please enter your email and password.");
+      showError({
+        title: "Enter your sign-in details",
+        message: "Please enter both your email address and password to continue.",
+      });
       return;
     }
 
@@ -61,7 +67,7 @@ export default function LoginScreen() {
         );
       }
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
+      logAppError("Signing in", error);
 
       if (
         error instanceof Error &&
@@ -74,7 +80,10 @@ export default function LoginScreen() {
         return;
       }
 
-      Alert.alert("Login failed", "Please check your email and password.");
+      showError(getUserFacingError(error, {
+        title: "We could not sign you in",
+        message: "The email address or password may be incorrect. Please check your details and try again.",
+      }));
     } finally {
       setLoading(false);
     }

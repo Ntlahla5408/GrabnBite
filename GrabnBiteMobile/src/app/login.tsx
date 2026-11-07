@@ -34,8 +34,11 @@ export default function LoginScreen() {
 
       const result = await login(email.trim(), password);
 
-      console.log("LOGIN SUCCESS:", result);
-      console.log("USER ROLE:", result.role);
+      console.log("LOGIN SUCCESS:", {
+        userId: result.userId,
+        role: result.role,
+        isActive: result.isActive,
+      });
 
       Alert.alert("Welcome!", `Welcome back, ${result.firstName}!`);
 

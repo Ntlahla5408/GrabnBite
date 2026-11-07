@@ -14,6 +14,8 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/authContext";
+import { useErrorFeedback } from "../context/ErrorFeedbackContext";
+import { getUserFacingError, logAppError } from "../services/errorHandler";
 import {
   getRestaurantApplication,
   RestaurantApplicationDraft,
@@ -112,6 +114,7 @@ const emptyForm: DraftForm = {
 export default function RestaurantApplicationEditScreen() {
   const { applicationId } = useLocalSearchParams<{ applicationId: string }>();
   const { token, user, loading: authLoading } = useAuth();
+  const { showError } = useErrorFeedback();
   const parsedApplicationId = Number(applicationId);
   const hasValidApplicationId = Number.isInteger(parsedApplicationId) && parsedApplicationId > 0;
   const [application, setApplication] = useState<RestaurantApplicationDraft | null>(null);
@@ -194,7 +197,13 @@ export default function RestaurantApplicationEditScreen() {
         });
       })
       .catch((requestError: any) => {
-        if (active) setError(requestError?.message || "Unable to load this application.");
+        if (active) {
+          logAppError("Loading restaurant application draft", requestError);
+          showError(getUserFacingError(requestError, {
+            title: "We couldn't load your application",
+            message: "Your restaurant application details are temporarily unavailable. Please try again.",
+          }));
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -203,7 +212,7 @@ export default function RestaurantApplicationEditScreen() {
     return () => {
       active = false;
     };
-  }, [applicationId, parsedApplicationId, hasValidApplicationId, authLoading, token, user?.role]);
+  }, [applicationId, parsedApplicationId, hasValidApplicationId, authLoading, token, user?.role, showError]);
 
   const update = <K extends keyof DraftForm,>(key: K, value: DraftForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -266,7 +275,11 @@ export default function RestaurantApplicationEditScreen() {
       Alert.alert("Draft saved", "Your restaurant application details have been saved.");
       router.replace("/restaurant-profile");
     } catch (requestError: any) {
-      setError(requestError?.message || "Unable to save your application.");
+      logAppError("Saving restaurant application draft", requestError);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't save your application",
+        message: "Your application changes have not been saved. Please try again.",
+      }));
     } finally {
       setSaving(false);
     }
@@ -325,19 +338,23 @@ export default function RestaurantApplicationEditScreen() {
       setApplication((current) => current ? { ...current, status: result.status, submittedAt: new Date().toISOString() } : current);
       router.replace("/restaurant-profile");
     } catch (requestError: any) {
-      let responseMessage = requestError?.message || "Unable to submit your application.";
+      logAppError("Submitting restaurant application", requestError);
+      let missingItemsMessage: string | null = null;
       try {
-        const responseBody = responseMessage.match(/\{[\s\S]*\}/)?.[0];
+        const responseBody = String(requestError?.message ?? "").match(/\{[\s\S]*\}/)?.[0];
         if (responseBody) {
           const parsedResponse = JSON.parse(responseBody);
-          responseMessage = Array.isArray(parsedResponse.missingItems)
-            ? `Complete these items before submitting: ${parsedResponse.missingItems.join(", ")}.`
-            : parsedResponse.message || responseMessage;
+          if (Array.isArray(parsedResponse.missingItems)) {
+            missingItemsMessage = `Complete these items before submitting: ${parsedResponse.missingItems.join(", ")}.`;
+          }
         }
       } catch {
-        // Keep the original API error if the response is not JSON.
+        // Ignore an unstructured server response and show a safe message.
       }
-      setError(responseMessage);
+      showError(getUserFacingError(requestError, {
+        title: "We couldn't submit your application",
+        message: missingItemsMessage ?? "Your application has not been submitted. Please review the required information and try again.",
+      }));
     } finally {
       setSubmitting(false);
     }
@@ -540,7 +557,11 @@ export default function RestaurantApplicationEditScreen() {
               setApplication(refreshed);
               Alert.alert("Document uploaded", "Your supporting document has been uploaded.");
             } catch (uploadError: any) {
-              setError(uploadError?.message || "Unable to upload this document.");
+              logAppError("Uploading restaurant application document", uploadError);
+              showError(getUserFacingError(uploadError, {
+                title: "We couldn't upload this document",
+                message: "The document has not been uploaded. Please check the file and try again.",
+              }));
             } finally {
               setUploading(false);
             }
@@ -567,7 +588,11 @@ export default function RestaurantApplicationEditScreen() {
                       );
                       await Linking.openURL(result.signedUrl);
                     } catch (downloadError: any) {
-                      setError(downloadError?.message || "Unable to open this document.");
+                      logAppError("Opening restaurant application document", downloadError);
+                      showError(getUserFacingError(downloadError, {
+                        title: "We couldn't open this document",
+                        message: "The document could not be opened. Please try again.",
+                      }));
                     }
                   }}
                 >
@@ -594,7 +619,11 @@ export default function RestaurantApplicationEditScreen() {
                                 const refreshed = await getRestaurantApplication(application.restaurantApplicationId, token!);
                                 setApplication(refreshed);
                               } catch (deleteError: any) {
-                                setError(deleteError?.message || "Unable to remove this document.");
+                                logAppError("Removing restaurant application document", deleteError);
+                                showError(getUserFacingError(deleteError, {
+                                  title: "We couldn't remove this document",
+                                  message: "The document has not been removed. Please try again.",
+                                }));
                               }
                             },
                           },
@@ -684,7 +713,11 @@ export default function RestaurantApplicationEditScreen() {
               setBankingForm((current) => ({ ...current, accountNumber: "" }));
               Alert.alert("Banking details saved", "Your banking details were encrypted and saved. They will require verification.");
             } catch (bankingError: any) {
-              setError(bankingError?.message || "Unable to save banking details.");
+              logAppError("Saving restaurant banking details", bankingError);
+              showError(getUserFacingError(bankingError, {
+                title: "We couldn't save your banking details",
+                message: "Your banking details have not been updated. Please check the information and try again.",
+              }));
             } finally {
               setSavingBanking(false);
             }
